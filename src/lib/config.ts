@@ -3,6 +3,22 @@
  * all Solana OS still runs, using public endpoints and falling back to
  * clearly-labelled demo data when an upstream is unreachable.
  */
+export const PUBLIC_RPC = "https://api.mainnet-beta.solana.com";
+
+/**
+ * SOLANA_RPC_URL should be a full URL, but a bare Helius API key (a UUID) is
+ * accepted too. Anything else falls back to the public endpoint.
+ */
+export function normalizeRpcUrl(value: string | undefined): string {
+  if (!value) return PUBLIC_RPC;
+  if (/^https?:\/\//i.test(value)) return value;
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) {
+    return `https://mainnet.helius-rpc.com/?api-key=${value}`;
+  }
+  console.warn("[solana-os] SOLANA_RPC_URL is not a URL; using the public Solana RPC instead");
+  return PUBLIC_RPC;
+}
+
 export type DataModeSetting = "auto" | "live" | "demo";
 
 function env(name: string): string | undefined {
@@ -13,7 +29,7 @@ function env(name: string): string | undefined {
 export const config = {
   /** auto = live with labelled demo fallback; live = never fall back; demo = never call upstreams. */
   dataMode: (env("DATA_MODE") as DataModeSetting | undefined) ?? "auto",
-  rpcUrl: env("SOLANA_RPC_URL") ?? "https://api.mainnet-beta.solana.com",
+  rpcUrl: normalizeRpcUrl(env("SOLANA_RPC_URL")),
   jupiterApi: env("JUPITER_API_URL") ?? "https://lite-api.jup.ag",
   jupiterApiKey: env("JUPITER_API_KEY"),
   geckoTerminalApi: env("GECKOTERMINAL_API_URL") ?? "https://api.geckoterminal.com/api/v2",
@@ -54,7 +70,7 @@ export function capabilities() {
       google: Boolean(config.googleClientId && config.googleClientSecret),
       email: Boolean(config.resendApiKey) || !config.isProd,
     },
-    customRpc: config.rpcUrl !== "https://api.mainnet-beta.solana.com",
+    customRpc: config.rpcUrl !== PUBLIC_RPC,
   };
 }
 

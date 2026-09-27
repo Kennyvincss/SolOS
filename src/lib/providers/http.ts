@@ -21,6 +21,22 @@ export class UpstreamError extends Error {
   }
 }
 
+/** Strip a request URL (which may carry an API key) and anything key-like from an error message. */
+export function redact(message: string, url?: string): string {
+  let out = message;
+  if (url) {
+    out = out.split(url).join("[url]");
+    try {
+      const u = new URL(url);
+      for (const v of u.searchParams.values()) if (v.length >= 8) out = out.split(v).join("[redacted]");
+    } catch {
+      /* not a URL: redact the raw value */
+      if (url.length >= 8) out = out.split(url).join("[redacted]");
+    }
+  }
+  return out.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, "[redacted]");
+}
+
 export function cacheGet<T>(key: string): T | undefined {
   const e = cache.get(key);
   if (!e) return undefined;
@@ -81,7 +97,7 @@ export async function fetchJson<T>(url: string, opts: FetchJsonOptions = {}): Pr
   } catch (err) {
     if (err instanceof UpstreamError) throw err;
     const msg = err instanceof Error ? err.message : String(err);
-    throw new UpstreamError(msg.includes("abort") ? "timed out" : msg, undefined, url);
+    throw new UpstreamError(msg.includes("abort") ? "timed out" : redact(msg, url), undefined, url);
   } finally {
     clearTimeout(timer);
   }

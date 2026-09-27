@@ -99,3 +99,20 @@ describe("app catalog", () => {
     }
   });
 });
+
+describe("RPC configuration", () => {
+  it("accepts full URLs, turns a bare Helius key into a URL, and rejects junk", async () => {
+    const { normalizeRpcUrl, PUBLIC_RPC } = await import("@/lib/config");
+    expect(normalizeRpcUrl(undefined)).toBe(PUBLIC_RPC);
+    expect(normalizeRpcUrl("https://rpc.example.com/abc")).toBe("https://rpc.example.com/abc");
+    expect(normalizeRpcUrl("a4b52bc6-3321-4084-8880-ac46c32b54f8")).toBe("https://mainnet.helius-rpc.com/?api-key=a4b52bc6-3321-4084-8880-ac46c32b54f8");
+    expect(normalizeRpcUrl("not a url")).toBe(PUBLIC_RPC);
+  });
+
+  it("never echoes keys in error messages", async () => {
+    const { redact } = await import("@/lib/providers/http");
+    const key = "a4b52bc6-3321-4084-8880-ac46c32b54f8";
+    expect(redact(`Failed to parse URL from ${key}`, key)).not.toContain(key);
+    expect(redact("fetch failed for https://x.io/?api-key=supersecretkey", "https://x.io/?api-key=supersecretkey")).not.toContain("supersecretkey");
+  });
+});
