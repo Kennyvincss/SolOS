@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ExternalLink, Rss } from "lucide-react";
 import { Badge, Card, DataBadge, EmptyState, Monogram, Page, Section, SkeletonRows, Stat, cn } from "@/components/ui";
 import { NewsRow, TokenRow } from "@/components/domain";
-import { getApp, domainOf } from "@/lib/catalog/apps";
+import { getApp, domainOf, appLogo } from "@/lib/catalog/apps";
 import { useApi } from "@/lib/client/fetch";
 import { useActions, useStore } from "@/lib/client/store";
 import type { AppMetrics, DataMeta, NewsItem, Sourced, Token } from "@/lib/types";
@@ -24,7 +24,7 @@ export function ProjectView({ slug }: { slug: string }) {
   return (
     <Page>
       <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-        <Monogram name={app.name} color={app.color} src={m?.logo} size={72} />
+        <Monogram name={app.name} color={app.color} src={appLogo(app.slug)} size={72} />
         <div className="flex-1">
           <div className="text-[13px] text-muted">Project</div>
           <h1 className="text-[28px] font-semibold tracking-[-0.02em]">{app.name}</h1>

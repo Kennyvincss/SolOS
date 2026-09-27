@@ -57,7 +57,7 @@ function HitRow({ h }: { h: SearchHit }) {
           <Icon name={h.icon} size={17} />
         </span>
       ) : (
-        <Monogram name={h.title} color={h.color} size={36} />
+        <Monogram name={h.title} color={h.color} src={h.kind === "app" ? `/api/logo/${h.id}` : undefined} size={36} />
       )
     ) : (
       <span className="grid h-9 w-9 place-items-center rounded-xl bg-surface-2 text-muted">

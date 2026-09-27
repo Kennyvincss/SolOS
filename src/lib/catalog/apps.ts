@@ -111,3 +111,8 @@ export function domainOf(url: string): string {
 }
 
 export const KNOWN_DOMAINS = [...new Set(APPS.flatMap((x) => [x.website, x.appUrl].filter(Boolean).map((u) => domainOf(u!))))];
+
+/** Logo URL for an app (served and cached by /api/logo). */
+export function appLogo(slug: string) {
+  return `/api/logo/${slug}`;
+}

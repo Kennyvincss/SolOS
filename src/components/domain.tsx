@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ArrowDownLeft, ArrowUpRight, Boxes, CheckCircle2, Coins, ExternalLink, Layers, Repeat, XCircle } from "lucide-react";
+import { appLogo } from "@/lib/catalog/apps";
 import type { ActivityItem, AppEntry, AppMetrics, NewsItem, Portfolio, PredictionMarket, RiskReport, Token } from "@/lib/types";
 import { fmtNum, fmtUsd, shortAddr, timeAgo } from "@/lib/format";
 import { Badge, Change, Monogram, RISK_STYLE, RiskPill, cn } from "./ui";
@@ -43,7 +44,7 @@ export function TokenRow({ t, rank, right }: { t: Token; rank?: number; right?: 
 export function AppCard({ app, metrics, compact }: { app: AppEntry; metrics?: AppMetrics; compact?: boolean }) {
   return (
     <Link href={`/apps/${app.slug}`} className={cn("card card-hover group flex gap-3.5 p-4", compact && "p-3.5")}>
-      <Monogram name={app.name} color={app.color} src={metrics?.logo} size={compact ? 40 : 48} />
+      <Monogram name={app.name} color={app.color} src={appLogo(app.slug)} size={compact ? 40 : 48} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="truncate text-[15px] font-semibold">{app.name}</span>

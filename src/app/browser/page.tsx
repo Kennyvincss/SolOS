@@ -7,7 +7,7 @@ import { ArrowRight, ExternalLink, Lock, RotateCw, ShieldAlert, ShieldCheck, Unl
 import { Card, Monogram, RiskPill, cn } from "@/components/ui";
 import { useApi } from "@/lib/client/fetch";
 import { useSession } from "@/lib/client/session";
-import { APPS, domainOf } from "@/lib/catalog/apps";
+import { APPS, domainOf, appLogo } from "@/lib/catalog/apps";
 import type { RiskReport } from "@/lib/types";
 import { shortAddr } from "@/lib/format";
 
@@ -81,7 +81,7 @@ function BrowserInner() {
                 const a = APPS.find((x) => x.slug === slug)!;
                 return (
                   <button key={slug} onClick={() => go(a.appUrl ?? a.website)} className="card card-hover flex flex-col items-center gap-2 p-4 text-center">
-                    <Monogram name={a.name} color={a.color} size={44} />
+                    <Monogram name={a.name} color={a.color} src={appLogo(a.slug)} size={44} />
                     <span className="text-[13px] font-medium">{a.name}</span>
                   </button>
                 );
@@ -133,7 +133,7 @@ function BrowserInner() {
             )}
             {app && (
               <Link href={`/apps/${app.slug}`} className="mt-4 flex items-center gap-2 rounded-xl bg-surface-2 p-2.5 text-[13px]">
-                <Monogram name={app.name} color={app.color} size={28} /> {app.name} <ArrowRight size={13} className="ml-auto text-faint" />
+                <Monogram name={app.name} color={app.color} src={appLogo(app.slug)} size={28} /> {app.name} <ArrowRight size={13} className="ml-auto text-faint" />
               </Link>
             )}
             <div className="mt-5 text-[13px] font-semibold">Wallet</div>

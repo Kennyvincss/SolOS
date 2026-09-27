@@ -5,7 +5,7 @@ import Link from "next/link";
 import { BookOpen, Check, Code2, ExternalLink, Globe, Heart, ImageOff, MessageCircle, Plus, Share2, ShieldCheck, Star } from "lucide-react";
 import { Address, Badge, Card, DataBadge, Monogram, Page, Section, Stat, cn, share } from "@/components/ui";
 import { AppCard } from "@/components/domain";
-import { getApp, appsByCategory, domainOf } from "@/lib/catalog/apps";
+import { getApp, appsByCategory, domainOf, appLogo } from "@/lib/catalog/apps";
 import { useApi } from "@/lib/client/fetch";
 import { useActions, useStore } from "@/lib/client/store";
 import { useSession } from "@/lib/client/session";
@@ -84,7 +84,7 @@ export function AppDetail({ slug }: { slug: string }) {
   return (
     <Page>
       <div className="animate-fade-up flex flex-col gap-5 sm:flex-row sm:items-start">
-        <Monogram name={app.name} color={app.color} src={m?.logo} size={88} />
+        <Monogram name={app.name} color={app.color} src={appLogo(app.slug)} size={88} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-[28px] font-semibold tracking-[-0.02em]">{app.name}</h1>
