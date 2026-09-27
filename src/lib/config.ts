@@ -3,6 +3,8 @@
  * all Solana OS still runs, using public endpoints and falling back to
  * clearly-labelled demo data when an upstream is unreachable.
  */
+import { claudeAvailable } from "./ai/availability";
+
 export type DataModeSetting = "auto" | "live" | "demo";
 
 function env(name: string): string | undefined {
@@ -46,7 +48,7 @@ export const config = {
 export function capabilities() {
   return {
     dataMode: config.dataMode,
-    ai: config.anthropicKey ? "claude" : "offline",
+    ai: config.anthropicKey && claudeAvailable() ? "claude" : "offline",
     auth: {
       wallet: true,
       google: Boolean(config.googleClientId && config.googleClientSecret),
