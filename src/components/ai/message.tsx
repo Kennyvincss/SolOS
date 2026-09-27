@@ -22,7 +22,7 @@ export interface AssistantMsg {
   tools: ToolState[];
   cards: AiCard[];
   sources: AiSource[];
-  engine?: "claude" | "offline";
+  engine?: "groq" | "offline";
   error?: string;
   done: boolean;
 }

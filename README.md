@@ -13,7 +13,7 @@ extensions and a developer platform, all in one fast, dark-first interface.
    automatically; no Root Directory setting is needed.
 2. Add environment variables (see `.env.example`). The only one required in
    production is `AUTH_SECRET` (`openssl rand -base64 32`). Recommended:
-   `SOLANA_RPC_URL` (a private RPC) and `ANTHROPIC_API_KEY` (Solana AI).
+   `SOLANA_RPC_URL` (a private RPC) and `GROQ_API_KEY` (Solana AI, free at console.groq.com).
 3. Deploy.
 
 The server is stateless: sessions are signed cookies, caches live in memory
@@ -46,7 +46,7 @@ demo data is displayed.
 | Protocol TVL, DEX volume, yields | DefiLlama |
 | News | RSS/Atom feeds (`NEWS_FEEDS`) |
 | Prediction markets | Adapter endpoint (`PREDICTION_MARKETS_URL`) |
-| Solana AI | Claude (`ANTHROPIC_API_KEY`) with tool calls into the services above |
+| Solana AI | Groq (`GROQ_API_KEY`, model via `GROQ_MODEL`) with tool calls into the services above |
 
 With `DATA_MODE=auto` (default), an unreachable provider falls back to a
 **demo dataset that is labelled as demo everywhere it appears**. Wallet
@@ -70,7 +70,7 @@ src/
     services/          Business logic composed from providers (tokens, wallets, transactions, security, ecosystem)
     solana/            Address helpers, program registry, transaction explainer, pre-sign decoder
     search/            Fuzzy scoring, natural-language intent detection, unified search engine
-    ai/                Solana AI tools, Claude streaming loop, offline fallback
+    ai/                Solana AI tools, Groq streaming tool-call loop, no-key offline mode
     auth/              Signed-cookie sessions, Sign-In With Solana, origin helper
     extensions/        Extension SDK (manifest schema, permissioned host) + catalog
     catalog/           Curated app registry and page index
@@ -85,11 +85,12 @@ src/
   small time budget. `detectIntent` routes addresses, signatures and
   natural-language questions ("what are whales buying?") to the right view or
   to Solana AI.
-- **Solana AI:** a manual tool-use loop over 13 tools. Tool results are streamed
-  to the client as rich cards with source links; the system prompt requires
-  separating verified data, analysis and uncertainty, and forbids financial
-  advice. Without an API key, an offline engine answers from the same tools
-  using templates and says so.
+- **Solana AI:** runs on Groq's OpenAI-compatible API with a streaming
+  tool-call loop over 13 tools. Tool results are streamed to the client as
+  rich cards with source links; the system prompt requires separating
+  verified data, analysis and uncertainty, and forbids financial advice.
+  Without `GROQ_API_KEY`, an offline engine answers from the same tools using
+  templates and says so.
 - **Security:** token checks (mint/freeze authority, Token-2022 extensions,
   holder concentration, liquidity, age, verification), wallet/program checks
   (upgrade authority), domain checks (registry match, typosquatting, bait

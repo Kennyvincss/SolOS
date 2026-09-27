@@ -2,7 +2,7 @@ import type { AiCard, AiSource } from "./tools";
 
 /** Newline-delimited JSON events streamed from /api/ai/chat to the chat UI. */
 export type AiEvent =
-  | { type: "meta"; engine: "claude" | "offline"; model?: string }
+  | { type: "meta"; engine: "groq" | "offline"; model?: string }
   | { type: "tool"; id: string; name: string; label: string; status: "running" | "done" | "error"; error?: string }
   | { type: "text"; delta: string }
   | { type: "card"; card: AiCard }

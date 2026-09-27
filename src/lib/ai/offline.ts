@@ -8,7 +8,7 @@ import { APP_CATEGORIES } from "../types";
 
 /**
  * Offline Solana AI: used when no language model is configured
- * (ANTHROPIC_API_KEY unset). It maps the question to the same data tools and
+ * (GROQ_API_KEY unset). It maps the question to the same data tools and
  * writes a templated answer. It's honest about being template-based.
  */
 
@@ -154,7 +154,7 @@ export async function* offlineChat(history: ChatTurn[], ctx: ToolContext): Async
       parts.push(`I couldn't complete that lookup: ${e instanceof Error ? e.message : "unknown error"}.`);
     }
   }
-  const text = parts.join("\n\n") + "\n\n> Offline mode: this answer was assembled from the data tools using templates. Set `ANTHROPIC_API_KEY` to enable full Solana AI reasoning.";
+  const text = parts.join("\n\n") + "\n\n> Offline mode: this answer was assembled from the data tools using templates. Set `GROQ_API_KEY` to enable full Solana AI reasoning.";
   // Stream in small chunks so the UI behaves the same as with a model.
   for (let i = 0; i < text.length; i += 24) yield { type: "text", delta: text.slice(i, i + 24) };
   if (sources.length) yield { type: "sources", sources };

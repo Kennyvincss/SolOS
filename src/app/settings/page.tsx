@@ -105,8 +105,8 @@ export default function SettingsPage() {
           <Row label="Solana RPC" hint="Set SOLANA_RPC_URL to use Helius, Triton or your own node">
             <Badge>{status.data?.customRpc ? "Custom" : "Public endpoint"}</Badge>
           </Row>
-          <Row label="Solana AI" hint="Set ANTHROPIC_API_KEY to enable full reasoning">
-            <Badge tone={status.data?.ai === "claude" ? "green" : "neutral"}>{status.data?.ai === "claude" ? "Claude" : "Offline mode"}</Badge>
+          <Row label="Solana AI" hint="Powered by Groq. Set GROQ_API_KEY to enable">
+            <Badge tone={status.data?.ai === "offline" ? "neutral" : "green"}>{status.data?.ai === "groq" ? "Groq" : "Offline mode"}</Badge>
           </Row>
           <Row label="Market data" hint="Jupiter (tokens, prices), GeckoTerminal (charts), DefiLlama (TVL, yields)">
             <Badge>Public APIs</Badge>

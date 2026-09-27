@@ -3,8 +3,6 @@
  * all Solana OS still runs, using public endpoints and falling back to
  * clearly-labelled demo data when an upstream is unreachable.
  */
-import { claudeAvailable } from "./ai/availability";
-
 export type DataModeSetting = "auto" | "live" | "demo";
 
 function env(name: string): string | undefined {
@@ -34,8 +32,9 @@ export const config = {
       const [name, url] = s.split("|");
       return { name: name.trim(), url: (url ?? name).trim() };
     }),
-  anthropicKey: env("ANTHROPIC_API_KEY"),
-  aiModel: env("SOLANA_AI_MODEL") ?? "claude-opus-5",
+  groqKey: env("GROQ_API_KEY"),
+  groqModel: env("GROQ_MODEL") ?? "llama-3.3-70b-versatile",
+  groqApiUrl: env("GROQ_API_URL") ?? "https://api.groq.com/openai/v1",
   authSecret: env("AUTH_SECRET"),
   appUrl: env("APP_URL") ?? (env("VERCEL_PROJECT_PRODUCTION_URL") ? `https://${env("VERCEL_PROJECT_PRODUCTION_URL")}` : undefined),
   googleClientId: env("GOOGLE_CLIENT_ID"),
@@ -48,7 +47,7 @@ export const config = {
 export function capabilities() {
   return {
     dataMode: config.dataMode,
-    ai: config.anthropicKey && claudeAvailable() ? "claude" : "offline",
+    ai: config.groqKey ? ("groq" as const) : ("offline" as const),
     auth: {
       wallet: true,
       google: Boolean(config.googleClientId && config.googleClientSecret),
@@ -57,3 +56,4 @@ export function capabilities() {
     customRpc: config.rpcUrl !== "https://api.mainnet-beta.solana.com",
   };
 }
+

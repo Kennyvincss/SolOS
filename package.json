@@ -14,7 +14,6 @@
     "node": ">=20.9"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.128.0",
     "@wallet-standard/app": "^1.1.1",
     "bs58": "^6.0.0",
     "geist": "^1.7.2",

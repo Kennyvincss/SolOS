@@ -124,7 +124,7 @@ function Chat() {
     ta.style.height = `${Math.min(ta.scrollHeight, 180)}px`;
   }, [input]);
 
-  const engine = msgs.find((m): m is AssistantMsg => m.role === "assistant" && Boolean(m.engine))?.engine ?? (session.capabilities?.ai as "claude" | "offline" | undefined);
+  const engine = msgs.find((m): m is AssistantMsg => m.role === "assistant" && Boolean(m.engine))?.engine ?? session.capabilities?.ai;
   const empty = msgs.length === 0;
 
   return (
@@ -137,7 +137,7 @@ function Chat() {
         <span className="text-[15px] font-semibold">Solana AI</span>
         {engine && (
           <span className="rounded-full border border-line px-2 py-0.5 text-[11px] text-faint" title={engine === "offline" ? "No language model configured; answers are templated from live data." : undefined}>
-            {engine === "claude" ? "Claude" : "Offline mode"}
+            {engine === "groq" ? "Groq" : "Offline mode"}
           </span>
         )}
         <div className="flex-1" />

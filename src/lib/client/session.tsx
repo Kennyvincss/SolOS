@@ -26,7 +26,7 @@ export interface User {
 
 export interface Capabilities {
   dataMode: string;
-  ai: "claude" | "offline";
+  ai: "groq" | "offline";
   auth: { wallet: boolean; google: boolean; email: boolean };
 }
 

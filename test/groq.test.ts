@@ -1,0 +1,74 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { AiEvent } from "@/lib/ai/protocol";
+
+vi.mock("@/lib/config", () => ({
+  config: { groqKey: "gsk_test", groqModel: "test-model", groqApiUrl: "https://groq.test/openai/v1" },
+}));
+const runTool = vi.fn();
+vi.mock("@/lib/ai/tools", async () => {
+  const { z } = await import("zod");
+  return {
+    runTool: (...a: unknown[]) => runTool(...a),
+    TOOL_DEFS: [{ name: "get_token", description: "token", input_schema: { type: "object", properties: { token: { type: "string" } } } }],
+    TOOL_LABELS: { get_token: "Fetching token data" },
+    TOOL_SCHEMAS: { get_token: z.object({ token: z.string() }) },
+  };
+});
+
+const { groqChat, GroqError } = await import("@/lib/ai/groq");
+
+function sse(chunks: unknown[]) {
+  const body = chunks.map((c) => `data: ${JSON.stringify(c)}\n\n`).join("") + "data: [DONE]\n\n";
+  return new Response(new ReadableStream({ start(c) { c.enqueue(new TextEncoder().encode(body)); c.close(); } }), { status: 200 });
+}
+
+async function collect(gen: AsyncGenerator<AiEvent>) {
+  const out: AiEvent[] = [];
+  for await (const e of gen) out.push(e);
+  return out;
+}
+
+afterEach(() => vi.unstubAllGlobals());
+
+describe("groqChat", () => {
+  it("streams tool calls split across chunks, runs the tool, then streams the answer", async () => {
+    const bodies: unknown[] = [];
+    const responses = [
+      sse([
+        { choices: [{ delta: { tool_calls: [{ index: 0, id: "call_1", type: "function", function: { name: "get_token", arguments: '{"tok' } }] } }] },
+        { choices: [{ delta: { tool_calls: [{ index: 0, function: { arguments: 'en":"JUP"}' } }] }, finish_reason: "tool_calls" }] },
+      ]),
+      sse([{ choices: [{ delta: { content: "JUP is " } }] }, { choices: [{ delta: { content: "$0.80." }, finish_reason: "stop" }] }]),
+    ];
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init: RequestInit) => (bodies.push(JSON.parse(String(init.body))), responses.shift()!)));
+    runTool.mockResolvedValue({ result: { priceUsd: 0.8 }, sources: [{ label: "JUP", href: "/tokens/jup", provider: "Jupiter", mode: "live" }] });
+
+    const events = await collect(groqChat([{ role: "user", content: "price of JUP?" }], {}));
+
+    expect(runTool).toHaveBeenCalledWith("get_token", { token: "JUP" }, {});
+    expect(events.filter((e) => e.type === "text").map((e) => (e as { delta: string }).delta).join("")).toBe("JUP is $0.80.");
+    expect(events.find((e) => e.type === "meta")).toMatchObject({ engine: "groq", model: "test-model" });
+    expect(events.some((e) => e.type === "sources")).toBe(true);
+    // The second request carries the assistant tool call and the tool result.
+    const second = bodies[1] as { messages: { role: string; tool_call_id?: string }[]; tools: unknown[] };
+    expect(second.messages.at(-2)).toMatchObject({ role: "assistant" });
+    expect(second.messages.at(-1)).toMatchObject({ role: "tool", tool_call_id: "call_1" });
+    expect(second.tools).toHaveLength(1);
+  });
+
+  it("throws a GroqError with the HTTP status so the caller can fall back", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ error: { message: "Invalid API Key" } }), { status: 401 })));
+    await expect(collect(groqChat([{ role: "user", content: "hi" }], {}))).rejects.toMatchObject({ status: 401 });
+    expect(GroqError).toBeDefined();
+  });
+});
+
+describe("friendlyError", () => {
+  it("maps Groq failures to readable messages", async () => {
+    const { friendlyError } = await import("@/lib/ai/run");
+    expect(friendlyError(new GroqError(401, "Groq 401: Invalid API Key"))).toMatch(/rejected the API key/);
+    expect(friendlyError(new GroqError(429, "Groq 429: Rate limit reached"))).toMatch(/rate limit/);
+    expect(friendlyError(new GroqError(404, "Groq 404: The model `x` does not exist"))).toMatch(/GROQ_MODEL/);
+    expect(friendlyError(new Error("boom"))).toMatch(/temporarily unavailable/);
+  });
+});
