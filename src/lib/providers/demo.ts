@@ -11,7 +11,6 @@ import type {
   ActivityItem,
   NewsItem,
   Portfolio,
-  PredictionMarket,
   PricePoint,
   Protocol,
   Token,
@@ -166,31 +165,6 @@ export function demoNews(): NewsItem[] {
     publishedAt: new Date(now - i * 3 * 3600e3).toISOString(),
     summary: "Placeholder item shown because no live news feed could be reached. Configure NEWS_FEEDS to aggregate real sources.",
     categories,
-  }));
-}
-
-export function demoMarkets(): PredictionMarket[] {
-  const r = seeded("markets");
-  const q: [string, PredictionMarket["category"]][] = [
-    ["Example: Will SOL close the month above its opening price?", "Crypto"],
-    ["Example: Will a new Solana client reach 10% of stake this year?", "Technology"],
-    ["Example: Will the championship final go to overtime?", "Sports"],
-    ["Example: Will the central bank cut rates at the next meeting?", "Markets"],
-    ["Example: Will the film top the box office on opening weekend?", "Culture"],
-    ["Example: Will the proposal pass the next governance vote?", "Politics"],
-    ["Example: Will stablecoin supply on Solana grow this quarter?", "Crypto"],
-    ["Example: Will the product launch before the announced date?", "Technology"],
-  ];
-  return q.map(([question, category], i) => ({
-    id: `demo-market-${i}`,
-    question,
-    category,
-    probability: Math.round((0.1 + r() * 0.8) * 100) / 100,
-    volumeUsd: Math.round(10_000 + r() * 2_000_000),
-    liquidityUsd: Math.round(5_000 + r() * 400_000),
-    closesAt: new Date(Date.now() + (3 + r() * 90) * 86400e3).toISOString(),
-    platform: "Demo market",
-    url: "/markets",
   }));
 }
 

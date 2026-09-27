@@ -27,7 +27,6 @@ describe("intent detection", () => {
   const cases: [string, string][] = [
     ["What Solana tokens are trending today?", "trending_tokens"],
     ["What are whales buying?", "whales"],
-    ["Find Solana prediction markets", "prediction_markets"],
     ["Show me new Solana apps", "new_apps"],
     ["What's happening on Solana today?", "today"],
     ["What can I do with my USDC?", "yield"],

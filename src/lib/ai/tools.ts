@@ -8,7 +8,7 @@ import { getToken, movers, newTokens, topTradedTokens, trendingTokens } from "..
 import { getActivity, getPortfolio } from "../services/wallets";
 import { explainSignature } from "../services/transactions";
 import { addressRisk, domainRisk } from "../services/security";
-import { news, predictionMarkets, protocols, yields, networkStatus } from "../services/ecosystem";
+import { news, protocols, yields, networkStatus } from "../services/ecosystem";
 import { isAddress, isSignature } from "../solana/address";
 import { renderHeadline } from "../solana/explain";
 import { scoreDoc } from "../search/fuzzy";
@@ -35,7 +35,6 @@ export type AiCard =
   | { kind: "risk"; data: unknown }
   | { kind: "apps"; data: unknown }
   | { kind: "news"; data: unknown }
-  | { kind: "markets"; data: unknown }
   | { kind: "yields"; data: unknown }
   | { kind: "activity"; address: string; data: unknown };
 
@@ -68,7 +67,6 @@ export const TOOL_SCHEMAS = {
   find_apps: z.object({ category: z.enum(APP_CATEGORIES).optional(), query: z.string().max(100).optional() }),
   get_news: z.object({ topic: z.string().max(60).optional() }),
   get_defi_yields: z.object({ asset: z.string().max(20).optional(), category: z.string().max(40).optional() }),
-  get_prediction_markets: z.object({ category: z.string().max(30).optional() }),
   get_protocols: z.object({ names: z.array(z.string().max(60)).max(6).optional() }),
   get_network_status: z.object({}),
 } as const;
@@ -76,7 +74,7 @@ export const TOOL_SCHEMAS = {
 export type ToolName = keyof typeof TOOL_SCHEMAS;
 
 export const TOOL_DEFS: { name: ToolName; description: string; input_schema: Record<string, unknown> }[] = [
-  { name: "search_solana", description: "Unified Solana OS search across tokens, apps, protocols, news, prediction markets and extensions. Use for anything you need to locate.", input_schema: { type: "object", properties: { query: { type: "string" } }, required: ["query"] } },
+  { name: "search_solana", description: "Unified Solana OS search across tokens, apps, protocols, news and extensions. Use for anything you need to locate.", input_schema: { type: "object", properties: { query: { type: "string" } }, required: ["query"] } },
   { name: "get_token", description: "Live market data for one token: price, market cap, volume, liquidity, holders, 1h/24h/7d change, verification and audit flags. Accepts a mint address or a symbol like SOL or JUP.", input_schema: { type: "object", properties: { token: { type: "string", description: "Mint address or symbol" } }, required: ["token"] } },
   { name: "get_token_list", description: "Lists of tokens: trending (attention), top_traded (volume), new (recently launched), gainers or losers (24h, liquid tokens only).", input_schema: { type: "object", properties: { list: { type: "string", enum: [...TOKEN_LISTS] }, limit: { type: "integer", minimum: 1, maximum: 20 } }, required: ["list"] } },
   { name: "get_wallet_portfolio", description: "Current holdings and USD value of a Solana wallet from on-chain balances. Use address \"me\" for the user's connected wallet.", input_schema: { type: "object", properties: { address: { type: "string" } }, required: ["address"] } },
@@ -86,7 +84,6 @@ export const TOOL_DEFS: { name: ToolName; description: string; input_schema: Rec
   { name: "find_apps", description: "Find Solana applications from the Solana OS App Store by category and/or keyword.", input_schema: { type: "object", properties: { category: { type: "string", enum: [...APP_CATEGORIES] }, query: { type: "string" } } } },
   { name: "get_news", description: "Latest Solana ecosystem headlines with their sources, optionally filtered by a topic keyword.", input_schema: { type: "object", properties: { topic: { type: "string" } } } },
   { name: "get_defi_yields", description: "Solana DeFi yield opportunities (APY, TVL, project) from DefiLlama. Filter by asset symbol (e.g. USDC, SOL) or category (Lending, Liquid staking, Liquidity providing, Perpetuals, Restaking, Stablecoins, Yield).", input_schema: { type: "object", properties: { asset: { type: "string" }, category: { type: "string" } } } },
-  { name: "get_prediction_markets", description: "Prediction markets on Solana with current probability, volume and closing time.", input_schema: { type: "object", properties: { category: { type: "string" } } } },
   { name: "get_protocols", description: "Solana DeFi protocols with TVL and 1d/7d change from DefiLlama. Pass names to compare specific protocols, or omit for the top list.", input_schema: { type: "object", properties: { names: { type: "array", items: { type: "string" } } } } },
   { name: "get_network_status", description: "Solana network status: current slot, epoch progress, throughput (TPS) and priority fee percentiles.", input_schema: { type: "object", properties: {} } },
 ];
@@ -102,7 +99,6 @@ export const TOOL_LABELS: Record<ToolName, string> = {
   find_apps: "Searching the App Store",
   get_news: "Reading news",
   get_defi_yields: "Loading DeFi yields",
-  get_prediction_markets: "Loading prediction markets",
   get_protocols: "Loading protocol data",
   get_network_status: "Checking network status",
 };
@@ -244,16 +240,6 @@ export async function runTool(name: ToolName, rawInput: unknown, ctx: ToolContex
         result: { dataMode: r.meta.mode, note: "APYs are variable and backward-looking; reward APY can change quickly.", pools: items.map((p) => ({ project: p.project, symbol: p.symbol, apy: round(p.apy, 3), baseApy: round(p.apyBase, 3), rewardApy: round(p.apyReward, 3), tvlUsd: round(p.tvlUsd), category: p.category, ilRisk: p.ilRisk })) },
         card: { kind: "yields", data: { pools: items, meta: r.meta } },
         sources: [src("DeFi hub", `/defi${asset ? `?asset=${asset}` : ""}`, r.meta)],
-      };
-    }
-    case "get_prediction_markets": {
-      const r = await predictionMarkets();
-      const cat = (input.category as string | undefined)?.toLowerCase();
-      const items = r.data.filter((m) => !cat || m.category.toLowerCase() === cat).slice(0, 10);
-      return {
-        result: { dataMode: r.meta.mode, note: r.meta.note, markets: items.map((m) => ({ question: m.question, probability: m.probability, volumeUsd: m.volumeUsd, closesAt: m.closesAt, platform: m.platform })) },
-        card: { kind: "markets", data: { items, meta: r.meta } },
-        sources: [src("Prediction markets", "/markets", r.meta)],
       };
     }
     case "get_protocols": {

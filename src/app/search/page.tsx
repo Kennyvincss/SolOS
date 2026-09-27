@@ -14,7 +14,7 @@ import { useSession } from "@/lib/client/session";
 import { useStore } from "@/lib/client/store";
 import type { SearchHit, SearchResponse } from "@/lib/types";
 
-const AI_INTENTS = new Set(["question", "trending_tokens", "whales", "today", "compare", "yield", "new_apps", "prediction_markets", "portfolio"]);
+const AI_INTENTS = new Set(["question", "trending_tokens", "whales", "today", "compare", "yield", "new_apps", "portfolio"]);
 
 /** Streams a short Solana AI answer at the top of the results page. */
 function InlineAnswer({ question }: { question: string }) {
@@ -61,7 +61,7 @@ function HitRow({ h }: { h: SearchHit }) {
       )
     ) : (
       <span className="grid h-9 w-9 place-items-center rounded-xl bg-surface-2 text-muted">
-        <Icon name={h.kind === "news" ? "Newspaper" : h.kind === "market" ? "Target" : h.kind === "wallet" ? "Wallet" : h.kind === "transaction" ? "ReceiptText" : h.kind === "developer" ? "Code2" : h.icon ?? "Compass"} size={16} />
+        <Icon name={h.kind === "news" ? "Newspaper" : h.kind === "wallet" ? "Wallet" : h.kind === "transaction" ? "ReceiptText" : h.kind === "developer" ? "Code2" : h.icon ?? "Compass"} size={16} />
       </span>
     );
   return (
@@ -93,7 +93,7 @@ function Results() {
       {!q && (
         <div className="py-8">
           <h1 className="mb-2 text-center text-[24px] font-semibold tracking-[-0.02em]">Search everything on Solana</h1>
-          <p className="mb-6 text-center text-[14px] text-muted">Tokens, wallets, transactions, apps, protocols, NFTs, news, prediction markets, developers and more.</p>
+          <p className="mb-6 text-center text-[14px] text-muted">Tokens, wallets, transactions, apps, protocols, NFTs, news, developers and more.</p>
           <SuggestionChips />
           {recent.length > 0 && (
             <div className="mx-auto mt-10 max-w-md">

@@ -13,7 +13,7 @@ import { Wordmark, LogoMark } from "./logo";
 import { shortAddr } from "@/lib/format";
 import { openCommandBar } from "./command-bar";
 
-const SIDEBAR = ["/", "/search", "/discover", "/apps", "/extensions", "/ai", "/markets", "/tokens", "/wallets", "/defi", "/rwa", "/payments", "/news", "/security", "/portfolio", "/notifications", "/settings"];
+const SIDEBAR = ["/", "/search", "/discover", "/apps", "/extensions", "/ai", "/tokens", "/wallets", "/defi", "/rwa", "/payments", "/news", "/security", "/portfolio", "/notifications", "/settings"];
 const LABEL: Record<string, string> = { "/ai": "AI" };
 
 function isActive(path: string, href: string) {

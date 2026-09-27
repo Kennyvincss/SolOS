@@ -7,7 +7,7 @@ import { createHost, type ExtensionHost, type ExtensionManifest } from "@/lib/ex
 import { apiGet } from "@/lib/client/fetch";
 import { useActions, useStore } from "@/lib/client/store";
 import { useSession } from "@/lib/client/session";
-import type { NewsItem, Portfolio, PredictionMarket, Protocol, RiskReport, Sourced, YieldPool } from "@/lib/types";
+import type { NewsItem, Portfolio, Protocol, RiskReport, Sourced, YieldPool } from "@/lib/types";
 import type { NetworkStatus } from "@/lib/services/ecosystem";
 import { fmtNum, fmtUsd, shortAddr } from "@/lib/format";
 import { isAddress } from "@/lib/solana/address";
@@ -179,26 +179,6 @@ function ScannerWidget({ host, kind }: WidgetProps & { kind: "token" | "any" }) 
   );
 }
 
-function MarketsWidget({ host }: WidgetProps) {
-  const { data, error } = useHostCall<Sourced<PredictionMarket[]>>(() => host.markets.list(), [], 60_000);
-  if (error) return <p className="text-[13px] text-muted">{error}</p>;
-  if (!data) return <SkeletonRows rows={3} />;
-  return (
-    <div className="space-y-3">
-      <DataBadge meta={data.meta} />
-      {data.data.slice(0, 4).map((m) => (
-        <div key={m.id}>
-          <div className="flex justify-between gap-3 text-[13px]">
-            <span className="line-clamp-1">{m.question}</span>
-            <span className="tabular font-medium">{Math.round(m.probability * 100)}%</span>
-          </div>
-          <Meter value={m.probability} className="mt-1" />
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function NftWidget({ host }: WidgetProps) {
   const session = useSession();
   const { data } = useHostCall<Sourced<Portfolio> | null>(() => host.portfolio.mine(), [session.address]);
@@ -361,7 +341,6 @@ const WIDGETS: Record<string, (p: WidgetProps) => ReactNode> = {
   "solanaos.token-scanner": (p) => <ScannerWidget {...p} kind="token" />,
   "solanaos.portfolio-tracker": (p) => <PortfolioWidget {...p} />,
   "solanaos.pnl-tracker": () => <NeedsProvider text="an indexer with historical cost basis (e.g. Helius or Birdeye)" />,
-  "solanaos.prediction-tracker": (p) => <MarketsWidget {...p} />,
   "solanaos.nft-tracker": (p) => <NftWidget {...p} />,
   "solanaos.defi-dashboard": (p) => <DefiWidget {...p} />,
   "solanaos.network-monitor": (p) => <NetworkWidget {...p} />,

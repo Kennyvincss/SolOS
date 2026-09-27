@@ -184,7 +184,7 @@ export function PortfolioView({ address, own }: { address: string; own?: boolean
             )}
           </Card>
           <Card className="p-4 sm:p-5">
-            <h3 className="text-[14px] font-semibold">Lending, liquidity, perps & prediction positions</h3>
+            <h3 className="text-[14px] font-semibold">Lending, liquidity & perps positions</h3>
             <p className="mt-2 text-[13px] leading-relaxed text-muted">
               Positions held inside protocols (Kamino, marginfi, Drift, Orca, Raydium…) live in program accounts, not token balances. They appear here once a position-indexing provider is connected. Until then we show nothing rather than estimates.
             </p>

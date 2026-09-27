@@ -36,8 +36,6 @@ function plan(q: string, ctx: ToolContext): Plan {
       return [{ tool: "get_token_list", input: { list: "trending", limit: 10 } }];
     case "whales":
       return [{ tool: "get_token_list", input: { list: "top_traded", limit: 10 } }];
-    case "prediction_markets":
-      return [{ tool: "get_prediction_markets", input: {} }];
     case "new_apps":
       return [{ tool: "get_token_list", input: { list: "new", limit: 8 } }, { tool: "find_apps", input: {} }];
     case "today":
@@ -104,10 +102,6 @@ function write(tool: ToolName, out: ToolOutput): string {
     case "get_defi_yields": {
       const pools = (r.pools as { project: string; symbol: string; apy?: number; tvlUsd: number }[]) ?? [];
       return `**Yield opportunities on Solana** (${r.dataMode === "demo" ? "demo placeholders" : "DefiLlama"}, sorted by TVL):\n\n${pools.slice(0, 8).map((p) => `- **${p.project}** ${p.symbol}: ${p.apy !== undefined ? `${p.apy.toFixed(2)}% APY` : "APY n/a"}, TVL ${fmtUsd(p.tvlUsd, { compact: true })}`).join("\n")}\n\nAPYs are variable and include smart-contract risk. This is information, not financial advice. [Compare in the DeFi hub](/defi)${demo}`;
-    }
-    case "get_prediction_markets": {
-      const m = (r.markets as { question: string; probability: number; platform: string }[]) ?? [];
-      return `**Prediction markets**\n\n${m.slice(0, 8).map((x) => `- ${x.question} — **${Math.round(x.probability * 100)}%** (${x.platform})`).join("\n")}\n\nProbabilities are market prices, not forecasts.${demo}\n\n[Browse markets](/markets)`;
     }
     case "get_protocols": {
       const p = (r.protocols as { name: string; category: string; tvlUsdOnSolana?: number; change7d?: number }[]) ?? [];

@@ -11,7 +11,7 @@ import { extractSolanaId } from "../solana/address";
 const CATEGORY_ALIASES: Record<string, AppCategory> = {
   defi: "DeFi", lending: "DeFi", borrow: "DeFi", staking: "DeFi", yield: "DeFi", dex: "Trading", dexs: "Trading",
   trading: "Trading", perps: "Trading", perpetuals: "Trading", swap: "Trading", payments: "Payments", payment: "Payments",
-  prediction: "Prediction", nft: "NFTs", nfts: "NFTs", gaming: "Gaming", games: "Gaming", game: "Gaming", ai: "AI",
+  nft: "NFTs", nfts: "NFTs", gaming: "Gaming", games: "Gaming", game: "Gaming", ai: "AI",
   agents: "AI", social: "Social", rwa: "RWA", rwas: "RWA", depin: "DePIN", wallet: "Wallets", wallets: "Wallets",
   developer: "Developer Tools", developers: "Developer Tools", "dev tools": "Developer Tools", infrastructure: "Infrastructure",
   infra: "Infrastructure", rpc: "Infrastructure", dao: "DAOs", daos: "DAOs", security: "Security", multisig: "Security",
@@ -39,9 +39,6 @@ export function detectIntent(raw: string): SearchIntent {
   }
   if (/\b(whale|whales|smart money|smart wallets?|big wallets?)\b/.test(lower)) {
     return { type: "whales", label: "Smart wallet activity", href: "/discover#smart-wallets", aiPrompt: q };
-  }
-  if (/\b(prediction|predict|betting|bets?|odds|polymarket|forecast)\b/.test(lower)) {
-    return { type: "prediction_markets", label: "Prediction markets", href: "/markets", aiPrompt: q };
   }
   if (/\b(new|newest|latest|recent)\b.*\b(apps?|projects?|protocols?|launch(es)?)\b/.test(lower)) {
     return { type: "new_apps", label: "New on Solana", href: "/discover#new", aiPrompt: q };

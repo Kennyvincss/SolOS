@@ -19,7 +19,6 @@ const STARTERS = [
   "What are whales buying?",
   "Find new Solana projects",
   "Compare Kamino and marginfi",
-  "Show me Solana prediction markets",
   "What can I do with my USDC?",
   "Explain JUP to me like I'm a beginner",
   "Is jup-ag-claim.com safe?",

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ArrowDownLeft, ArrowUpRight, Boxes, CheckCircle2, Coins, ExternalLink, Layers, Repeat, XCircle } from "lucide-react";
 import { appLogo } from "@/lib/catalog/apps";
-import type { ActivityItem, AppEntry, AppMetrics, NewsItem, Portfolio, PredictionMarket, RiskReport, Token } from "@/lib/types";
+import type { ActivityItem, AppEntry, AppMetrics, NewsItem, Portfolio, RiskReport, Token } from "@/lib/types";
 import { fmtNum, fmtUsd, shortAddr, timeAgo } from "@/lib/format";
 import { Badge, Change, Monogram, RISK_STYLE, RiskPill, cn } from "./ui";
 import { Donut, Meter } from "./charts";
@@ -177,33 +177,6 @@ export function NewsRow({ n, compact }: { n: NewsItem; compact?: boolean }) {
       </div>
       <div className={cn("mt-1 font-medium leading-snug group-hover:text-fg", compact ? "line-clamp-2 text-[13.5px]" : "text-[15px]")}>{n.title}</div>
       {!compact && n.summary && <div className="mt-1 line-clamp-2 text-[13px] leading-relaxed text-muted">{n.summary}</div>}
-    </a>
-  );
-}
-
-/* ------------------------------------------------------------------ markets */
-
-export function MarketCard({ m }: { m: PredictionMarket }) {
-  const internal = m.url.startsWith("/");
-  return (
-    <a href={m.url} target={internal ? undefined : "_blank"} rel="noopener noreferrer" className="card card-hover flex flex-col gap-3 p-4">
-      <div className="flex items-center justify-between text-[11.5px] text-faint">
-        <span>{m.category}</span>
-        <span>{m.platform}</span>
-      </div>
-      <div className="line-clamp-3 min-h-[3.9em] text-[14.5px] font-medium leading-snug">{m.question}</div>
-      <div>
-        <div className="mb-1.5 flex items-end justify-between">
-          <span className="text-[24px] font-semibold tabular leading-none">{Math.round(m.probability * 100)}%</span>
-          <span className="text-[11.5px] text-muted">Yes</span>
-        </div>
-        <Meter value={m.probability} />
-      </div>
-      <div className="flex justify-between text-[11.5px] text-muted tabular">
-        <span>Vol {fmtUsd(m.volumeUsd, { compact: true })}</span>
-        <span>Liq {fmtUsd(m.liquidityUsd, { compact: true })}</span>
-        <span>{m.closesAt ? `Closes ${timeAgo(m.closesAt)}` : ""}</span>
-      </div>
     </a>
   );
 }

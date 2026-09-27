@@ -6,7 +6,7 @@ import { EXTENSIONS } from "../extensions/catalog";
 import { scoreDoc, normalize } from "./fuzzy";
 import { detectIntent } from "./intent";
 import { searchTokens } from "../services/tokens";
-import { news, predictionMarkets, protocols } from "../services/ecosystem";
+import { news, protocols } from "../services/ecosystem";
 import { shortAddr, fmtUsd, fmtPct } from "../format";
 
 /**
@@ -25,14 +25,13 @@ const LABELS: Record<SearchKind, string> = {
   project: "Projects",
   protocol: "Protocols",
   news: "News",
-  market: "Prediction markets",
   extension: "Extensions",
   page: "Go to",
   nft: "NFTs",
   developer: "Developers",
 };
 
-const ORDER: SearchKind[] = ["wallet", "transaction", "token", "app", "protocol", "market", "news", "extension", "developer", "page", "project", "nft"];
+const ORDER: SearchKind[] = ["wallet", "transaction", "token", "app", "protocol", "news", "extension", "developer", "page", "project", "nft"];
 
 function withBudget<T>(p: Promise<T>, ms: number): Promise<T | null> {
   return Promise.race([p.catch(() => null), new Promise<null>((r) => setTimeout(() => r(null), ms))]);
@@ -86,10 +85,9 @@ export async function search(query: string, opts: { limitPerGroup?: number } = {
   const tokenQuery = isFreeText ? q.replace(/^\$/, "") : intent.entity ?? "";
   const shortEnough = tokenQuery.split(/\s+/).length <= 3;
 
-  const [tokens, newsRes, marketsRes, protoRes] = await Promise.all([
+  const [tokens, newsRes, protoRes] = await Promise.all([
     tokenQuery && (shortEnough || intent.type === "analyze_wallet") ? withBudget(searchTokens(tokenQuery), 2500) : null,
     isFreeText && q ? withBudget(news(), 1200) : null,
-    isFreeText && q ? withBudget(predictionMarkets(), 1000) : null,
     isFreeText && q ? withBudget(protocols(), 1200) : null,
   ]);
 
@@ -119,15 +117,6 @@ export async function search(query: string, opts: { limitPerGroup?: number } = {
       const s = scoreDoc(q, n.title, [n.summary ?? ""]);
       if (s > 0.5) hits.push({ kind: "news", id: n.id, title: n.title, subtitle: `${n.source} · ${new Date(n.publishedAt).toLocaleDateString()}`, href: n.url, score: s * 0.85, meta: { mode: newsRes.meta.mode } });
     }
-  }
-  if (marketsRes) {
-    for (const m of marketsRes.data) {
-      const s = scoreDoc(q, m.question, [m.category, m.platform]);
-      if (s > 0.5 || intent.type === "prediction_markets") {
-        hits.push({ kind: "market", id: m.id, title: m.question, subtitle: `${Math.round(m.probability * 100)}% · ${m.platform}`, href: m.url, score: Math.max(s, 0.6) * 0.85, badge: marketsRes.meta.mode === "demo" ? "Demo" : undefined });
-      }
-    }
-    if (marketsRes.meta.mode === "demo" && hits.some((h) => h.kind === "market")) meta.push(marketsRes.meta);
   }
   if (protoRes) {
     const appNames = new Set(APPS.map((a) => normalize(a.name)));

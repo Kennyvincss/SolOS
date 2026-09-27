@@ -25,7 +25,7 @@ const PILLARS = [
   { icon: ReceiptText, title: "Understand transactions", body: "Any signature, explained in plain English.", href: "/tx" },
   { icon: ShieldCheck, title: "Stay safe", body: "Transparent risk indicators before you sign or buy.", href: "/security" },
   { icon: Puzzle, title: "Install extensions", body: "Whale alerts, scanners and trackers in your workspace.", href: "/extensions" },
-  { icon: Target, title: "Explore markets", body: "Prediction markets, DeFi yields and RWAs.", href: "/markets" },
+  { icon: Target, title: "Explore DeFi & RWAs", body: "Yields, lending, staking and tokenized real-world assets.", href: "/defi" },
   { icon: Code2, title: "Build on Solana", body: "Submit apps and extensions, use the SDK and APIs.", href: "/developers" },
 ];
 

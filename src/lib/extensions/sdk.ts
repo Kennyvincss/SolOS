@@ -25,7 +25,6 @@ export const PERMISSIONS = {
   "programs:read": "Read on-chain accounts",
   "network:read": "Read Solana network status",
   "news:read": "Read news headlines",
-  "markets:read": "Read prediction market data",
   "defi:read": "Read DeFi protocols and yields",
 } as const;
 export type Permission = keyof typeof PERMISSIONS;
@@ -96,7 +95,6 @@ export interface ExtensionHost {
   programs: { account(address: string): Promise<unknown> };
   network: { status(): Promise<unknown> };
   news: { latest(): Promise<unknown> };
-  markets: { list(): Promise<unknown> };
   defi: { overview(): Promise<unknown> };
 }
 
@@ -203,12 +201,6 @@ export function createHost(manifest: ExtensionManifest, deps: HostDeps): Extensi
       async latest() {
         need("news:read");
         return deps.fetchJson(`/api/news`);
-      },
-    },
-    markets: {
-      async list() {
-        need("markets:read");
-        return deps.fetchJson(`/api/markets`);
       },
     },
     defi: {

@@ -11,7 +11,7 @@ export const SUGGESTIONS = [
   "Show me new Solana apps",
   "What are whales buying?",
   "Analyze this wallet",
-  "Find Solana prediction markets",
+  "What can I do with my USDC?",
   "What's happening on Solana today?",
 ];
 

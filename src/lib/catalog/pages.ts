@@ -16,7 +16,6 @@ export const PAGES: PageDef[] = [
   { href: "/apps", title: "App Store", description: "Discover Solana applications", icon: "LayoutGrid", keywords: ["apps", "dapps", "store", "applications"], section: "core", nav: true },
   { href: "/extensions", title: "Extensions", description: "Add tools to your Solana OS", icon: "Puzzle", keywords: ["plugins", "widgets", "tools", "add-ons"], section: "core", nav: true },
   { href: "/ai", title: "Solana AI", description: "Ask anything about Solana", icon: "Sparkles", keywords: ["assistant", "chat", "ask", "gpt"], section: "core", nav: true },
-  { href: "/markets", title: "Markets", description: "Prediction markets on Solana", icon: "Target", keywords: ["prediction", "betting", "odds"], section: "explore", nav: true },
   { href: "/tokens", title: "Tokens", description: "Prices, charts and token pages", icon: "Coins", keywords: ["prices", "coins", "charts", "memecoins"], section: "explore", nav: true },
   { href: "/wallets", title: "Wallets", description: "Explore and follow any public wallet", icon: "Wallet", keywords: ["explorer", "address", "follow", "whales"], section: "explore", nav: true },
   { href: "/tx", title: "Transaction Explainer", description: "Understand any transaction in plain English", icon: "ReceiptText", keywords: ["signature", "explain", "tx"], section: "explore" },

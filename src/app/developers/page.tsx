@@ -54,7 +54,6 @@ const API = [
   ["GET", "/api/apps", "App registry + live metrics"],
   ["GET", "/api/defi", "Protocols, yields, DEX volume"],
   ["GET", "/api/news", "Aggregated news with sources"],
-  ["GET", "/api/markets", "Prediction markets"],
   ["GET", "/api/network", "Slot, TPS, priority fees"],
   ["POST", "/api/ai/chat", "Solana AI (NDJSON stream)"],
   ["POST", "/api/ai/ask", "Solana AI (single response)"],

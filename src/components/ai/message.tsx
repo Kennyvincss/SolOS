@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { CheckCircle2, Circle, Database, FlaskConical, Loader2, XCircle } from "lucide-react";
 import type { AiCard, AiSource } from "@/lib/ai/tools";
-import type { AppEntry, DataMeta, NewsItem, Portfolio, PredictionMarket, RiskReport, Token, TxExplanation, YieldPool, ActivityItem } from "@/lib/types";
+import type { AppEntry, DataMeta, NewsItem, Portfolio, RiskReport, Token, TxExplanation, YieldPool, ActivityItem } from "@/lib/types";
 import { fmtUsd, shortAddr } from "@/lib/format";
 import { renderHeadline } from "@/lib/solana/explain";
-import { ActivityList, AppCard, HoldingsTable, MarketCard, Markdown, NewsRow, RiskList, TokenRow } from "../domain";
+import { ActivityList, AppCard, HoldingsTable, Markdown, NewsRow, RiskList, TokenRow } from "../domain";
 import { Change, DataBadge, cn } from "../ui";
 
 export interface ToolState {
@@ -147,21 +147,6 @@ export function DataCard({ card, viewer }: { card: AiCard; viewer?: string | nul
             ))}
           </div>
         </CardShell>
-      );
-    }
-    case "markets": {
-      const { items, meta } = card.data as { items: PredictionMarket[]; meta: DataMeta };
-      return (
-        <div>
-          <div className="mb-2 flex justify-end">
-            <DataBadge meta={meta} />
-          </div>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {items.slice(0, 4).map((m) => (
-              <MarketCard key={m.id} m={m} />
-            ))}
-          </div>
-        </div>
       );
     }
     case "yields": {

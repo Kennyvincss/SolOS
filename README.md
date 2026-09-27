@@ -4,7 +4,7 @@
 
 Solana OS is a gateway to the Solana ecosystem: universal search, an app store,
 Solana AI, wallet and portfolio, token and transaction explorers, a security
-center, DeFi/RWA/payments hubs, prediction markets, news, a social feed,
+center, DeFi/RWA/payments hubs, news, a social feed,
 extensions and a developer platform, all in one fast, dark-first interface.
 
 ## Deploy to Vercel
@@ -45,7 +45,6 @@ demo data is displayed.
 | Price charts | GeckoTerminal OHLCV |
 | Protocol TVL, DEX volume, yields | DefiLlama |
 | News | RSS/Atom feeds (`NEWS_FEEDS`) |
-| Prediction markets | Adapter endpoint (`PREDICTION_MARKETS_URL`) |
 | Solana AI | Groq (`GROQ_API_KEY`; model auto-selected, or pinned with `GROQ_MODEL`) with tool calls into the services above |
 
 With `DATA_MODE=auto` (default), an unreachable provider falls back to a
@@ -116,7 +115,7 @@ src/
 - **Phase 1–3 (in this build):** landing and personalized home, universal
   search, token/wallet/transaction search, App Store, Solana AI, wallet
   connection, portfolio, extensions, discover, wallet following and alerts,
-  notifications, security center, news, DeFi, prediction markets, RWA,
+  notifications, security center, news, DeFi, RWA,
   payments (Solana Pay requests), social feed, developer platform.
 - **Next integrations:** indexer for PnL, positions and NFTs (e.g. Helius DAS
   plus webhooks for server-side alerts); a database-backed `StorageAdapter`;

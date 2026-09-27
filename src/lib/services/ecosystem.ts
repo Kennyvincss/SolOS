@@ -1,8 +1,8 @@
 import "server-only";
-import type { AppMetrics, NewsItem, PredictionMarket, Protocol, Sourced, YieldPool } from "../types";
+import type { AppMetrics, NewsItem, Protocol, Sourced, YieldPool } from "../types";
 import { solanaDexVolume, solanaProtocols, solanaYields } from "../providers/defillama";
 import { fetchNews } from "../providers/news";
-import { demoMarkets, demoNews, demoProtocols, demoYields } from "../providers/demo";
+import { demoNews, demoProtocols, demoYields } from "../providers/demo";
 import { withSource } from "../providers/source";
 import { cached, fetchJson } from "../providers/http";
 import { APPS } from "../catalog/apps";
@@ -57,23 +57,6 @@ export async function appMetrics(): Promise<Sourced<Record<string, AppMetrics>>>
 
 export async function news(): Promise<Sourced<NewsItem[]>> {
   return withSource("RSS feeds", fetchNews, demoNews);
-}
-
-/**
- * Prediction markets. There is no single public API for Solana prediction
- * markets, so a normalised adapter endpoint can be configured with
- * PREDICTION_MARKETS_URL returning `PredictionMarket[]`. Without it we show
- * demo markets, labelled as such.
- */
-export async function predictionMarkets(): Promise<Sourced<PredictionMarket[]>> {
-  const url = process.env.PREDICTION_MARKETS_URL;
-  if (!url) {
-    return {
-      data: demoMarkets(),
-      meta: { provider: "Demo dataset", mode: "demo", fetchedAt: new Date().toISOString(), note: "No prediction market provider configured (PREDICTION_MARKETS_URL)." },
-    };
-  }
-  return withSource("Prediction markets adapter", () => cached("markets", 60_000, () => fetchJson<PredictionMarket[]>(url)), demoMarkets);
 }
 
 export interface NetworkStatus {

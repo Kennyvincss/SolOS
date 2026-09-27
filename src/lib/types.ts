@@ -177,7 +177,6 @@ export const APP_CATEGORIES = [
   "DeFi",
   "Trading",
   "Payments",
-  "Prediction",
   "NFTs",
   "Gaming",
   "AI",
@@ -256,24 +255,6 @@ export interface NewsItem {
   categories: NewsCategory[];
 }
 
-/* ------------------------------------------------------- prediction markets */
-
-export const MARKET_CATEGORIES = ["Crypto", "Sports", "Politics", "Technology", "Markets", "Culture", "Other"] as const;
-export type MarketCategory = (typeof MARKET_CATEGORIES)[number];
-
-export interface PredictionMarket {
-  id: string;
-  question: string;
-  category: MarketCategory;
-  /** 0-1 */
-  probability: number;
-  volumeUsd?: number;
-  liquidityUsd?: number;
-  closesAt?: string;
-  platform: string;
-  url: string;
-}
-
 /* ---------------------------------------------------------------------- defi */
 
 export const DEFI_CATEGORIES = [
@@ -328,7 +309,6 @@ export type SearchKind =
   | "project"
   | "protocol"
   | "news"
-  | "market"
   | "extension"
   | "page"
   | "nft"
@@ -354,7 +334,6 @@ export interface SearchIntent {
     | "whales"
     | "analyze_wallet"
     | "explain_tx"
-    | "prediction_markets"
     | "today"
     | "compare"
     | "category"

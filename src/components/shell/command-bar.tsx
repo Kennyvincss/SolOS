@@ -119,9 +119,9 @@ export function CommandBar() {
       .slice(0, 3)
       .forEach(({ p }) => out.push({ id: p.href, group: "Go to", title: p.title, subtitle: p.description, href: p.href, icon: <Icon name={p.icon} size={16} /> }));
     remote?.groups
-      .filter((g) => g.kind === "news" || g.kind === "market")
+      .filter((g) => g.kind === "news")
       .flatMap((g) => g.hits.slice(0, 2).map((h) => ({ ...h, group: g.label })))
-      .forEach((h) => out.push({ id: `${h.kind}:${h.id}`, group: h.group, title: h.title, subtitle: h.subtitle, href: h.href, icon: <Icon name={h.kind === "news" ? "Newspaper" : "Target"} size={16} /> }));
+      .forEach((h) => out.push({ id: `${h.kind}:${h.id}`, group: h.group, title: h.title, subtitle: h.subtitle, href: h.href, icon: <Icon name="Newspaper" size={16} /> }));
     out.push({ id: "ai", group: "Solana AI", title: `Ask Solana AI: “${t}”`, href: `/ai?q=${encodeURIComponent(t)}`, icon: <Sparkles size={16} className="text-sol-green" /> });
     out.push({ id: "all", group: "Search", title: `Search everything for “${t}”`, href: `/search?q=${encodeURIComponent(t)}`, icon: <Search size={16} /> });
     return out;
