@@ -1,6 +1,6 @@
 import "server-only";
 import { config } from "../config";
-import { GroqError, groqChat } from "./groq";
+import { GroqError, groqChat, isModelError } from "./groq";
 import { offlineChat } from "./offline";
 import type { AiEvent, ChatTurn } from "./protocol";
 import type { ToolContext } from "./tools";
@@ -8,10 +8,12 @@ import type { ToolContext } from "./tools";
 /** Turn a Groq failure into a message people can act on (never raw API JSON). */
 export function friendlyError(err: unknown): string {
   if (err instanceof GroqError) {
+    const detail = err.message.replace(/^Groq \d+:\s*/, "").slice(0, 200);
     if (err.status === 401) return "Solana AI can't connect: Groq rejected the API key. Check GROQ_API_KEY.";
     if (err.status === 429) return "Solana AI is busy right now (Groq rate limit). Please try again in a minute.";
-    if (/model/i.test(err.message) && (err.status === 404 || err.status === 400)) return "Solana AI's model isn't available on Groq. Check GROQ_MODEL.";
+    if (isModelError(err)) return `Solana AI's model isn't available on Groq (${detail}). Remove GROQ_MODEL to auto-select, or set it to a model from console.groq.com/docs/models.`;
     if (err.status === 413) return "That request was too large for Solana AI. Try a shorter question.";
+    return `Solana AI request failed (Groq ${err.status}: ${detail}).`;
   }
   return "Solana AI is temporarily unavailable. Please try again in a moment.";
 }

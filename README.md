@@ -46,7 +46,7 @@ demo data is displayed.
 | Protocol TVL, DEX volume, yields | DefiLlama |
 | News | RSS/Atom feeds (`NEWS_FEEDS`) |
 | Prediction markets | Adapter endpoint (`PREDICTION_MARKETS_URL`) |
-| Solana AI | Groq (`GROQ_API_KEY`, model via `GROQ_MODEL`) with tool calls into the services above |
+| Solana AI | Groq (`GROQ_API_KEY`; model auto-selected, or pinned with `GROQ_MODEL`) with tool calls into the services above |
 
 With `DATA_MODE=auto` (default), an unreachable provider falls back to a
 **demo dataset that is labelled as demo everywhere it appears**. Wallet

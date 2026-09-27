@@ -20,6 +20,10 @@ export class GroqError extends Error {
   }
 }
 
+export function isModelError(e: GroqError) {
+  return (e.status === 404 || e.status === 400) && /model/i.test(e.message) && /(not found|does not exist|decommissioned|deprecated|not supported|no chat model)/i.test(e.message);
+}
+
 type Msg =
   | { role: "system" | "user"; content: string }
   | { role: "assistant"; content: string | null; tool_calls?: ToolCall[] }
@@ -36,17 +40,56 @@ interface Delta {
   tool_calls?: { index: number; id?: string; type?: string; function?: { name?: string; arguments?: string } }[];
 }
 
+/**
+ * Preferred tool-calling models, best first. Groq retires models over time, so
+ * when GROQ_MODEL isn't set we ask the API which models this key can use and
+ * take the first match.
+ */
+export const PREFERRED_MODELS = [
+  "openai/gpt-oss-120b",
+  "moonshotai/kimi-k2-instruct-0905",
+  "moonshotai/kimi-k2-instruct",
+  "llama-3.3-70b-versatile",
+  "meta-llama/llama-4-maverick-17b-128e-instruct",
+  "qwen/qwen3-32b",
+  "openai/gpt-oss-20b",
+  "meta-llama/llama-4-scout-17b-16e-instruct",
+  "llama-3.1-8b-instant",
+];
+const NOT_CHAT = /whisper|tts|playai|guard|prompt-guard|orpheus|distil|compound|allam/i;
+
+let discovered: { model: string; at: number } | null = null;
+
+/** Pick a chat model from the list the API returns (exported for tests). */
+export function pickModel(available: string[]): string | null {
+  for (const m of PREFERRED_MODELS) if (available.includes(m)) return m;
+  return available.find((m) => !NOT_CHAT.test(m)) ?? null;
+}
+
+export async function resolveModel(forceRefresh = false): Promise<string> {
+  if (config.groqModel) return config.groqModel;
+  if (discovered && !forceRefresh && Date.now() - discovered.at < 60 * 60_000) return discovered.model;
+  const res = await fetch(`${config.groqApiUrl}/models`, { headers: { authorization: `Bearer ${config.groqKey}` } });
+  if (!res.ok) throw new GroqError(res.status, `Groq ${res.status}: could not list models`);
+  const body = (await res.json()) as { data?: { id: string; active?: boolean }[] };
+  const ids = (body.data ?? []).filter((m) => m.active !== false).map((m) => m.id);
+  const model = pickModel(ids);
+  if (!model) throw new GroqError(404, "Groq 404: no chat model is available for this API key");
+  discovered = { model, at: Date.now() };
+  return model;
+}
+
 /** Free tiers have small tokens-per-minute budgets, so tool results are capped. */
 const MAX_TOOL_RESULT_CHARS = 6000;
 
 const tools = TOOL_DEFS.map((t) => ({ type: "function" as const, function: { name: t.name, description: t.description, parameters: t.input_schema } }));
 
-async function* streamCompletion(messages: Msg[], signal?: AbortSignal): AsyncGenerator<{ delta: Delta; finish?: string | null }> {
+async function* streamCompletion(model: string, messages: Msg[], signal?: AbortSignal): AsyncGenerator<{ delta: Delta; finish?: string | null }> {
   const res = await fetch(`${config.groqApiUrl}/chat/completions`, {
     method: "POST",
     headers: { authorization: `Bearer ${config.groqKey}`, "content-type": "application/json" },
     body: JSON.stringify({
-      model: config.groqModel,
+      model,
       messages,
       tools,
       tool_choice: "auto",
@@ -94,7 +137,8 @@ async function* streamCompletion(messages: Msg[], signal?: AbortSignal): AsyncGe
 }
 
 export async function* groqChat(history: ChatTurn[], ctx: ToolContext, signal?: AbortSignal): AsyncGenerator<AiEvent> {
-  yield { type: "meta", engine: "groq", model: config.groqModel };
+  let model = await resolveModel();
+  yield { type: "meta", engine: "groq", model };
   const today = new Date().toISOString().slice(0, 10);
   const messages: Msg[] = [
     { role: "system", content: `${SYSTEM_PROMPT}\n\nCurrent date: ${today}. Connected wallet: ${ctx.wallet ?? "none"}.` },
@@ -109,7 +153,21 @@ export async function* groqChat(history: ChatTurn[], ctx: ToolContext, signal?: 
     const calls: ToolCall[] = [];
     let finish: string | null | undefined;
 
-    for await (const { delta, finish: f } of streamCompletion(messages, signal)) {
+    let stream = streamCompletion(model, messages, signal);
+    // If an auto-picked model was retired since discovery, re-discover once.
+    if (!config.groqModel) {
+      const first = await stream.next().catch(async (e) => {
+        if (!(e instanceof GroqError) || !isModelError(e)) throw e;
+        model = await resolveModel(true);
+        stream = streamCompletion(model, messages, signal);
+        return stream.next();
+      });
+      stream = (async function* (head, rest) {
+        if (!head.done) yield head.value;
+        yield* rest;
+      })(first, stream);
+    }
+    for await (const { delta, finish: f } of stream) {
       if (f) finish = f;
       if (delta.content) {
         const sep = firstInStep && wroteText ? "\n\n" : "";

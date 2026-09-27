@@ -68,7 +68,41 @@ describe("friendlyError", () => {
     const { friendlyError } = await import("@/lib/ai/run");
     expect(friendlyError(new GroqError(401, "Groq 401: Invalid API Key"))).toMatch(/rejected the API key/);
     expect(friendlyError(new GroqError(429, "Groq 429: Rate limit reached"))).toMatch(/rate limit/);
-    expect(friendlyError(new GroqError(404, "Groq 404: The model `x` does not exist"))).toMatch(/GROQ_MODEL/);
+    expect(friendlyError(new GroqError(404, "Groq 404: The model `x` does not exist or you do not have access to it."))).toMatch(/GROQ_MODEL/);
+    expect(friendlyError(new GroqError(400, "Groq 400: The model `llama-3.3-70b-versatile` has been decommissioned"))).toMatch(/decommissioned/);
+    expect(friendlyError(new GroqError(400, "Groq 400: tool_use_failed"))).toMatch(/Groq 400: tool_use_failed/);
     expect(friendlyError(new Error("boom"))).toMatch(/temporarily unavailable/);
+  });
+});
+
+describe("model selection", () => {
+  it("prefers known tool-calling models and skips non-chat models", async () => {
+    const { pickModel } = await import("@/lib/ai/groq");
+    expect(pickModel(["whisper-large-v3", "llama-3.1-8b-instant", "openai/gpt-oss-120b"])).toBe("openai/gpt-oss-120b");
+    expect(pickModel(["whisper-large-v3", "meta-llama/llama-guard-4-12b", "some-new/model-2027"])).toBe("some-new/model-2027");
+    expect(pickModel(["whisper-large-v3"])).toBeNull();
+  });
+
+  it("auto-discovers the model when GROQ_MODEL is unset", async () => {
+    const { config } = await import("@/lib/config");
+    const saved = config.groqModel;
+    (config as { groqModel?: string }).groqModel = undefined;
+    try {
+      const calls: string[] = [];
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (url: string, init?: RequestInit) => {
+          calls.push(url);
+          if (url.endsWith("/models")) return new Response(JSON.stringify({ data: [{ id: "whisper-large-v3" }, { id: "qwen/qwen3-32b", active: true }] }));
+          expect(JSON.parse(String(init?.body)).model).toBe("qwen/qwen3-32b");
+          return sse([{ choices: [{ delta: { content: "hi" }, finish_reason: "stop" }] }]);
+        }),
+      );
+      const events = await collect(groqChat([{ role: "user", content: "hello" }], {}));
+      expect(events.find((e) => e.type === "meta")).toMatchObject({ model: "qwen/qwen3-32b" });
+      expect(calls[0]).toMatch(/\/models$/);
+    } finally {
+      (config as { groqModel?: string }).groqModel = saved;
+    }
   });
 });

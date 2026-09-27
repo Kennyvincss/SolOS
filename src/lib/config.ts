@@ -33,7 +33,8 @@ export const config = {
       return { name: name.trim(), url: (url ?? name).trim() };
     }),
   groqKey: env("GROQ_API_KEY"),
-  groqModel: env("GROQ_MODEL") ?? "llama-3.3-70b-versatile",
+  /** Optional. When unset, Solana AI picks a tool-capable model from the ones your Groq key can use. */
+  groqModel: env("GROQ_MODEL"),
   groqApiUrl: env("GROQ_API_URL") ?? "https://api.groq.com/openai/v1",
   authSecret: env("AUTH_SECRET"),
   appUrl: env("APP_URL") ?? (env("VERCEL_PROJECT_PRODUCTION_URL") ? `https://${env("VERCEL_PROJECT_PRODUCTION_URL")}` : undefined),
