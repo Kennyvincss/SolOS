@@ -1,0 +1,36 @@
+name: Desktop extension check
+
+# Installs real wallet extensions (Phantom, Solflare, Backpack) into the
+# desktop app, opens their popups and prints what rendered and any errors.
+# Also checks the in-app Chrome Web Store search. Run it from the Actions tab.
+on:
+  workflow_dispatch:
+    inputs:
+      ids:
+        description: "Comma-separated Chrome Web Store extension IDs"
+        required: false
+        default: "bfnaelmomeimhlpmgjnjophhpkkoljpa,bhhhlbepdkbapadjdnnojkbgioiodbic,aflkmfhebedbjioipglgcbcmnbpgliof"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - run: npm ci
+      - name: Check extensions
+        env:
+          EXT_IDS: ${{ inputs.ids }}
+        run: timeout 300 xvfb-run -a npx electron --no-sandbox test/check-real-extensions.js 2>&1 | grep -v -E "dbus|Fontconfig|viz_main|gpu_" || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: extension-check
+          path: desktop/diag/
