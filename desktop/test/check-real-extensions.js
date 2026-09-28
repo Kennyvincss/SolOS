@@ -13,7 +13,7 @@ process.env.SOLANA_OS_URL = `http://localhost:${home.address().port}`;
 const { app, BrowserWindow, session } = require("electron");
 require("../src/main.js");
 const { installExtension } = require("electron-chrome-web-store");
-const { searchWebStore } = require("../src/webstore-search");
+const { searchWebStore, EXTRACT } = require("../src/webstore-search");
 
 const IDS = (process.env.EXT_IDS || "bfnaelmomeimhlpmgjnjophhpkkoljpa,bhhhlbepdkbapadjdnnojkbgioiodbic,aflkmfhebedbjioipglgcbcmnbpgliof").split(",");
 const OUT = process.env.OUT_DIR || path.join(__dirname, "..", "diag");
@@ -45,11 +45,25 @@ app.whenReady().then(async () => {
       await w.loadURL("https://chromewebstore.google.com/search/solana%20wallet?hl=en");
       await sleep(8000);
       const info = await w.webContents.executeJavaScript(`({ url: location.href, title: document.title, anchors: document.querySelectorAll("a").length, detail: [...document.querySelectorAll("a")].map((a) => a.getAttribute("href")).filter((h) => h && h.includes("detail")).slice(0, 8), text: document.body.innerText.slice(0, 1500), html: document.body.innerHTML.slice(0, 3000) })`);
-      log("SEARCH-PAGE", JSON.stringify(info));
+      log("SEARCH-PAGE", JSON.stringify({ ...info, html: undefined, text: info.text.slice(0, 300) }));
+      const direct = await w.webContents.executeJavaScript(EXTRACT).catch((e) => "ERR " + e.message);
+      log("EXTRACT-ON-PAGE", JSON.stringify(Array.isArray(direct) ? { count: direct.length, sample: direct.slice(0, 3) } : direct));
+      const probe = await w.webContents.executeJavaScript(`(() => { const a = document.querySelector('a[href*="detail/"]'); if (!a) return "no anchor"; const h = a.getAttribute("href"); let u; try { u = new URL(h, document.baseURI).pathname; } catch (e) { u = "URL-ERR " + e.message; } return { h, base: document.baseURI, u, match: /\\/detail\\/(?:[^/]+\\/)?([a-p]{32})\\/?$/.test(u), text: a.innerText.slice(0, 120), hasImg: !!a.querySelector("img") }; })()`).catch((e) => "ERR " + e.message);
+      log("ANCHOR-PROBE", JSON.stringify(probe));
       w.destroy();
     }
   } catch (e) {
     log("SEARCH-ERROR", e.stack || e);
+  }
+
+  // 1b) Icon lookup (what the website's /api/extensions/<id>/icon does).
+  try {
+    const res = await fetch("https://chromewebstore.google.com/detail/bfnaelmomeimhlpmgjnjophhpkkoljpa?hl=en", { headers: { "user-agent": "Mozilla/5.0 SolanaOS" } });
+    const html = await res.text();
+    const m = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i) ?? html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
+    log("ICON", res.status, m ? m[1] : "no og:image", html.length);
+  } catch (e) {
+    log("ICON-ERROR", String(e));
   }
 
   // 2) Install and open each extension's popup.
