@@ -13,6 +13,7 @@ const { WALLETS, SOLANA_OS_URL, normalizeInput, riskFromReport, hostOf } = requi
 const library = require("./library");
 const passwords = require("./passwords");
 const { initUpdater, checkForUpdatesInteractive } = require("./updater");
+const { searchWebStore } = require("./webstore-search");
 
 const PARTITION = "persist:solanaos";
 const TOOLBAR_HEIGHT = 88;
@@ -455,6 +456,14 @@ function registerIpc() {
       return { ok: false, error: String(err?.message ?? err) };
     }
   });
+  ipcMain.handle("desktop:searchExtensions", async (e, query) => {
+    if (!fromHome(e)) return null;
+    try {
+      return { ok: true, results: await searchWebStore(browserSession, typeof query === "string" ? query : "solana") };
+    } catch (err) {
+      return { ok: false, error: String(err?.message ?? err), results: [] };
+    }
+  });
   ipcMain.handle("desktop:removeExtension", async (e, id) => {
     if (!fromHome(e) || typeof id !== "string") return false;
     const x = browserSession.extensions.getExtension(id);
@@ -569,6 +578,72 @@ async function removeExtension(s, id, name) {
   return true;
 }
 
+/* ------------------------------------------------------------ chrome.identity.launchWebAuthFlow */
+
+// Extensions sign users in (e.g. "Continue with Google") by opening a login
+// page and waiting for a redirect to https://<extension-id>.chromiumapp.org/.
+function webAuthFlow(extensionId, { url, interactive }) {
+  return new Promise((resolve, reject) => {
+    let target;
+    try {
+      target = new URL(String(url));
+    } catch {
+      return reject(new Error("Invalid auth URL"));
+    }
+    if (target.protocol !== "https:") return reject(new Error("Auth URL must be https"));
+    const redirectPrefix = `https://${extensionId}.chromiumapp.org/`;
+    const win = new BrowserWindow({
+      width: 480,
+      height: 720,
+      show: interactive !== false,
+      title: "Sign in",
+      autoHideMenuBar: true,
+      backgroundColor: "#ffffff",
+      webPreferences: { session: browserSession, sandbox: true, contextIsolation: true },
+    });
+    let done = false;
+    const finish = (err, value) => {
+      if (done) return;
+      done = true;
+      if (!win.isDestroyed()) win.destroy();
+      if (err) reject(err);
+      else resolve(value);
+    };
+    const check = (event, next) => {
+      if (typeof next === "string" && next.startsWith(redirectPrefix)) {
+        event.preventDefault();
+        finish(null, next);
+      }
+    };
+    win.webContents.on("will-redirect", check);
+    win.webContents.on("will-navigate", check);
+    win.webContents.on("will-frame-navigate", (e) => check(e, e.url));
+    win.on("closed", () => finish(new Error("The user did not approve access.")));
+    if (interactive === false) setTimeout(() => finish(new Error("User interaction required.")), 15000);
+    win.loadURL(target.toString()).catch(() => {});
+  });
+}
+
+function setupWebAuthFlow() {
+  const idFrom = (u) => /^chrome-extension:\/\/([a-p]{32})\//.exec(u || "")?.[1];
+  // From extension pages.
+  ipcMain.handle("solanaos-identity-auth", (e, opts) => {
+    const id = idFrom(e.senderFrame?.url);
+    if (!id) throw new Error("Not an extension");
+    return webAuthFlow(id, opts || {});
+  });
+  // From extension service workers (they have their own IPC channel).
+  const seen = new WeakSet();
+  browserSession.serviceWorkers.on("running-status-changed", ({ runningStatus, versionId }) => {
+    if (runningStatus !== "starting") return;
+    const worker = browserSession.serviceWorkers.getWorkerFromVersionID(versionId);
+    const id = idFrom(worker?.scope);
+    if (!worker || !id || seen.has(worker)) return;
+    seen.add(worker);
+    worker.ipc.handle("solanaos-identity-auth", (_e, opts) => webAuthFlow(id, opts || {}));
+  });
+}
+
 /* ------------------------------------------------------------ app menu */
 
 function buildMenu() {
@@ -659,6 +734,13 @@ app.whenReady().then(async () => {
   // Store treat this like a regular Chromium browser, plus a Solana OS marker.
   const ua = browserSession.getUserAgent().replace(/\s(Electron|solana-os-desktop|Solana\s?OS)\/\S+/gi, "");
   browserSession.setUserAgent(`${ua} ${DESKTOP_UA_TOKEN}`);
+
+  // Chrome APIs Electron lacks (chrome.identity, chrome.sidePanel, ...). Must be
+  // registered before ElectronChromeExtensions, which freezes `chrome`.
+  const polyfillPath = path.join(__dirname, "extension-polyfills.js");
+  browserSession.registerPreloadScript({ id: "solanaos-crx-polyfills-frame", type: "frame", filePath: polyfillPath });
+  browserSession.registerPreloadScript({ id: "solanaos-crx-polyfills-worker", type: "service-worker", filePath: polyfillPath });
+  setupWebAuthFlow();
 
   extensions = new ElectronChromeExtensions({
     license: "GPL-3.0",

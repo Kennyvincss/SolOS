@@ -48,10 +48,15 @@ app.whenReady().then(() => {
         const wb = win.getBounds();
         result.popup = { visible: true, bounds: pb, window: wb, text: await popup.webContents.executeJavaScript("document.body.innerText.trim().slice(0, 40)") };
         result.popupInsideWindow = pb.x >= wb.x && pb.x + pb.width <= wb.x + wb.width;
+        // Chrome APIs Electron lacks are polyfilled in pages and the service worker.
+        result.apis = await popup.webContents.executeJavaScript(
+          "chrome.storage.local.get('swProbe').then((r) => ({ page: { identity: chrome.identity.getRedirectURL('x'), sidePanel: typeof chrome.sidePanel.open, tabsCreate: typeof chrome.tabs.create }, worker: r.swProbe || null }))",
+        );
       } else result.popup = { visible: false };
       const img = await win.webContents.capturePage();
       fs.writeFileSync(process.env.SMOKE_OUT || "smoke-ext.png", img.toPNG());
-      result.ok = result.contentScript === "injected" && result.toolbarActions > 0 && result.desktopUA === true && result.popup.visible && result.popupInsideWindow;
+      result.ok = result.contentScript === "injected" && result.toolbarActions > 0 && result.desktopUA === true && result.popup.visible && result.popupInsideWindow &&
+        /chromiumapp\.org\/x$/.test(result.apis?.page?.identity) && /chromiumapp\.org\/cb$/.test(result.apis?.worker?.identity || "") && result.apis.worker.sidePanel === true;
     } catch (e) {
       result.error = String(e && e.stack || e);
     }

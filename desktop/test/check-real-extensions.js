@@ -39,6 +39,15 @@ app.whenReady().then(async () => {
     const t = Date.now();
     const results = await searchWebStore(ses, "solana wallet", { limit: 40 });
     log("SEARCH", JSON.stringify({ ms: Date.now() - t, count: results.length, sample: results.slice(0, 6) }));
+    if (!results.length) {
+      // What did the store page look like?
+      const w = new BrowserWindow({ show: false, width: 1280, height: 2000, webPreferences: { session: ses, backgroundThrottling: false } });
+      await w.loadURL("https://chromewebstore.google.com/search/solana%20wallet?hl=en");
+      await sleep(8000);
+      const info = await w.webContents.executeJavaScript(`({ url: location.href, title: document.title, anchors: document.querySelectorAll("a").length, detail: [...document.querySelectorAll("a")].map((a) => a.getAttribute("href")).filter((h) => h && h.includes("detail")).slice(0, 8), text: document.body.innerText.slice(0, 1500), html: document.body.innerHTML.slice(0, 3000) })`);
+      log("SEARCH-PAGE", JSON.stringify(info));
+      w.destroy();
+    }
   } catch (e) {
     log("SEARCH-ERROR", e.stack || e);
   }

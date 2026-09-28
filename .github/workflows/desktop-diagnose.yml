@@ -25,10 +25,14 @@ jobs:
           cache: npm
           cache-dependency-path: desktop/package-lock.json
       - run: npm ci
+      # Run with Chromium's sandbox on, like on users' computers (extension
+      # service-worker preloads only run when sandboxed).
+      - name: Allow the Chromium sandbox
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
       - name: Check extensions
         env:
           EXT_IDS: ${{ inputs.ids }}
-        run: timeout 300 xvfb-run -a npx electron --no-sandbox test/check-real-extensions.js 2>&1 | grep -v -E "dbus|Fontconfig|viz_main|gpu_" || true
+        run: timeout 300 xvfb-run -a npx electron test/check-real-extensions.js 2>&1 | grep -v -E "dbus|Fontconfig|viz_main|gpu_" || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
