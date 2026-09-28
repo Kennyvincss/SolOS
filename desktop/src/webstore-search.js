@@ -14,25 +14,31 @@ const CACHE_MS = 10 * 60 * 1000;
 // Runs inside the store page. Returns [{ id, name, icon, description, rating, users }].
 const EXTRACT = `(() => {
   const out = new Map();
-  for (const a of document.querySelectorAll('a[href*="/detail/"]')) {
-    const m = a.href.match(/\\/detail\\/(?:[^/?#]+\\/)?([a-p]{32})(?:[/?#]|$)/);
-    if (!m || out.has(m[1])) continue;
-    const img = a.querySelector("img");
-    const lines = (a.innerText || "").split("\\n").map((s) => s.trim()).filter(Boolean);
-    const heading = a.querySelector("h1,h2,h3,[role=heading]");
-    const name = (heading && heading.textContent.trim()) || (img && img.alt && img.alt.trim()) || lines[0] || "";
-    if (!name) continue;
-    const description = lines.find((l) => l !== name && l.length > 25 && !/^\\d/.test(l)) || "";
-    const ratingLine = lines.find((l) => /^\\d(\\.\\d)?$/.test(l));
-    const usersLine = lines.find((l) => /users?$/i.test(l));
-    out.set(m[1], {
-      id: m[1],
-      name: name.slice(0, 80),
-      icon: img ? img.currentSrc || img.src || img.getAttribute("data-src") || "" : "",
-      description: description.slice(0, 200),
-      rating: ratingLine ? Number(ratingLine) : null,
-      users: usersLine || null,
-    });
+  for (const a of document.querySelectorAll('a[href*="detail/"]')) {
+    try {
+      const href = new URL(a.getAttribute("href"), document.baseURI).pathname;
+      const m = href.match(/\\/detail\\/(?:[^/]+\\/)?([a-p]{32})\\/?$/);
+      if (!m || out.has(m[1])) continue;
+      const card = a.closest("[role=listitem], li, article") || a;
+      const img = a.querySelector("img") || card.querySelector("img");
+      const lines = String(card.innerText || a.innerText || "").split("\\n").map((s) => s.trim()).filter(Boolean);
+      const heading = a.querySelector("h1,h2,h3,[role=heading]") || card.querySelector("h1,h2,h3,[role=heading]");
+      const name = String((heading && heading.textContent) || (img && img.alt) || lines[0] || "").trim();
+      if (!name) continue;
+      const description = lines.find((l) => l !== name && l.length > 25 && !/^\\d/.test(l)) || "";
+      const ratingLine = lines.find((l) => /^\\d(\\.\\d)?$/.test(l));
+      const usersLine = lines.find((l) => /users?$/i.test(l));
+      out.set(m[1], {
+        id: m[1],
+        name: name.slice(0, 80),
+        icon: img ? String(img.currentSrc || img.getAttribute("src") || img.getAttribute("data-src") || "") : "",
+        description: description.slice(0, 200),
+        rating: ratingLine ? Number(ratingLine) : null,
+        users: usersLine || null,
+      });
+    } catch (e) {
+      /* skip odd elements */
+    }
   }
   return [...out.values()];
 })()`;
@@ -68,9 +74,13 @@ async function searchWebStore(session, query, { limit = 60, timeoutMs = 20000 } 
     let results = [];
     let stableRounds = 0;
     let loadMores = 0;
+    let lastError = null;
     while (Date.now() - started < timeoutMs) {
       await sleep(600);
-      const now = await win.webContents.executeJavaScript(EXTRACT).catch(() => []);
+      const now = await win.webContents.executeJavaScript(EXTRACT).catch((err) => {
+        lastError = String(err && err.message ? err.message : err);
+        return [];
+      });
       if (now.length > results.length) {
         results = now;
         stableRounds = 0;
@@ -86,6 +96,7 @@ async function searchWebStore(session, query, { limit = 60, timeoutMs = 20000 } 
     }
     results = results.slice(0, limit);
     if (results.length) cache.set(key, { at: Date.now(), results });
+    else if (lastError) throw new Error(`Couldn't read the Chrome Web Store results: ${lastError}`);
     return results;
   } finally {
     if (!win.isDestroyed()) win.destroy();

@@ -66,7 +66,7 @@ app.whenReady().then(async () => {
         await win.loadURL(`chrome-extension://${id}/${popupPath}`).catch((e) => log("POPUP-LOAD-ERROR", id, String(e)));
         await sleep(8000);
         const info = await win.webContents
-          .executeJavaScript(`({ text: document.body ? document.body.innerText.slice(0, 200) : null, html: document.body ? document.body.innerHTML.length : 0, apis: Object.keys(chrome || {}).sort().join(","), size: [innerWidth, innerHeight] })`)
+          .executeJavaScript(`({ text: document.body ? document.body.innerText.slice(0, 200) : null, html: document.body ? document.body.innerHTML.length : 0, apis: Object.keys(chrome || {}).sort().join(","), browser: typeof browser === "undefined" ? "none" : browser === chrome ? "same" : "different", size: [innerWidth, innerHeight] })`)
           .catch((e) => ({ error: String(e) }));
         log("POPUP", id, JSON.stringify(info));
         const img = await win.webContents.capturePage();

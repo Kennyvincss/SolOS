@@ -5,6 +5,7 @@ const probe = {
   sidePanel: typeof chrome.sidePanel?.setPanelBehavior === "function",
   tabsCreate: typeof chrome.tabs?.create === "function",
   windowsUpdate: typeof chrome.windows?.update === "function",
+  browserIsChrome: typeof browser === "undefined" || browser === chrome,
 };
 chrome.storage.local.set({ swProbe: probe });
 console.log("PROBE " + JSON.stringify(probe));

@@ -112,6 +112,16 @@ function polyfill(bridge) {
     memory: { getInfo: api(async () => ({ capacity: 0, availableCapacity: 0 })) },
   });
   define("fontSettings", { getFontList: api(async () => []) });
+
+  // Newer Chromium also exposes the extension APIs as a separate `browser`
+  // object, which doesn't get the APIs added here or by
+  // electron-chrome-extensions. Wallets that use `browser.*` (Phantom,
+  // Solflare) then crash, so make `browser` the same object as `chrome`.
+  try {
+    if (globalThis.browser !== c) Object.defineProperty(globalThis, "browser", { value: c, configurable: true, writable: true, enumerable: false });
+  } catch {
+    /* not configurable */
+  }
 }
 
 // launchWebAuthFlow runs in the main process (it opens a login window).
