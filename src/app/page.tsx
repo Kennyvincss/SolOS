@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Bell, Compass, Globe, LayoutGrid, PieChart, Puzzle, ReceiptText, ShieldCheck, Sparkles, Wallet, Search as SearchIcon, Code2, Target } from "lucide-react";
+import { ArrowRight, Bell, Compass, Globe, LayoutGrid, PieChart, Puzzle, ReceiptText, ShieldCheck, Sparkles, Wallet, Search as SearchIcon, Target } from "lucide-react";
 import { SearchBox, SuggestionChips } from "@/components/search-box";
 import { Card, DataBadge, EmptyState, Page, Section, Skeleton, SkeletonRows, Change, cn } from "@/components/ui";
 import { AppCard, NewsRow, TokenRow } from "@/components/domain";
@@ -24,9 +24,8 @@ const PILLARS = [
   { icon: Wallet, title: "Connect your wallet", body: "Portfolio, activity and alerts. Browsing never requires one.", href: "/portfolio" },
   { icon: ReceiptText, title: "Understand transactions", body: "Any signature, explained in plain English.", href: "/tx" },
   { icon: ShieldCheck, title: "Stay safe", body: "Transparent risk indicators before you sign or buy.", href: "/security" },
-  { icon: Puzzle, title: "Install extensions", body: "Whale alerts, scanners and trackers in your workspace.", href: "/extensions" },
+  { icon: Puzzle, title: "Install extensions", body: "Wallets, trackers and trading tools, one click away.", href: "/extensions" },
   { icon: Target, title: "Explore DeFi & RWAs", body: "Yields, lending, staking and tokenized real-world assets.", href: "/defi" },
-  { icon: Code2, title: "Build on Solana", body: "Submit apps and extensions, use the SDK and APIs.", href: "/developers" },
 ];
 
 function Trending() {

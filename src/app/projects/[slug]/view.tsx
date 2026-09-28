@@ -94,8 +94,6 @@ export function ProjectView({ slug }: { slug: string }) {
               </a>
             )}
           </div>
-          <h3 className="mt-5 text-[15px] font-semibold">Users & activity</h3>
-          <p className="mt-1 text-[13px] text-muted">Active-user counts require an indexer; TVL and volume above come from DefiLlama.</p>
         </Card>
       </div>
 

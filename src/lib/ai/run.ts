@@ -7,13 +7,11 @@ import type { ToolContext } from "./tools";
 
 /** Turn a Groq failure into a message people can act on (never raw API JSON). */
 export function friendlyError(err: unknown): string {
+  // Details (status, model, key problems) go to the server log only.
   if (err instanceof GroqError) {
-    const detail = err.message.replace(/^Groq \d+:\s*/, "").slice(0, 200);
-    if (err.status === 401) return "Solana AI can't connect: Groq rejected the API key. Check GROQ_API_KEY.";
-    if (err.status === 429) return "Solana AI is busy right now (Groq rate limit). Please try again in a minute.";
-    if (isModelError(err)) return `Solana AI's model isn't available on Groq (${detail}). Remove GROQ_MODEL to auto-select, or set it to a model from console.groq.com/docs/models.`;
-    if (err.status === 413) return "That request was too large for Solana AI. Try a shorter question.";
-    return `Solana AI request failed (Groq ${err.status}: ${detail}).`;
+    console.error("[solana-ai] Groq error:", err.status, err.message);
+    if (err.status === 429) return "Solana AI is busy right now. Please try again in a minute.";
+    if (err.status === 413) return "That question is too long. Try a shorter one.";
   }
   return "Solana AI is temporarily unavailable. Please try again in a moment.";
 }

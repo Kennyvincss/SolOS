@@ -41,7 +41,7 @@ export async function walletPnl(address: string, currentPrices: Map<string, numb
       fast,
       deadline,
     );
-    if (ok.length && !txs.length) throw new UpstreamError("Couldn't load this wallet's transactions from the Solana RPC right now.");
+    if (ok.length && !txs.length) throw new UpstreamError("Couldn't load this wallet's trades right now.");
 
     // 3) SOL price by day (for swaps against SOL).
     const solDaily = await priceHistory(SOL_MINT, "1Y").catch(() => []);

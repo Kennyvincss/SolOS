@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
-import { AlertTriangle, Check, Copy, Database, FlaskConical, Info, RefreshCw, X } from "lucide-react";
+import { AlertTriangle, Check, Copy, FlaskConical, Info, RefreshCw, X } from "lucide-react";
 import type { DataMeta, RiskLevel } from "@/lib/types";
 import { fmtPct, shortAddr, timeAgo } from "@/lib/format";
 
@@ -113,12 +113,18 @@ export function EmptyState({ icon, title, body, action }: { icon?: ReactNode; ti
   );
 }
 
+/** Plain-language error text: never shows status codes, provider names or internals. */
+export function friendlyError(message: string): string {
+  if (/\b[1-5]\d\d\b|rpc|provider|upstream|fetch|timed? ?out|forbidden|json|econn|network|api|unavailable:|internal|undefined|null/i.test(message)) return "Couldn't load this right now. Please try again in a moment.";
+  return message;
+}
+
 export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
     <div className="flex items-start gap-3 rounded-2xl border border-down/20 bg-down/5 p-4 text-[13px]">
       <AlertTriangle size={16} className="mt-0.5 shrink-0 text-down" />
       <div className="flex-1">
-        <div className="text-fg">{message}</div>
+        <div className="text-fg">{friendlyError(message)}</div>
       </div>
       {onRetry && (
         <button onClick={onRetry} className="btn btn-sm btn-ghost">
@@ -135,15 +141,15 @@ export function DataBadge({ meta, className }: { meta?: DataMeta | null; classNa
   const demo = meta.mode === "demo";
   return (
     <span
-      title={`${meta.provider}${meta.note ? ` — ${meta.note}` : ""} · updated ${timeAgo(meta.fetchedAt)}`}
+      title={demo ? "Live data is temporarily unavailable, so sample figures are shown." : `Updated ${timeAgo(meta.fetchedAt)}`}
       className={cn(
         "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-medium",
         demo ? "border-warn/30 bg-warn/10 text-warn" : "border-line text-faint",
         className,
       )}
     >
-      {demo ? <FlaskConical size={11} /> : <Database size={11} />}
-      {demo ? "Demo data" : meta.provider}
+      {demo ? <FlaskConical size={11} /> : <span className="h-1.5 w-1.5 rounded-full bg-sol-green" />}
+      {demo ? "Sample data" : "Live"}
     </span>
   );
 }
@@ -154,7 +160,7 @@ export function DemoNotice({ meta }: { meta?: DataMeta | null }) {
     <div className="mb-4 flex items-start gap-2.5 rounded-2xl border border-warn/25 bg-warn/[0.06] p-3.5 text-[13px] leading-relaxed">
       <FlaskConical size={15} className="mt-0.5 shrink-0 text-warn" />
       <div>
-        <span className="font-medium text-warn">Demo data.</span> <span className="text-muted">These values are placeholders, not real blockchain or market data. {meta.note}</span>
+        <span className="font-medium text-warn">Sample data.</span> <span className="text-muted">Live data is temporarily unavailable, so these figures are examples, not real market data. Refresh in a minute.</span>
       </div>
     </div>
   );

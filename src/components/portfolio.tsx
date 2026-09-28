@@ -143,12 +143,11 @@ export function PortfolioView({ address, own }: { address: string; own?: boolean
         </div>
         <p className="mt-4 text-[12px] leading-relaxed text-faint">
           {pnl.data
-            ? `Trading PnL from this wallet's ${pnl.data.trades} swaps against SOL or stablecoins (${pnl.data.txsAnalyzed} transactions checked${pnl.data.complete ? "" : ", most recent first"}): realized on sales plus unrealized on what's still held, at average entry prices. Transfers and airdrops aren't counted as trades.`
+            ? `Profit and loss from ${pnl.data.trades} ${pnl.data.trades === 1 ? "trade" : "trades"}${pnl.data.complete ? "" : " (most recent)"}. "Realized" is from what you sold; "open" is on what you still hold. Transfers and airdrops don't count.`
             : pnl.error
-              ? "PnL couldn't be calculated right now: the Solana RPC didn't return this wallet's transactions. Try again in a minute."
-              : "Calculating PnL from this wallet's trades…"}
+              ? "Couldn't load profit and loss right now. Try again in a minute."
+              : "Working out profit and loss from your trades…"}
         </p>
-        {data.meta.note && data.meta.mode === "live" && <p className="mt-1 text-[12px] text-warn">{data.meta.note}</p>}
       </Card>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_380px]">
@@ -185,7 +184,6 @@ export function PortfolioView({ address, own }: { address: string; own?: boolean
                   </Link>
                 ))}
               </div>
-              <p className="mt-2 text-[11.5px] text-faint">Images, names and floor prices need a DAS-compatible provider (e.g. Helius).</p>
             </Card>
           )}
         </div>
@@ -206,7 +204,7 @@ export function PortfolioView({ address, own }: { address: string; own?: boolean
           <Card className="p-4 sm:p-5">
             <h3 className="text-[14px] font-semibold">Lending, liquidity & perps positions</h3>
             <p className="mt-2 text-[13px] leading-relaxed text-muted">
-              Positions held inside protocols (Kamino, marginfi, Drift, Orca, Raydium…) live in program accounts, not token balances. They appear here once a position-indexing provider is connected. Until then we show nothing rather than estimates.
+              Positions you hold inside apps like Kamino, marginfi, Drift, Orca or Raydium aren&apos;t shown here yet. Open the app to see them.
             </p>
           </Card>
         </div>

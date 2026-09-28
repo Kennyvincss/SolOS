@@ -12,7 +12,7 @@ export default function PortfolioPage() {
     <Page>
       <PageHeader
         title="Portfolio"
-        subtitle={s.address ? (s.wallet ? `${s.wallet.name} · ${shortAddr(s.address, 6)}` : s.address === "demo" ? "Demo wallet (placeholder data)" : `Watching ${shortAddr(s.address, 6)} (read-only)`) : "Your assets, allocation, positions and activity."}
+        subtitle={s.address ? (s.wallet ? `${s.wallet.name} · ${shortAddr(s.address, 6)}` : s.address === "demo" ? "Demo wallet (sample data)" : `Watching ${shortAddr(s.address, 6)} (read-only)`) : "Your assets, allocation, positions and activity."}
         actions={
           s.address && (
             <button onClick={() => s.setWalletModal(true)} className="btn btn-ghost btn-sm">

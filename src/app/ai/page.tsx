@@ -132,7 +132,6 @@ function Chat() {
     ta.style.height = `${Math.min(ta.scrollHeight, 180)}px`;
   }, [input]);
 
-  const engine = msgs.find((m): m is AssistantMsg => m.role === "assistant" && Boolean(m.engine))?.engine ?? session.capabilities?.ai;
   const empty = msgs.length === 0;
 
   return (
@@ -143,11 +142,6 @@ function Chat() {
         </Link>
         <Sparkles size={17} className="text-sol-green" />
         <span className="text-[15px] font-semibold">Solana AI</span>
-        {engine && (
-          <span className="rounded-full border border-line px-2 py-0.5 text-[11px] text-faint" title={engine === "offline" ? "No language model configured; answers are templated from live data." : undefined}>
-            {engine === "groq" ? "Groq" : "Offline mode"}
-          </span>
-        )}
         <div className="flex-1" />
         {!empty && (
           <button
@@ -170,7 +164,7 @@ function Chat() {
                 <Sparkles size={22} className="text-sol-green" />
               </div>
               <h1 className="mt-4 text-[26px] font-semibold tracking-[-0.02em] sm:text-[30px]">Ask anything about Solana</h1>
-              <p className="mt-2 max-w-md text-[14px] text-muted">Answers use live on-chain and market data, link to their sources, and separate verified data from analysis.</p>
+              <p className="mt-2 max-w-md text-[14px] text-muted">Ask about any token, wallet, app or transaction. Answers use live data and link to where they came from.</p>
               <div className="mt-7 grid w-full gap-2 sm:grid-cols-2">
                 {STARTERS.map((s) => (
                   <button key={s} onClick={() => send(s)} className="card card-hover px-4 py-3 text-left text-[13.5px] text-muted hover:text-fg">
@@ -181,7 +175,7 @@ function Chat() {
               <div className="mt-6 flex items-start gap-2 text-left text-[12px] leading-relaxed text-faint">
                 <Info size={13} className="mt-0.5 shrink-0" />
                 <span>
-                  Solana AI provides information, not financial advice. <span className="text-muted">Verified data</span> comes from tools and is labelled with its source; <span className="text-muted">analysis</span> is the AI&apos;s interpretation; anything unverifiable is flagged as uncertain.
+                  Solana AI shares information, not financial advice. Always double-check before you trade.
                 </span>
               </div>
             </div>

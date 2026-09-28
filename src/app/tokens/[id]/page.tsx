@@ -5,7 +5,7 @@ import { use, useState } from "react";
 import Link from "next/link";
 import { BellPlus, CheckCircle2, ExternalLink, Globe, Share2, Star } from "lucide-react";
 import { AreaChart } from "@/components/charts";
-import { Address, Badge, Card, Change, DataBadge, DemoNotice, EmptyState, ErrorState, InfoNote, Modal, Monogram, Page, Section, Segmented, Skeleton, SkeletonRows, Stat, cn, share } from "@/components/ui";
+import { Address, Badge, Card, Change, DataBadge, DemoNotice, EmptyState, ErrorState, InfoNote, Modal, friendlyError, Monogram, Page, Section, Segmented, Skeleton, SkeletonRows, Stat, cn, share } from "@/components/ui";
 import { AppCard, NewsRow, RiskList } from "@/components/domain";
 import { AskAIPanel } from "@/components/ai/inline";
 import { useApi } from "@/lib/client/fetch";
@@ -207,11 +207,11 @@ export default function TokenPage({ params }: { params: Promise<{ id: string }> 
       <Section title="Risk & security" subtitle="Transparent indicators, never a blanket verdict">
         <Card className="p-4 sm:p-5">
           {data.meta.mode === "demo" ? (
-            <InfoNote>Risk checks run against live on-chain data and are unavailable while the market data provider is offline.</InfoNote>
+            <InfoNote>Risk checks are temporarily unavailable. Try again in a minute.</InfoNote>
           ) : risk.loading ? (
             <SkeletonRows rows={4} />
           ) : risk.error ? (
-            <p className="text-[13px] text-muted">{risk.error}</p>
+            <p className="text-[13px] text-muted">{friendlyError(risk.error)}</p>
           ) : risk.data ? (
             <RiskList report={risk.data} />
           ) : null}
@@ -219,7 +219,7 @@ export default function TokenPage({ params }: { params: Promise<{ id: string }> 
       </Section>
 
       <div className="mt-8 grid gap-4 lg:grid-cols-2">
-        {data.meta.mode === "live" ? <Holders mint={t.mint} /> : <Card className="p-5"><EmptyState title="Holders unavailable in demo mode" /></Card>}
+        {data.meta.mode === "live" ? <Holders mint={t.mint} /> : <Card className="p-5"><EmptyState title="Holders are temporarily unavailable" /></Card>}
         <Card className="p-4 sm:p-5">
           <div className="mb-1 flex items-center justify-between">
             <h3 className="text-[15px] font-semibold">News</h3>
@@ -235,7 +235,7 @@ export default function TokenPage({ params }: { params: Promise<{ id: string }> 
         </Card>
       </div>
 
-      <Section title={`Protocols using ${t.symbol}`} subtitle="Yield pools that include this token (DefiLlama)">
+      <Section title={`Protocols using ${t.symbol}`} subtitle="Ways to earn with this token">
         <Card className="p-4 sm:p-5">
           {defi.loading && <SkeletonRows rows={3} />}
           {defi.data && !pools.length && <EmptyState title="No tracked pools include this token" />}
@@ -268,13 +268,14 @@ export default function TokenPage({ params }: { params: Promise<{ id: string }> 
             </Link>
           </div>
         )}
-        <Card className="p-4 sm:p-5">
-          <h3 className="text-[15px] font-semibold">Social activity & related wallets</h3>
-          <p className="mt-2 text-[13px] leading-relaxed text-muted">
-            Social mentions and wallet clustering need dedicated providers (e.g. the X API and an indexer). They are not shown until one is connected, so nothing here is guessed. {t.twitter && <>Follow {t.symbol} on <a className="underline" href={t.twitter} target="_blank" rel="noopener noreferrer">X</a>.</>}
-          </p>
-          <p className="mt-2 text-[12px] text-faint">Top holder addresses above link to their wallet pages. Mint: {shortAddr(t.mint, 6)}</p>
-        </Card>
+        {t.twitter && (
+          <Card className="p-4 sm:p-5">
+            <h3 className="text-[15px] font-semibold">Community</h3>
+            <p className="mt-2 text-[13px] leading-relaxed text-muted">
+              Follow {t.symbol} on <a className="underline" href={t.twitter} target="_blank" rel="noopener noreferrer">X</a> for news from the team.
+            </p>
+          </Card>
+        )}
       </div>
 
       <PriceAlertModal t={t} open={alertOpen} onClose={() => setAlertOpen(false)} />

@@ -70,7 +70,6 @@ export function capabilities() {
       google: Boolean(config.googleClientId && config.googleClientSecret),
       email: Boolean(config.resendApiKey) || !config.isProd,
     },
-    customRpc: config.rpcUrl !== PUBLIC_RPC,
   };
 }
 

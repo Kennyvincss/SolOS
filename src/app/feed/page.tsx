@@ -120,7 +120,7 @@ export default function FeedPage() {
 
   return (
     <Page>
-      <PageHeader title="Feed" subtitle="Follow wallets, projects, apps and developers. See what's happening across Solana." />
+      <PageHeader title="Feed" subtitle="Follow wallets, projects and apps. See what's happening across Solana." />
       <Tabs
         value={tab}
         onChange={setTab}

@@ -39,7 +39,6 @@ function InlineAnswer({ question }: { question: string }) {
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2 text-[13px] font-medium">
           <Sparkles size={15} className="text-sol-green" /> Solana AI
-          {m.engine === "offline" && <Badge>Offline mode</Badge>}
         </div>
         <Link href={`/ai?q=${encodeURIComponent(question)}`} className="flex items-center gap-1 text-[12.5px] text-muted hover:text-fg">
           Continue in chat <ArrowRight size={12} />
@@ -74,7 +73,7 @@ function HitRow({ h }: { h: SearchHit }) {
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="truncate text-[14px] font-medium">{h.title}</span>
-          {h.badge && <Badge tone={h.badge === "Verified" ? "green" : h.badge === "Demo" ? "warn" : "neutral"}>{h.badge}</Badge>}
+          {h.badge && <Badge tone={h.badge === "Verified" ? "green" : h.badge === "Sample" ? "warn" : "neutral"}>{h.badge}</Badge>}
         </div>
         {h.subtitle && <div className="truncate text-[12.5px] text-muted">{h.subtitle}</div>}
       </div>
@@ -103,7 +102,7 @@ function Results() {
       {!q && (
         <div className="py-8">
           <h1 className="mb-2 text-center text-[24px] font-semibold tracking-[-0.02em]">Search everything on Solana</h1>
-          <p className="mb-6 text-center text-[14px] text-muted">Tokens, wallets, transactions, apps, protocols, NFTs, news, developers and more.</p>
+          <p className="mb-6 text-center text-[14px] text-muted">Tokens, wallets, transactions, apps, protocols, NFTs, news and more.</p>
           <SuggestionChips />
           {recent.length > 0 && (
             <div className="mx-auto mt-10 max-w-md">
@@ -148,14 +147,8 @@ function Results() {
       {q && data && (
         <>
           <div className="mb-3 flex flex-wrap items-center gap-2 text-[12px] text-faint">
-            <span>
-              {data.groups.reduce((s, g) => s + g.hits.length, 0)} results in {data.tookMs} ms
-            </span>
-            {data.meta
-              .filter((m, i, all) => all.findIndex((x) => x.provider === m.provider && x.mode === m.mode) === i)
-              .map((m, i) => (
-                <DataBadge key={i} meta={m} />
-              ))}
+            <span>{data.groups.reduce((s, g) => s + g.hits.length, 0)} results</span>
+            {data.meta.some((m) => m.mode === "demo") && <DataBadge meta={data.meta.find((m) => m.mode === "demo")} />}
           </div>
           {data.groups.length === 0 && !AI_INTENTS.has(data.intent.type) && (
             <Card>

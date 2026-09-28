@@ -33,7 +33,7 @@ export function ToolChips({ tools }: { tools: ToolState[] }) {
   return (
     <div className="mb-3 flex flex-wrap gap-1.5">
       {tools.map((t) => (
-        <span key={t.id} title={t.error} className={cn("inline-flex items-center gap-1.5 rounded-full border border-line px-2.5 py-1 text-[11.5px]", t.status === "error" ? "text-down" : "text-muted")}>
+        <span key={t.id} className={cn("inline-flex items-center gap-1.5 rounded-full border border-line px-2.5 py-1 text-[11.5px]", t.status === "error" ? "text-down" : "text-muted")}>
           {t.status === "running" ? <Loader2 size={11} className="animate-spin" /> : t.status === "done" ? <CheckCircle2 size={11} className="text-sol-green" /> : <XCircle size={11} />}
           {t.label}
         </span>
@@ -153,7 +153,7 @@ export function DataCard({ card, viewer }: { card: AiCard; viewer?: string | nul
     case "yields": {
       const { pools, meta } = card.data as { pools: YieldPool[]; meta: DataMeta };
       return (
-        <CardShell title="Yields · DefiLlama" meta={meta} href="/defi">
+        <CardShell title="Yields" meta={meta} href="/defi">
           <div className="divide-y divide-line text-[13px]">
             {pools.slice(0, 6).map((p) => (
               <div key={p.id} className="flex items-center justify-between py-2">
@@ -196,7 +196,7 @@ export function Sources({ sources }: { sources: AiSource[] }) {
             href={s.href}
             target={ext ? "_blank" : undefined}
             rel={ext ? "noopener noreferrer" : undefined}
-            title={`${s.provider}${s.mode === "demo" ? " (demo data)" : ""}`}
+            title={s.mode === "demo" ? "Sample data" : s.label}
             className={cn("inline-flex max-w-[260px] items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11.5px] transition-colors hover:text-fg", s.mode === "demo" ? "border-warn/30 text-warn" : "border-line text-muted")}
           >
             {s.mode === "demo" ? <FlaskConical size={11} /> : <Circle size={6} className="fill-sol-green text-sol-green" />}

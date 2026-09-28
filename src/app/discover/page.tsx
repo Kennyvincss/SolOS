@@ -102,10 +102,10 @@ export default function DiscoverPage() {
             <TokenList url="/api/tokens?list=top_traded&limit=10" right="volume" />
           </Card>
         </Section>
-        <Section id="most-used" title="👥 Most used" subtitle="Apps by value locked on Solana (DefiLlama)">
+        <Section id="most-used" title="👥 Most used" subtitle="The apps people trust with the most money">
           <Card className="p-3 sm:p-4">
             {apps.loading && <SkeletonRows rows={5} />}
-            {apps.data && !mostUsed.length && <EmptyState title="Usage metrics unavailable" body={apps.data.meta.note} />}
+            {apps.data && !mostUsed.length && <EmptyState title="Rankings are temporarily unavailable" body="Check back in a minute." />}
             <div className="grid gap-2">
               {mostUsed.map((a) => (
                 <AppCard key={a.slug} app={a} metrics={apps.data?.metrics[a.slug]} compact />

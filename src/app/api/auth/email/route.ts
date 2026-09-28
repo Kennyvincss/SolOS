@@ -33,7 +33,7 @@ export async function POST(req: Request) {
       if (!res.ok) return fail("Could not send the email. Please try again.", 502);
       return ok({ sent: true });
     }
-    if (config.isProd) return fail("Email sign-in is not configured (RESEND_API_KEY).", 501);
+    if (config.isProd) return fail("Email sign-in isn't available yet. Sign in with your wallet or Google instead.", 501);
     return ok({ sent: false, devLink: link });
   });
 }

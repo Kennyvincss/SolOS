@@ -38,7 +38,7 @@ async function plan(q: string, ctx: ToolContext): Promise<Plan> {
     if (!f.length) return [{ tool: "open_page", input: { path: "/wallets", label: "Explore Wallets" } }];
     return f.slice(0, 3).flatMap((w) => [{ tool: "get_wallet_portfolio" as ToolName, input: { address: w.address } }]);
   }
-  const open = q.match(/\b(?:open|go to|take me to|show me)\s+(?:the\s+)?(extensions|portfolio|security|news|defi|apps|app store|settings|profile|feed|notifications|wallets|payments|rwa|developers)\b/i);
+  const open = q.match(/\b(?:open|go to|take me to|show me)\s+(?:the\s+)?(extensions|portfolio|security|news|defi|apps|app store|settings|profile|feed|notifications|wallets|payments|rwa)\b/i);
   if (open) {
     const map: Record<string, string> = { "app store": "/apps", apps: "/apps", wallets: "/wallets" };
     const k = open[1].toLowerCase();
@@ -84,7 +84,7 @@ async function plan(q: string, ctx: ToolContext): Promise<Plan> {
 
 function write(tool: ToolName, out: ToolOutput): string {
   const r = out.result as Record<string, unknown>;
-  const demo = r.dataMode === "demo" ? "\n\n> These figures are **demo placeholders**; the live provider was unreachable." : "";
+  const demo = r.dataMode === "demo" ? "\n\n> These figures are **sample figures**: live data is temporarily unavailable." : "";
   switch (tool) {
     case "get_token": {
       if (r.found === false) return "I couldn't find that token.";
@@ -93,7 +93,7 @@ function write(tool: ToolName, out: ToolOutput): string {
     case "get_token_list": {
       const tokens = (r.tokens as { symbol: string; change24h?: number; volume24h?: number; link: string }[]) ?? [];
       if (!tokens.length) return "No tokens returned right now.";
-      return `Here's the current **${String(r.list).replace("_", " ")}** list (${r.dataMode === "demo" ? "demo placeholders" : "verified data from Jupiter"}):\n\n${tokens.slice(0, 8).map((t, i) => `${i + 1}. [${t.symbol}](${t.link}) — ${fmtPct(t.change24h)} 24h, volume ${fmtUsd(t.volume24h, { compact: true })}`).join("\n")}\n\nTrending reflects attention and trading activity, not quality. Check each token's risk indicators before trading.${demo}`;
+      return `Here's the current **${String(r.list).replace("_", " ")}** list (${r.dataMode === "demo" ? "sample figures" : "live"}):\n\n${tokens.slice(0, 8).map((t, i) => `${i + 1}. [${t.symbol}](${t.link}) — ${fmtPct(t.change24h)} 24h, volume ${fmtUsd(t.volume24h, { compact: true })}`).join("\n")}\n\nTrending reflects attention and trading activity, not quality. Check each token's risk indicators before trading.${demo}`;
     }
     case "get_wallet_portfolio": {
       const holdings = (r.holdings as { symbol: string; valueUsd?: number; amount: number }[]) ?? [];
@@ -119,11 +119,11 @@ function write(tool: ToolName, out: ToolOutput): string {
     }
     case "get_defi_yields": {
       const pools = (r.pools as { project: string; symbol: string; apy?: number; tvlUsd: number }[]) ?? [];
-      return `**Yield opportunities on Solana** (${r.dataMode === "demo" ? "demo placeholders" : "DefiLlama"}, sorted by TVL):\n\n${pools.slice(0, 8).map((p) => `- **${p.project}** ${p.symbol}: ${p.apy !== undefined ? `${p.apy.toFixed(2)}% APY` : "APY n/a"}, TVL ${fmtUsd(p.tvlUsd, { compact: true })}`).join("\n")}\n\nAPYs are variable and include smart-contract risk. This is information, not financial advice. [Compare in the DeFi hub](/defi)${demo}`;
+      return `**Yield opportunities on Solana** (sorted by total value locked):\n\n${pools.slice(0, 8).map((p) => `- **${p.project}** ${p.symbol}: ${p.apy !== undefined ? `${p.apy.toFixed(2)}% APY` : "APY n/a"}, TVL ${fmtUsd(p.tvlUsd, { compact: true })}`).join("\n")}\n\nAPYs are variable and include smart-contract risk. This is information, not financial advice. [Compare in the DeFi hub](/defi)${demo}`;
     }
     case "get_protocols": {
       const p = (r.protocols as { name: string; category: string; tvlUsdOnSolana?: number; change7d?: number }[]) ?? [];
-      return `**Protocol comparison** (${r.dataMode === "demo" ? "demo placeholders" : "DefiLlama"}):\n\n| Protocol | Category | TVL on Solana | 7d |\n|---|---|---|---|\n${p.map((x) => `| ${x.name} | ${x.category} | ${fmtUsd(x.tvlUsdOnSolana, { compact: true })} | ${fmtPct(x.change7d)} |`).join("\n")}${demo}`;
+      return `**Protocol comparison**:\n\n| Protocol | Category | TVL on Solana | 7d |\n|---|---|---|---|\n${p.map((x) => `| ${x.name} | ${x.category} | ${fmtUsd(x.tvlUsdOnSolana, { compact: true })} | ${fmtPct(x.change7d)} |`).join("\n")}${demo}`;
     }
     case "identify_address":
       return `That address is a **${r.kind}**. [Open it](${r.link}).`;
@@ -170,14 +170,14 @@ export async function* offlineChat(history: ChatTurn[], ctx: ToolContext, reason
       parts.push(write(s.tool, out));
     } catch (e) {
       yield { type: "tool", id, name: s.tool, label: TOOL_LABELS[s.tool], status: "error", error: e instanceof Error ? e.message : "failed" };
-      parts.push(`I couldn't complete that lookup: ${e instanceof Error ? e.message : "unknown error"}.`);
+      parts.push("I couldn't load that right now. Please try again in a moment.");
     }
   }
   const note =
     reason === "busy"
-      ? "> Solana AI's language model is at its usage limit for the moment, so this answer was put together straight from the data. Full answers come back within a minute."
-      : "> Offline mode: this answer was assembled from the data tools using templates. Set `GROQ_API_KEY` to enable full Solana AI reasoning.";
-  const text = parts.join("\n\n") + "\n\n" + note;
+      ? "> Solana AI is busy, so here's a quick answer from the data. Ask again in a minute for a fuller one."
+      : "";
+  const text = parts.join("\n\n") + (note ? "\n\n" + note : "");
   // Stream in small chunks so the UI behaves the same as with a model.
   for (let i = 0; i < text.length; i += 24) yield { type: "text", delta: text.slice(i, i + 24) };
   if (sources.length) yield { type: "sources", sources };

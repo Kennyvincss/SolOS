@@ -29,6 +29,5 @@ export const PAGES: PageDef[] = [
   { href: "/browser", title: "Browser", description: "Open Solana apps safely inside Solana OS", icon: "Globe", keywords: ["browse", "open app", "web"], section: "explore" },
   { href: "/notifications", title: "Notifications", description: "Alerts and updates", icon: "Bell", keywords: ["alerts", "inbox"], section: "you", nav: true },
   { href: "/profile", title: "Profile", description: "Your public profile", icon: "UserRound", keywords: ["account", "me"], section: "you" },
-  { href: "/developers", title: "Developers", description: "Submit apps and extensions, APIs and SDK", icon: "Code2", keywords: ["build", "api", "sdk", "submit"], section: "you" },
   { href: "/settings", title: "Settings", description: "Preferences, privacy and data sources", icon: "Settings", keywords: ["preferences", "theme", "privacy"], section: "you", nav: true },
 ];

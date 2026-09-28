@@ -106,7 +106,7 @@ export async function search(query: string, opts: { limitPerGroup?: number } = {
         href: `/tokens/${t.mint}`,
         icon: t.icon,
         score: base - i * 0.01 + (t.verified ? 0.03 : 0),
-        badge: demo ? "Demo" : t.verified ? "Verified" : undefined,
+        badge: demo ? "Sample" : t.verified ? "Verified" : undefined,
         meta: { symbol: t.symbol, mode: tokens.meta.mode },
       });
     });

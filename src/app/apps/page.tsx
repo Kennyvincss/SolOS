@@ -36,7 +36,7 @@ function Store() {
 
   return (
     <Page wide>
-      <PageHeader title="App Store" subtitle="Discover the applications of the Solana ecosystem. Descriptions are curated; usage metrics come live from DefiLlama." actions={<DataBadge meta={data?.meta} />} />
+      <PageHeader title="App Store" subtitle="Discover the best apps on Solana, hand-picked and ranked by real usage." actions={<DataBadge meta={data?.meta} />} />
       <div className="relative mb-4">
         <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-faint" />
         <input value={q} onChange={(e) => setQ(e.target.value)} className="input h-12 rounded-full pl-11" placeholder={`Search ${APPS.length} apps`} aria-label="Search apps" />

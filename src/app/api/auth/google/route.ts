@@ -6,7 +6,7 @@ import { originFor } from "@/lib/auth/origin";
 import { fail } from "@/lib/api";
 
 export async function GET(req: Request) {
-  if (!config.googleClientId || !config.googleClientSecret) return fail("Google sign-in is not configured (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET).", 501);
+  if (!config.googleClientId || !config.googleClientSecret) return fail("Google sign-in isn't available yet. Sign in with your wallet or email instead.", 501);
   const state = crypto.randomBytes(16).toString("base64url");
   const jar = await cookies();
   jar.set("sos_oauth_state", state, { httpOnly: true, secure: config.isProd, sameSite: "lax", path: "/api/auth", maxAge: 600 });

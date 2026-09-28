@@ -64,14 +64,15 @@ describe("groqChat", () => {
 });
 
 describe("friendlyError", () => {
-  it("maps Groq failures to readable messages", async () => {
+  it("shows people plain messages without keys, models or status codes", async () => {
     const { friendlyError } = await import("@/lib/ai/run");
-    expect(friendlyError(new GroqError(401, "Groq 401: Invalid API Key"))).toMatch(/rejected the API key/);
-    expect(friendlyError(new GroqError(429, "Groq 429: Rate limit reached"))).toMatch(/rate limit/);
-    expect(friendlyError(new GroqError(404, "Groq 404: The model `x` does not exist or you do not have access to it."))).toMatch(/GROQ_MODEL/);
-    expect(friendlyError(new GroqError(400, "Groq 400: The model `llama-3.3-70b-versatile` has been decommissioned"))).toMatch(/decommissioned/);
-    expect(friendlyError(new GroqError(400, "Groq 400: tool_use_failed"))).toMatch(/Groq 400: tool_use_failed/);
-    expect(friendlyError(new Error("boom"))).toMatch(/temporarily unavailable/);
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(friendlyError(new GroqError(429, "Groq 429: Rate limit reached"))).toMatch(/busy/);
+    for (const e of [new GroqError(401, "Groq 401: Invalid API Key"), new GroqError(404, "Groq 404: The model `x` does not exist"), new GroqError(400, "Groq 400: tool_use_failed"), new Error("boom")]) {
+      const msg = friendlyError(e);
+      expect(msg).toMatch(/temporarily unavailable/);
+      expect(msg).not.toMatch(/Groq|GROQ|API|model|\d{3}/);
+    }
   });
 });
 

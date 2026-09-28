@@ -2,10 +2,9 @@
 
 import Link from "next/link";
 import { LogOut } from "lucide-react";
-import { Badge, Card, Page, PageHeader, Section, Segmented, Toggle } from "@/components/ui";
+import { Card, Page, PageHeader, Section, Segmented, Toggle } from "@/components/ui";
 import { useActions, useStore, type NotificationCategory, DEFAULT_STATE } from "@/lib/client/store";
 import { useSession } from "@/lib/client/session";
-import { useApi } from "@/lib/client/fetch";
 import { shortAddr } from "@/lib/format";
 
 const NOTIF: { key: NotificationCategory; label: string; hint: string }[] = [
@@ -35,14 +34,13 @@ export default function SettingsPage() {
   const prefs = useStore((s) => s.notifPrefs);
   const { set } = useActions();
   const session = useSession();
-  const status = useApi<{ dataMode: string; ai: string; auth: Record<string, boolean>; customRpc: boolean }>("/api/status");
 
   return (
     <Page>
       <PageHeader title="Settings" />
       <Section title="Account" className="mt-0">
         <Card className="divide-y divide-line px-5">
-          <Row label={session.user ? session.user.name : "Not signed in"} hint={session.user ? `Signed in with ${session.user.provider}${session.user.email ? ` · ${session.user.email}` : ""}${session.user.wallet ? ` · ${shortAddr(session.user.wallet)}` : ""}` : "Sign in to keep your settings tied to your account."}>
+          <Row label={session.user ? session.user.name : "Not signed in"} hint={session.user ? `Signed in with ${({ google: "Google", email: "email", wallet: "wallet" } as Record<string, string>)[session.user.provider] ?? session.user.provider}${session.user.email ? ` · ${session.user.email}` : ""}${session.user.wallet ? ` · ${shortAddr(session.user.wallet)}` : ""}` : "Sign in to keep your settings tied to your account."}>
             {session.user ? (
               <button onClick={() => session.signOut()} className="btn btn-ghost btn-sm">
                 <LogOut size={14} /> Sign out
@@ -84,7 +82,7 @@ export default function SettingsPage() {
             </Row>
           ))}
         </Card>
-        <p className="mt-2 text-[12px] text-faint">Alerts are evaluated while Solana OS is open in a tab. Push delivery when closed requires a server-side webhook provider.</p>
+        <p className="mt-2 text-[12px] text-faint">Alerts arrive while Solana OS is open.</p>
       </Section>
 
       <Section title="Privacy">
@@ -93,23 +91,6 @@ export default function SettingsPage() {
             <Link href="/profile" className="btn btn-ghost btn-sm">
               Edit profile
             </Link>
-          </Row>
-        </Card>
-      </Section>
-
-      <Section title="Data sources">
-        <Card className="divide-y divide-line px-5">
-          <Row label="Data mode" hint="auto = live providers with labelled demo fallback">
-            <Badge tone={status.data?.dataMode === "demo" ? "warn" : "green"}>{status.data?.dataMode ?? "…"}</Badge>
-          </Row>
-          <Row label="Solana RPC" hint="Set SOLANA_RPC_URL to use Helius, Triton or your own node">
-            <Badge>{status.data?.customRpc ? "Custom" : "Public endpoint"}</Badge>
-          </Row>
-          <Row label="Solana AI" hint="Powered by Groq. Set GROQ_API_KEY to enable">
-            <Badge tone={status.data?.ai === "offline" ? "neutral" : "green"}>{status.data?.ai === "groq" ? "Groq" : "Offline mode"}</Badge>
-          </Row>
-          <Row label="Market data" hint="Jupiter (tokens, prices), GeckoTerminal (charts), DefiLlama (TVL, yields)">
-            <Badge>Public APIs</Badge>
           </Row>
         </Card>
       </Section>
