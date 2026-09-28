@@ -42,6 +42,9 @@ jobs:
               curl -s -o /dev/null -w "[site] %{http_code} ttfb=%{time_starttransfer}s total=%{time_total}s size=%{size_download} $u\n" "https://solos-rho.vercel.app$u"
             done
           done
+      - name: Jupiter links
+        if: contains(inputs.checks, 'jupiter')
+        run: timeout 200 xvfb-run -a npx electron test/check-jupiter.js 2>&1 | grep "^\\[jup" || true
       - name: Phantom end-to-end
         if: contains(inputs.checks, 'phantom')
         run: |
