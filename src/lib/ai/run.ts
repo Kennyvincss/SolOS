@@ -1,6 +1,6 @@
 import "server-only";
 import { config } from "../config";
-import { GroqError, groqChat, isModelError } from "./groq";
+import { GroqError, groqChat, isModelError, isRateLimit } from "./groq";
 import { offlineChat } from "./offline";
 import type { AiEvent, ChatTurn } from "./protocol";
 import type { ToolContext } from "./tools";
@@ -24,10 +24,21 @@ export async function* chat(history: ChatTurn[], ctx: ToolContext, signal?: Abor
     yield* offlineChat(history, ctx);
     return;
   }
+  let answered = false;
   try {
-    yield* groqChat(history, ctx, signal);
+    for await (const ev of groqChat(history, ctx, signal)) {
+      if (ev.type === "text" || ev.type === "card") answered = true;
+      yield ev;
+    }
   } catch (err) {
     if (signal?.aborted) return;
+    // Every Groq model is rate limited right now: answer from the data tools
+    // instead of failing, unless part of an answer was already shown.
+    if (isRateLimit(err) && !answered) {
+      console.warn("[solana-ai] Groq rate limited; answering in offline mode");
+      yield* offlineChat(history, ctx, "busy");
+      return;
+    }
     console.error("[solana-ai]", err);
     yield { type: "error", message: friendlyError(err) };
     yield { type: "done" };

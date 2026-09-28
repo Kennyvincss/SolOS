@@ -14,10 +14,25 @@ export class GroqError extends Error {
   constructor(
     public status: number,
     message: string,
+    /** For rate limits: how long Groq asked us to wait. */
+    public retryAfterMs?: number,
   ) {
     super(message);
     this.name = "GroqError";
   }
+}
+
+/** Rate limits (requests or tokens per minute/day). Each model has its own limits. */
+export function isRateLimit(e: unknown): e is GroqError {
+  return e instanceof GroqError && (e.status === 429 || (e.status === 413 && /rate limit|tokens per minute|TPM/i.test(e.message)));
+}
+
+/** "Please try again in 1m2.5s" / "in 850ms" / a Retry-After header, in ms. */
+export function parseRetryAfter(header: string | null, message: string): number | undefined {
+  if (header && Number.isFinite(Number(header))) return Number(header) * 1000;
+  const m = message.match(/try again in\s+(?:(\d+)h)?(?:(\d+)m(?!s))?(?:([\d.]+)s)?(?:([\d.]+)ms)?/i);
+  if (!m || !m[0].match(/\d/)) return undefined;
+  return (Number(m[1] ?? 0) * 3600 + Number(m[2] ?? 0) * 60 + Number(m[3] ?? 0)) * 1000 + Number(m[4] ?? 0);
 }
 
 export function isModelError(e: GroqError) {
@@ -58,7 +73,9 @@ export const PREFERRED_MODELS = [
 ];
 const NOT_CHAT = /whisper|tts|playai|guard|prompt-guard|orpheus|distil|compound|allam/i;
 
-let discovered: { model: string; at: number } | null = null;
+let discovered: { model: string; at: number; available: string[] } | null = null;
+/** Models that hit a rate limit, and until when to avoid them. */
+const coolingUntil = new Map<string, number>();
 
 /** Pick a chat model from the list the API returns (exported for tests). */
 export function pickModel(available: string[]): string | null {
@@ -75,12 +92,41 @@ export async function resolveModel(forceRefresh = false): Promise<string> {
   const ids = (body.data ?? []).filter((m) => m.active !== false).map((m) => m.id);
   const model = pickModel(ids);
   if (!model) throw new GroqError(404, "Groq 404: no chat model is available for this API key");
-  discovered = { model, at: Date.now() };
+  discovered = { model, at: Date.now(), available: ids };
   return model;
 }
 
-/** Free tiers have small tokens-per-minute budgets, so tool results are capped. */
-const MAX_TOOL_RESULT_CHARS = 6000;
+/** Another tool-calling model to use while `current` is rate limited (each model has separate limits). */
+async function fallbackModel(current: string): Promise<string | null> {
+  if (!discovered || Date.now() - discovered.at > 60 * 60_000) {
+    try {
+      const res = await fetch(`${config.groqApiUrl}/models`, { headers: { authorization: `Bearer ${config.groqKey}` } });
+      if (res.ok) {
+        const body = (await res.json()) as { data?: { id: string; active?: boolean }[] };
+        const ids = (body.data ?? []).filter((m) => m.active !== false).map((m) => m.id);
+        discovered = { model: pickModel(ids) ?? current, at: Date.now(), available: ids };
+      }
+    } catch {
+      /* keep what we have */
+    }
+  }
+  const now = Date.now();
+  return PREFERRED_MODELS.find((m) => m !== current && discovered?.available.includes(m) && (coolingUntil.get(m) ?? 0) <= now) ?? null;
+}
+
+/** The model to start with: skip the preferred one while it's cooling down. */
+async function startModel(): Promise<string> {
+  const model = await resolveModel();
+  if ((coolingUntil.get(model) ?? 0) <= Date.now()) return model;
+  return (await fallbackModel(model)) ?? model;
+}
+
+/** Free tiers have small tokens-per-minute budgets, so tool results and history are capped. */
+const MAX_TOOL_RESULT_CHARS = 4500;
+const MAX_HISTORY_TURNS = 12;
+const MAX_PAST_ANSWER_CHARS = 2000;
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const tools = TOOL_DEFS.map((t) => ({ type: "function" as const, function: { name: t.name, description: t.description, parameters: t.input_schema } }));
 
@@ -107,7 +153,7 @@ async function* streamCompletion(model: string, messages: Msg[], signal?: AbortS
     } catch {
       /* not JSON */
     }
-    throw new GroqError(res.status, `Groq ${res.status}: ${message.slice(0, 300)}`);
+    throw new GroqError(res.status, `Groq ${res.status}: ${message.slice(0, 300)}`, res.status === 429 || res.status === 413 ? parseRetryAfter(res.headers.get("retry-after"), message) : undefined);
   }
   const reader = res.body.getReader();
   const dec = new TextDecoder();
@@ -137,12 +183,12 @@ async function* streamCompletion(model: string, messages: Msg[], signal?: AbortS
 }
 
 export async function* groqChat(history: ChatTurn[], ctx: ToolContext, signal?: AbortSignal): AsyncGenerator<AiEvent> {
-  let model = await resolveModel();
+  let model = await startModel();
   yield { type: "meta", engine: "groq", model };
   const today = new Date().toISOString().slice(0, 10);
   const messages: Msg[] = [
     { role: "system", content: `${SYSTEM_PROMPT}\n\nCurrent date: ${today}. Connected wallet: ${ctx.wallet ?? "none"}.${userContextPrompt(ctx.user)}` },
-    ...history.map((m) => ({ role: m.role, content: m.content }) as Msg),
+    ...history.slice(-MAX_HISTORY_TURNS).map((m, i, all) => ({ role: m.role, content: m.role === "assistant" && i < all.length - 1 ? m.content.slice(0, MAX_PAST_ANSWER_CHARS) : m.content }) as Msg),
   ];
   const allSources: AiSource[] = [];
   let wroteText = false;
@@ -153,20 +199,38 @@ export async function* groqChat(history: ChatTurn[], ctx: ToolContext, signal?: 
     const calls: ToolCall[] = [];
     let finish: string | null | undefined;
 
+    // Open the stream. Recover from a retired model (re-discover) and from
+    // rate limits: a short wait if Groq asks for one, otherwise another model.
     let stream = streamCompletion(model, messages, signal);
-    // If an auto-picked model was retired since discovery, re-discover once.
-    if (!config.groqModel) {
-      const first = await stream.next().catch(async (e) => {
-        if (!(e instanceof GroqError) || !isModelError(e)) throw e;
-        model = await resolveModel(true);
+    let first: IteratorResult<{ delta: Delta; finish?: string | null }>;
+    let rediscovered = false;
+    let waited = false;
+    for (let attempt = 0; ; attempt++) {
+      try {
+        first = await stream.next();
+        break;
+      } catch (e) {
+        if (attempt >= 5 || signal?.aborted) throw e;
+        if (e instanceof GroqError && isModelError(e) && !config.groqModel && !rediscovered) {
+          rediscovered = true;
+          model = await resolveModel(true);
+        } else if (isRateLimit(e)) {
+          const wait = e.retryAfterMs ?? 30_000;
+          coolingUntil.set(model, Date.now() + wait);
+          const next = await fallbackModel(model);
+          if (next) model = next;
+          else if (!waited && wait <= 6000) {
+            waited = true;
+            await sleep(wait + 250);
+          } else throw e;
+        } else throw e;
         stream = streamCompletion(model, messages, signal);
-        return stream.next();
-      });
-      stream = (async function* (head, rest) {
-        if (!head.done) yield head.value;
-        yield* rest;
-      })(first, stream);
+      }
     }
+    stream = (async function* (head, rest) {
+      if (!head.done) yield head.value;
+      yield* rest;
+    })(first, stream);
     for await (const { delta, finish: f } of stream) {
       if (f) finish = f;
       if (delta.content) {

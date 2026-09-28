@@ -141,7 +141,7 @@ function write(tool: ToolName, out: ToolOutput): string {
   }
 }
 
-export async function* offlineChat(history: ChatTurn[], ctx: ToolContext): AsyncGenerator<AiEvent> {
+export async function* offlineChat(history: ChatTurn[], ctx: ToolContext, reason: "no-key" | "busy" = "no-key"): AsyncGenerator<AiEvent> {
   yield { type: "meta", engine: "offline" };
   const q = [...history].reverse().find((m) => m.role === "user")?.content ?? "";
   const steps = await plan(q, ctx);
@@ -173,7 +173,11 @@ export async function* offlineChat(history: ChatTurn[], ctx: ToolContext): Async
       parts.push(`I couldn't complete that lookup: ${e instanceof Error ? e.message : "unknown error"}.`);
     }
   }
-  const text = parts.join("\n\n") + "\n\n> Offline mode: this answer was assembled from the data tools using templates. Set `GROQ_API_KEY` to enable full Solana AI reasoning.";
+  const note =
+    reason === "busy"
+      ? "> Solana AI's language model is at its usage limit for the moment, so this answer was put together straight from the data. Full answers come back within a minute."
+      : "> Offline mode: this answer was assembled from the data tools using templates. Set `GROQ_API_KEY` to enable full Solana AI reasoning.";
+  const text = parts.join("\n\n") + "\n\n" + note;
   // Stream in small chunks so the UI behaves the same as with a model.
   for (let i = 0; i < text.length; i += 24) yield { type: "text", delta: text.slice(i, i + 24) };
   if (sources.length) yield { type: "sources", sources };

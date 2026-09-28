@@ -15,7 +15,7 @@ vi.mock("@/lib/ai/tools", async () => {
   };
 });
 
-const { groqChat, GroqError } = await import("@/lib/ai/groq");
+const { groqChat, GroqError, parseRetryAfter } = await import("@/lib/ai/groq");
 
 function sse(chunks: unknown[]) {
   const body = chunks.map((c) => `data: ${JSON.stringify(c)}\n\n`).join("") + "data: [DONE]\n\n";
@@ -104,5 +104,33 @@ describe("model selection", () => {
     } finally {
       (config as { groqModel?: string }).groqModel = saved;
     }
+  });
+
+  it("switches to another model when the first one is rate limited", async () => {
+    const models: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (url.endsWith("/models")) return new Response(JSON.stringify({ data: [{ id: "test-model" }, { id: "llama-3.3-70b-versatile" }, { id: "whisper-large-v3" }] }));
+        const model = JSON.parse(String(init?.body)).model as string;
+        models.push(model);
+        if (model === "test-model") return new Response(JSON.stringify({ error: { message: "Rate limit reached for model test-model. Please try again in 42.5s." } }), { status: 429 });
+        return sse([{ choices: [{ delta: { content: "Hello" }, finish_reason: "stop" }] }]);
+      }),
+    );
+    const events = await collect(groqChat([{ role: "user", content: "hi" }], {}));
+    expect(models[0]).toBe("test-model");
+    expect(models).toHaveLength(2);
+    expect(models[1]).not.toBe("test-model");
+    expect(events.filter((e) => e.type === "text").map((e) => (e as { delta: string }).delta).join("")).toBe("Hello");
+  });
+});
+
+describe("parseRetryAfter", () => {
+  it("reads Groq's wait hints", () => {
+    expect(parseRetryAfter("3", "")).toBe(3000);
+    expect(parseRetryAfter(null, "Please try again in 1m2.5s.")).toBe(62500);
+    expect(parseRetryAfter(null, "Please try again in 850ms.")).toBe(850);
+    expect(parseRetryAfter(null, "no hint")).toBeUndefined();
   });
 });
