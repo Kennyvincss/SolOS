@@ -6,7 +6,7 @@
 // electron-chrome-extensions (used under GPL-3.0).
 
 const path = require("node:path");
-const { app, BrowserWindow, Menu, MenuItem, WebContentsView, dialog, ipcMain, net, session, shell } = require("electron");
+const { app, BrowserWindow, Menu, MenuItem, WebContentsView, dialog, ipcMain, nativeImage, net, session, shell } = require("electron");
 const { ElectronChromeExtensions } = require("electron-chrome-extensions");
 const { installChromeWebStore, installExtension, uninstallExtension } = require("electron-chrome-web-store");
 const { WALLETS, SOLANA_OS_URL, normalizeInput, riskFromReport, hostOf } = require("./lib");
@@ -362,9 +362,9 @@ function chromeMenu(s) {
               ...installed.map((x) => {
                 const hidden = hiddenExtensions().includes(x.id);
                 return {
-                  label: hidden ? `${x.name} (hidden)` : x.name,
+                  label: hidden ? x.name : `${x.name} (pinned)`,
                   submenu: [
-                    { label: hidden ? "Show in toolbar" : "Hide from toolbar", click: () => setExtensionHidden(x.id, !hidden) },
+                    { label: hidden ? "Pin to toolbar" : "Unpin from toolbar", click: () => setExtensionHidden(x.id, !hidden) },
                     { label: `Remove ${x.name}…`, click: () => removeExtension(s, x.id, x.name) },
                   ],
                 };
@@ -525,6 +525,7 @@ function registerIpc() {
 
   /* bookmarks */
   on("shell:toggleBookmark", (s) => s.toggleBookmark());
+  on("shell:extensionsPanel", (s, rect) => rect && openExtensionsPanel(s, { left: Number(rect.left) || 0, top: Number(rect.top) || 0, right: Number(rect.right) || 0, bottom: Number(rect.bottom) || 0 }));
   on("shell:appMenu", (s, pos) => chromeMenu(s).popup({ window: s.win, x: Math.round(pos?.x ?? 0), y: Math.round(pos?.y ?? 0) }));
 
   /* password manager (messages come from the tab preload) */
@@ -641,6 +642,155 @@ async function removeExtension(s, id, name) {
   if (response !== 1) return false;
   await uninstallExtension(id, { session: browserSession });
   return true;
+}
+
+/* ------------------------------------------------------------ Extensions panel (puzzle-piece button) */
+
+// Like Chrome's: every installed extension with a pin toggle (pinned ones show
+// next to the address bar) and a ⋮ menu; clicking one opens its popup.
+const PANEL_WIDTH = 320;
+let extPanel = null; // { win, shell, anchor }
+let panelClosed = { shell: null, at: 0 }; // clicking the button while open closes it (blur fires first)
+
+function extensionIcon(ext) {
+  const m = ext.manifest || {};
+  const sets = [m.icons, (m.action || m.browser_action || {}).default_icon];
+  for (const set of sets) {
+    if (!set) continue;
+    const rel = typeof set === "string" ? set : set[Object.keys(set).map(Number).filter((n) => n >= 32).sort((a, b) => a - b)[0]] || set[Object.keys(set).sort((a, b) => b - a)[0]];
+    if (!rel) continue;
+    const file = path.join(ext.path, String(rel).replace(/^\//, ""));
+    if (!file.startsWith(ext.path)) continue;
+    const img = nativeImage.createFromPath(file);
+    if (!img.isEmpty()) return img.resize({ width: 40, height: 40, quality: "best" }).toDataURL();
+  }
+  return null;
+}
+
+function panelItems() {
+  const hidden = new Set(hiddenExtensions());
+  return browserSession.extensions
+    .getAllExtensions()
+    .filter((x) => !(x.manifest && x.manifest.theme))
+    .map((x) => ({ id: x.id, name: x.name, pinned: !hidden.has(x.id), icon: extensionIcon(x) }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function closeExtensionsPanel() {
+  const p = extPanel;
+  extPanel = null;
+  if (p) panelClosed = { shell: p.shell, at: Date.now() };
+  if (p && !p.win.isDestroyed()) p.win.destroy();
+}
+
+/** anchor: the puzzle button's rect in the browser window's content coordinates. */
+function openExtensionsPanel(s, anchor) {
+  if (extPanel) {
+    const same = extPanel.shell === s;
+    closeExtensionsPanel();
+    if (same) return; // second click on the button closes it, like Chrome
+  }
+  if (panelClosed.shell === s && Date.now() - panelClosed.at < 300) return;
+  const content = s.win.getContentBounds();
+  const x = Math.round(content.x + Math.min(anchor.right, content.width) - PANEL_WIDTH);
+  const y = Math.round(content.y + anchor.bottom + 4);
+  const win = new BrowserWindow({
+    parent: s.win,
+    x: Math.max(content.x, x),
+    y,
+    width: PANEL_WIDTH,
+    height: 200,
+    frame: false,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    skipTaskbar: true,
+    show: false,
+    backgroundColor: "#1b1e23",
+    webPreferences: { preload: path.join(__dirname, "preload-panel.js"), contextIsolation: true, sandbox: true },
+  });
+  extPanel = { win, shell: s, anchor, holdOpen: false };
+  win.loadFile(path.join(__dirname, "ui", "extensions-panel.html"));
+  win.on("blur", () => {
+    if (extPanel?.win === win && !extPanel.holdOpen) setTimeout(() => extPanel?.win === win && !extPanel.holdOpen && closeExtensionsPanel(), 0);
+  });
+  win.on("closed", () => extPanel?.win === win && (extPanel = null));
+}
+
+function registerPanelIpc() {
+  const fromPanel = (e) => extPanel && !extPanel.win.isDestroyed() && e.sender === extPanel.win.webContents;
+  ipcMain.handle("panel:list", (e) => (fromPanel(e) ? panelItems() : []));
+  ipcMain.handle("panel:setPinned", (e, id, pinned) => {
+    if (!fromPanel(e) || typeof id !== "string" || !browserSession.extensions.getExtension(id)) return false;
+    setExtensionHidden(id, !pinned);
+    return true;
+  });
+  ipcMain.on("panel:resize", (e, height) => {
+    if (!fromPanel(e)) return;
+    const h = Math.max(80, Math.min(560, Math.ceil(Number(height) || 0)));
+    const b = extPanel.win.getBounds();
+    extPanel.win.setBounds({ ...b, height: h });
+    if (!extPanel.win.isVisible()) extPanel.win.show();
+  });
+  ipcMain.on("panel:close", (e) => fromPanel(e) && closeExtensionsPanel());
+  ipcMain.on("panel:manage", (e) => {
+    if (!fromPanel(e)) return;
+    const s = extPanel.shell;
+    closeExtensionsPanel();
+    s.newTab(`${SOLANA_OS_URL}/extensions#installed`);
+  });
+  ipcMain.on("panel:findMore", (e) => {
+    if (!fromPanel(e)) return;
+    const s = extPanel.shell;
+    closeExtensionsPanel();
+    s.newTab(`${SOLANA_OS_URL}/extensions`);
+  });
+  // Clicking an extension opens its popup (or runs its click action), anchored to the puzzle button.
+  ipcMain.on("panel:open", (e, id) => {
+    if (!fromPanel(e) || typeof id !== "string" || !browserSession.extensions.getExtension(id)) return;
+    const { shell: s, anchor } = extPanel;
+    closeExtensionsPanel();
+    s.win.focus();
+    try {
+      extensions.api.browserAction.activateClick({ extensionId: id, tabId: s.activeId ?? -1, anchorRect: { x: anchor.left, y: anchor.top, width: anchor.right - anchor.left, height: anchor.bottom - anchor.top }, alignment: "bottom left" });
+    } catch (err) {
+      console.error("[extensions] open failed:", err);
+    }
+  });
+  ipcMain.on("panel:itemMenu", (e, pos) => {
+    if (!fromPanel(e)) return;
+    const ext = browserSession.extensions.getExtension(pos?.id);
+    if (!ext) return;
+    const p = extPanel;
+    const s = p.shell;
+    const manifest = ext.manifest || {};
+    const optionsPage = manifest.options_page || manifest.options_ui?.page;
+    const pinned = !hiddenExtensions().includes(ext.id);
+    const refresh = () => extPanel?.win === p.win && p.win.webContents.send("panel:refresh");
+    const menu = Menu.buildFromTemplate([
+      { label: ext.name, enabled: false },
+      { type: "separator" },
+      { label: pinned ? "Unpin" : "Pin", click: () => (setExtensionHidden(ext.id, pinned), refresh()) },
+      { label: "Options", enabled: Boolean(optionsPage), click: () => (closeExtensionsPanel(), s.newTab(`chrome-extension://${ext.id}/${String(optionsPage).replace(/^\//, "")}`)) },
+      {
+        label: "Remove from Solana OS…",
+        click: async () => {
+          p.holdOpen = true;
+          await removeExtension(s, ext.id, ext.name).catch(() => false);
+          p.holdOpen = false;
+          if (extPanel?.win === p.win) {
+            refresh();
+            p.win.focus();
+          }
+        },
+      },
+      { type: "separator" },
+      { label: "Manage extensions", click: () => (closeExtensionsPanel(), s.newTab(`${SOLANA_OS_URL}/extensions#installed`)) },
+    ]);
+    p.holdOpen = true;
+    menu.popup({ window: p.win, x: Math.round(pos.x ?? 0), y: Math.round(pos.y ?? 0), callback: () => setTimeout(() => (p.holdOpen = false), 0) });
+  });
 }
 
 /* ------------------------------------------------------------ chrome.identity.launchWebAuthFlow */
@@ -922,8 +1072,8 @@ app.whenReady().then(async () => {
       for (const item of own) extra.append(item);
       if (own.length) add({ type: "separator" });
       add({ label: "Options", enabled: Boolean(optionsPage), click: () => optionsPage && s?.newTab(`chrome-extension://${ext.id}/${String(optionsPage).replace(/^\//, "")}`) });
-      add({ label: "Hide from toolbar", click: () => setExtensionHidden(ext.id, true) });
-      add({ label: `Remove ${ext.name}…`, click: () => removeExtension(s, ext.id, ext.name) });
+      add({ label: "Unpin", click: () => setExtensionHidden(ext.id, true) });
+      add({ label: "Remove from Solana OS…", click: () => removeExtension(s, ext.id, ext.name) });
       add({ type: "separator" });
       add({ label: "Manage extensions", click: () => s?.newTab(`${SOLANA_OS_URL}/extensions#installed`) });
       const a = details?.anchorRect ?? { x: 0, y: 0, height: 0 };
@@ -938,6 +1088,7 @@ app.whenReady().then(async () => {
   await installChromeWebStore({ session: browserSession }).catch((err) => console.error("[extensions] web store setup failed:", err));
 
   registerIpc();
+  registerPanelIpc();
   buildMenu();
 
   // Keep the Bookmarks/History menus current.

@@ -164,7 +164,7 @@ export async function runTool(name: ToolName, rawInput: unknown, ctx: ToolContex
       const name = raw.charAt(0).toUpperCase() + raw.slice(1);
       const inDesktop = ctx.user?.app === "desktop";
       const already = ctx.user?.installedExtensions?.find((x) => x.toLowerCase().includes(name.toLowerCase()));
-      if (already) return { result: { name, alreadyInstalled: already, note: "It's already installed; its icon is next to the address bar (or in ⋮ → Extensions if hidden)." }, sources: [] };
+      if (already) return { result: { name, alreadyInstalled: already, note: "It's already installed: it's next to the address bar if pinned, or under the puzzle-piece Extensions button." }, sources: [] };
       const href = `/extensions?q=${encodeURIComponent(name)}&install=1`;
       return {
         result: inDesktop

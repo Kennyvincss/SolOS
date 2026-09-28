@@ -154,9 +154,9 @@ $("menu").onclick = (e) => {
   const r = e.currentTarget.getBoundingClientRect();
   window.sos.appMenu(r.left, r.bottom + 4);
 };
-$("wallets").onclick = (e) => {
+$("extensions").onclick = (e) => {
   const r = e.currentTarget.getBoundingClientRect();
-  window.sos.walletMenu(r.left, r.bottom + 4);
+  window.sos.extensionsPanel({ left: r.left, top: r.top, right: r.right, bottom: r.bottom });
 };
 address.addEventListener("focus", () => {
   editing = true;

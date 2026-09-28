@@ -73,7 +73,7 @@ app.whenReady().then(() => {
       for (let i = 0; i < 20 && !menu; i++) await new Promise((r) => setTimeout(r, 150));
       Menu.prototype.popup = origPopup;
       result.contextMenu = menu ? menu.items.map((i) => i.label).filter(Boolean) : null;
-      const hide = menu?.items.find((i) => i.label === "Hide from toolbar");
+      const hide = menu?.items.find((i) => i.label === "Unpin");
       if (hide) {
         hide.click();
         await new Promise((r) => setTimeout(r, 800));
@@ -81,11 +81,52 @@ app.whenReady().then(() => {
           "(() => { const b = document.querySelector('browser-action-list').shadowRoot.querySelector('.action, [part~=action]'); return b ? getComputedStyle(b).display === 'none' : true })()",
         );
       }
+      // The puzzle-piece Extensions panel: lists the extension, re-pins it, and opens its popup.
+      const openPanel = async () => {
+        const known = new Set(BrowserWindow.getAllWindows());
+        const r = await win.webContents.executeJavaScript("(() => { const r = document.getElementById('extensions').getBoundingClientRect(); return { x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2) }; })()");
+        win.webContents.sendInputEvent({ type: "mouseDown", x: r.x, y: r.y, button: "left", clickCount: 1 });
+        win.webContents.sendInputEvent({ type: "mouseUp", x: r.x, y: r.y, button: "left", clickCount: 1 });
+        for (let i = 0; i < 30; i++) {
+          await new Promise((res) => setTimeout(res, 150));
+          const w = BrowserWindow.getAllWindows().find((x) => !known.has(x) && x.webContents.getURL().endsWith("extensions-panel.html") && x.isVisible());
+          if (w) return w;
+        }
+        return null;
+      };
+      const panel = await openPanel();
+      if (panel) {
+        const pb = panel.getBounds();
+        const wb = win.getBounds();
+        result.panel = {
+          rows: await panel.webContents.executeJavaScript("[...document.querySelectorAll('#list li .open span')].map((s) => s.textContent)"),
+          pinnedBefore: await panel.webContents.executeJavaScript("document.querySelector('#list .pin').classList.contains('on')"),
+          inside: pb.x >= wb.x && pb.x + pb.width <= wb.x + wb.width,
+          hasIcon: await panel.webContents.executeJavaScript("Boolean(document.querySelector('#list img'))"),
+        };
+        if (process.env.PANEL_OUT) fs.writeFileSync(process.env.PANEL_OUT, (await panel.webContents.capturePage()).toPNG());
+        await panel.webContents.executeJavaScript("document.querySelector('#list .pin').click()");
+        await new Promise((res) => setTimeout(res, 800));
+        result.panel.pinnedAfter = await panel.webContents.executeJavaScript("document.querySelector('#list .pin').classList.contains('on')");
+        result.panel.toolbarShowsAfterPin = await win.webContents.executeJavaScript(
+          "(() => { const b = document.querySelector('browser-action-list').shadowRoot.querySelector('.action, [part~=action]'); return Boolean(b) && getComputedStyle(b).display !== 'none' })()",
+        );
+        const beforeOpen = new Set(BrowserWindow.getAllWindows());
+        await panel.webContents.executeJavaScript("document.querySelector('#list .open').click()");
+        let pop = null;
+        for (let i = 0; i < 30 && !pop; i++) {
+          await new Promise((res) => setTimeout(res, 150));
+          pop = BrowserWindow.getAllWindows().find((w) => !beforeOpen.has(w) && w.webContents.getURL().includes("popup.html") && w.isVisible());
+        }
+        result.panel.popupFromPanel = Boolean(pop);
+        result.panel.closedAfterOpen = panel.isDestroyed();
+      } else result.panel = null;
       const img = await win.webContents.capturePage();
       fs.writeFileSync(process.env.SMOKE_OUT || "smoke-ext.png", img.toPNG());
       result.ok = result.contentScript === "injected" && result.toolbarActions > 0 && result.desktopUA === true && result.popup.visible && result.popupInsideWindow && /^chrome-extension:\/\/[a-p]{32}\/popup\.html\?approve=1$/.test(result.approvalWindow || "") &&
         /chromiumapp\.org\/x$/.test(result.apis?.page?.identity) && /chromiumapp\.org\/cb$/.test(result.apis?.worker?.identity || "") && result.apis.worker.sidePanel === true && result.apis.worker.browserIsChrome === true && result.apis.page.browserIsChrome === true &&
-        Array.isArray(result.contextMenu) && result.contextMenu.includes("Hide from toolbar") && result.contextMenu.some((l) => /^Remove /.test(l)) && result.hiddenAfterClick === true;
+        Array.isArray(result.contextMenu) && result.contextMenu.includes("Unpin") && result.contextMenu.includes("Remove from Solana OS…") && result.hiddenAfterClick === true &&
+        result.panel?.rows?.includes("Fake Wallet (test)") && result.panel.pinnedBefore === false && result.panel.pinnedAfter === true && result.panel.toolbarShowsAfterPin === true && result.panel.popupFromPanel === true && result.panel.closedAfterOpen === true && result.panel.inside === true;
     } catch (e) {
       result.error = String(e && e.stack || e);
     }

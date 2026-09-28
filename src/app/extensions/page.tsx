@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, Download, Eye, EyeOff, ExternalLink, Loader2, Search, Star, Trash2, Users, X } from "lucide-react";
+import { Check, Download, ExternalLink, Pin, PinOff, Loader2, Search, Star, Trash2, Users, X } from "lucide-react";
 import { Badge, Card, Monogram, Page, PageHeader, Section } from "@/components/ui";
 import { BROWSER_EXTENSIONS, chromeWebStoreUrl } from "@/lib/extensions/browser";
 import { useAppShell, useDesktopExtensions, type StoreExtension } from "@/lib/client/desktop";
@@ -189,7 +189,7 @@ export default function ExtensionsPage() {
       {desktop.error && <p className="mb-4 rounded-xl border border-line px-3 py-2 text-[13px] text-down">{desktop.error}</p>}
 
       {desktop.available && desktop.installedList.length > 0 && (
-        <Section id="installed" title="Installed" subtitle="Extensions in your Solana OS browser. Hidden ones keep working; they just don't show next to the address bar.">
+        <Section id="installed" title="Installed" subtitle="Extensions in your Solana OS browser. Pinned ones show next to the address bar; unpinned ones keep working and are in the puzzle-piece Extensions menu.">
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {desktop.installedList.map((x) => {
               const busy = desktop.busy === x.id;
@@ -200,13 +200,13 @@ export default function ExtensionsPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="truncate text-[14px] font-semibold">{x.name}</span>
-                      {x.hidden && <Badge>Hidden</Badge>}
+                      {!x.hidden && <Badge>Pinned</Badge>}
                     </div>
                     <div className="text-[12px] text-faint">Version {x.version}</div>
                   </div>
                   {desktop.canHide && (
-                    <button onClick={() => desktop.setHidden(x.id, !x.hidden)} disabled={busy} className="btn btn-ghost btn-sm" title={x.hidden ? "Show in toolbar" : "Hide from toolbar"} aria-label={x.hidden ? `Show ${x.name}` : `Hide ${x.name}`}>
-                      {x.hidden ? <Eye size={14} /> : <EyeOff size={14} />} {x.hidden ? "Show" : "Hide"}
+                    <button onClick={() => desktop.setHidden(x.id, !x.hidden)} disabled={busy} className="btn btn-ghost btn-sm" title={x.hidden ? "Pin to toolbar" : "Unpin from toolbar"} aria-label={x.hidden ? `Pin ${x.name}` : `Unpin ${x.name}`}>
+                      {x.hidden ? <Pin size={14} /> : <PinOff size={14} />} {x.hidden ? "Pin" : "Unpin"}
                     </button>
                   )}
                   <button onClick={() => desktop.remove(x.id)} disabled={busy} className="btn btn-ghost btn-sm text-down" aria-label={`Remove ${x.name}`}>

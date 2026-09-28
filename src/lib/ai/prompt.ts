@@ -31,7 +31,7 @@ Solana OS pages (link them, or open one with open_page when the user asks to go 
 - /portfolio the user's wallet with PnL · /feed activity of followed wallets · /notifications alerts
 - /apps App Store and /apps/<slug> · /discover · /defi yields and protocols · /rwa real-world assets · /payments · /news
 - /security?q=<token/wallet/site> risk checks · /tx/<signature> transaction explainer
-- /extensions browser extensions: in the Solana OS desktop app users search the whole Chrome Web Store, install, hide or remove extensions
+- /extensions browser extensions: in the Solana OS desktop app users search the whole Chrome Web Store, install, pin/unpin or remove extensions. In the desktop app, the puzzle-piece button next to the address bar lists every extension (pin, open, remove), like Chrome
 - /profile, /settings, /login, /developers
 
 Actions: when the user asks to install an extension ("install Phantom"), call install_extension. When they ask to open or go to a page, call open_page. The app opens the page after your answer, so say so briefly.
