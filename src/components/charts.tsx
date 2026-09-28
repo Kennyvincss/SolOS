@@ -21,44 +21,69 @@ export function Sparkline({ points, width = 96, height = 32, className }: { poin
   );
 }
 
+/** "Nice" axis ticks covering [min, max]. */
+function niceTicks(min: number, max: number, count = 4) {
+  const span = max - min || Math.abs(max) || 1;
+  const raw = span / count;
+  const mag = 10 ** Math.floor(Math.log10(raw));
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => s >= raw) ?? raw;
+  const lo = Math.floor(min / step) * step;
+  const hi = Math.ceil(max / step) * step;
+  const ticks: number[] = [];
+  for (let v = lo; v <= hi + step / 2 && ticks.length < 12; v += step) ticks.push(Number(v.toPrecision(12)));
+  return ticks;
+}
+
 export function AreaChart({
   data,
   height = 260,
   format = (v: number) => fmtUsd(v),
+  axisFormat,
   className,
   label = "Price",
+  color = "var(--chart)",
 }: {
   data: PricePoint[];
   height?: number;
   format?: (v: number) => string;
+  /** Shorter format for the y-axis (defaults to `format`). */
+  axisFormat?: (v: number) => string;
   className?: string;
   label?: string;
+  color?: string;
 }) {
   const ref = useRef<SVGSVGElement>(null);
   const [hover, setHover] = useState<number | null>(null);
   const W = 800;
   const H = height;
-  const pad = { t: 12, b: 22, l: 0, r: 0 };
-  const { path, area, min, max, xs, ys } = useMemo(() => {
+  const { path, area, min, max, xs, ys, ticks } = useMemo(() => {
     const vals = data.map((d) => d.v);
-    const min = Math.min(...vals);
-    const max = Math.max(...vals);
-    const span = max - min || Math.abs(max) * 0.01 || 1;
-    const xs = data.map((_, i) => pad.l + (i / Math.max(1, data.length - 1)) * (W - pad.l - pad.r));
-    const ys = data.map((d) => pad.t + (1 - (d.v - min) / span) * (H - pad.t - pad.b));
+    const rawMin = Math.min(...vals);
+    const rawMax = Math.max(...vals);
+    const ticks = niceTicks(rawMin, rawMax);
+    const lo = ticks[0];
+    const hi = ticks[ticks.length - 1];
+    const span = hi - lo || 1;
+    const xs = data.map((_, i) => (i / Math.max(1, data.length - 1)) * W);
+    const ys = data.map((d) => (1 - (d.v - lo) / span) * H);
     const path = xs.map((x, i) => `${i ? "L" : "M"}${x.toFixed(1)},${ys[i].toFixed(1)}`).join("");
-    const area = `${path}L${xs[xs.length - 1]},${H - pad.b}L${xs[0]},${H - pad.b}Z`;
-    return { path, area, min, max, xs, ys };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const area = `${path}L${xs[xs.length - 1]},${H}L${xs[0]},${H}Z`;
+    return { path, area, min: rawMin, max: rawMax, xs, ys, ticks };
   }, [data, H]);
 
-  if (data.length < 2) return <div className={cn("grid place-items-center text-[13px] text-muted", className)} style={{ height }}>No price history available</div>;
-  const up = data[data.length - 1].v >= data[0].v;
-  const color = up ? "var(--up)" : "var(--down)";
-  const i = hover ?? data.length - 1;
+  if (data.length < 2) return <div className={cn("grid place-items-center text-[13px] text-muted", className)} style={{ height }}>No history available yet</div>;
   const spanMs = data[data.length - 1].t - data[0].t;
+  const short = spanMs <= 2 * 86400e3;
   const fmtTime = (t: number) =>
-    new Date(t).toLocaleString("en-US", spanMs <= 2 * 86400e3 ? { hour: "numeric", minute: "2-digit" } : { month: "short", day: "numeric", ...(spanMs > 180 * 86400e3 ? { year: "2-digit" } : {}) });
+    new Date(t).toLocaleString(
+      "en-US",
+      short ? { hour: "numeric", minute: "2-digit" } : spanMs <= 8 * 86400e3 ? { weekday: "short", month: "short", day: "numeric", hour: "numeric" } : { month: "short", day: "numeric", ...(spanMs > 180 * 86400e3 ? { year: "numeric" } : {}) },
+    );
+  const fmtTick = (t: number) =>
+    new Date(t).toLocaleString("en-US", short ? { hour: "numeric" } : spanMs <= 8 * 86400e3 ? { weekday: "short" } : spanMs > 180 * 86400e3 ? { month: "short", year: "2-digit" } : { month: "short", day: "numeric" });
+  const xTicks = Array.from({ length: 7 }, (_, k) => Math.round((k / 6) * (data.length - 1)));
+  const axis = axisFormat ?? format;
+  const band = W / Math.max(8, Math.min(data.length, 14));
 
   const onMove = (clientX: number) => {
     const r = ref.current?.getBoundingClientRect();
@@ -68,50 +93,72 @@ export function AreaChart({
     for (let k = 1; k < xs.length; k++) if (Math.abs(xs[k] - x) < Math.abs(xs[best] - x)) best = k;
     setHover(best);
   };
+  const gid = `area-${label.replace(/\W/g, "")}`;
+  const hx = hover !== null ? (xs[hover] / W) * 100 : 0;
+  const hy = hover !== null ? (ys[hover] / H) * 100 : 0;
 
   return (
     <div className={cn("relative select-none", className)}>
-      <div className="pointer-events-none absolute left-0 top-0 z-10 text-[12px]">
-        <span className="font-medium tabular text-fg">{format(data[i].v)}</span>
-        <span className="ml-2 text-muted">{fmtTime(data[i].t)}</span>
-      </div>
-      <svg
-        ref={ref}
-        viewBox={`0 0 ${W} ${H}`}
-        preserveAspectRatio="none"
-        className="w-full touch-pan-y"
-        style={{ height }}
-        role="img"
-        aria-label={`${label} chart from ${format(data[0].v)} to ${format(data[data.length - 1].v)}; range ${format(min)} to ${format(max)}`}
-        onMouseMove={(e) => onMove(e.clientX)}
-        onMouseLeave={() => setHover(null)}
-        onTouchMove={(e) => onMove(e.touches[0].clientX)}
-        onTouchEnd={() => setHover(null)}
-      >
-        <defs>
-          <linearGradient id={`fill-${up ? "u" : "d"}`} x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor={color} stopOpacity={0.18} />
-            <stop offset="100%" stopColor={color} stopOpacity={0} />
-          </linearGradient>
-        </defs>
-        {[0.25, 0.5, 0.75].map((f) => (
-          <line key={f} x1={0} x2={W} y1={pad.t + f * (H - pad.t - pad.b)} y2={pad.t + f * (H - pad.t - pad.b)} stroke="var(--border)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
-        ))}
-        <path d={area} fill={`url(#fill-${up ? "u" : "d"})`} />
-        <path d={path} fill="none" stroke={color} strokeWidth={2} vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
-        {hover !== null && (
-          <>
-            <line x1={xs[hover]} x2={xs[hover]} y1={pad.t} y2={H - pad.b} stroke="var(--border-strong)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
-            <circle cx={xs[hover]} cy={ys[hover]} r={4.5} fill={color} stroke="var(--surface)" strokeWidth={2} vectorEffect="non-scaling-stroke" />
-          </>
-        )}
-      </svg>
-      <div className="mt-1 flex justify-between text-[11px] text-faint tabular">
-        <span>{fmtTime(data[0].t)}</span>
-        <span>
-          Low {format(min)} · High {format(max)}
-        </span>
-        <span>{fmtTime(data[data.length - 1].t)}</span>
+      <div className="flex gap-3">
+        {/* y-axis */}
+        <div className="relative shrink-0 text-right text-[11.5px] tabular text-faint" style={{ height, width: Math.max(...ticks.map((t) => axis(t).length)) * 6.6 + 2 }}>
+          {ticks.map((t, k) => (
+            <span key={t} className="absolute right-0 -translate-y-1/2 whitespace-nowrap" style={{ top: `${(1 - k / (ticks.length - 1)) * 100}%` }}>
+              {axis(t)}
+            </span>
+          ))}
+        </div>
+        <div className="relative min-w-0 flex-1">
+          <svg
+            ref={ref}
+            viewBox={`0 0 ${W} ${H}`}
+            preserveAspectRatio="none"
+            className="block w-full touch-pan-y overflow-visible"
+            style={{ height }}
+            role="img"
+            aria-label={`${label} chart from ${format(data[0].v)} to ${format(data[data.length - 1].v)}; range ${format(min)} to ${format(max)}`}
+            onMouseMove={(e) => onMove(e.clientX)}
+            onMouseLeave={() => setHover(null)}
+            onTouchMove={(e) => onMove(e.touches[0].clientX)}
+            onTouchEnd={() => setHover(null)}
+          >
+            <defs>
+              <linearGradient id={gid} x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stopColor={color} stopOpacity={0.2} />
+                <stop offset="100%" stopColor={color} stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
+            {ticks.map((_, k) => {
+              const y = (1 - k / (ticks.length - 1)) * H;
+              return <line key={k} x1={0} x2={W} y1={y} y2={y} stroke="var(--border)" strokeWidth={1} vectorEffect="non-scaling-stroke" />;
+            })}
+            {hover !== null && <rect x={Math.max(0, Math.min(W - band, xs[hover] - band / 2))} y={0} width={band} height={H} fill={color} fillOpacity={0.07} stroke={color} strokeOpacity={0.25} strokeWidth={1} vectorEffect="non-scaling-stroke" />}
+            <path d={area} fill={`url(#${gid})`} />
+            <path d={path} fill="none" stroke={color} strokeWidth={1.6} vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+          </svg>
+          {hover !== null && (
+            <>
+              <span className="pointer-events-none absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-surface" style={{ left: `${hx}%`, top: `${hy}%`, background: color }} />
+              <div
+                className="pointer-events-none absolute z-10 rounded-[10px] border border-line bg-surface px-3 py-2 text-[12px] shadow-[var(--shadow-pop)]"
+                style={{ left: `${hx}%`, top: `${hy}%`, transform: `translate(${hx > 70 ? "calc(-100% - 12px)" : "12px"}, ${hy > 60 ? "-110%" : "10%"})` }}
+              >
+                <div className="whitespace-nowrap text-muted">{fmtTime(data[hover].t)}</div>
+                <div className="whitespace-nowrap font-semibold tabular" style={{ color }}>
+                  {label}: {format(data[hover].v)}
+                </div>
+              </div>
+            </>
+          )}
+          {/* x-axis */}
+          <div className="relative mt-2 h-4 text-[11.5px] text-faint">
+            {xTicks.map((k, n) => (
+              <span key={n} className={cn("absolute whitespace-nowrap", n % 2 === 1 && "hidden sm:inline", n === 0 ? "" : n === xTicks.length - 1 ? "-translate-x-full" : "-translate-x-1/2")} style={{ left: `${(xs[k] / W) * 100}%` }}>
+                {fmtTick(data[k].t)}
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -185,7 +232,7 @@ export function Donut({ slices, size = 168, center }: { slices: { label: string;
 }
 
 /** Horizontal bars for probability / share displays. */
-export function Meter({ value, className, tone = "var(--green)" }: { value: number; className?: string; tone?: string }) {
+export function Meter({ value, className, tone = "var(--chart)" }: { value: number; className?: string; tone?: string }) {
   return (
     <div className={cn("h-1.5 w-full overflow-hidden rounded-full bg-surface-3", className)}>
       <div className="h-full rounded-full transition-[width] duration-500" style={{ width: `${Math.max(0, Math.min(100, value * 100))}%`, background: tone }} />

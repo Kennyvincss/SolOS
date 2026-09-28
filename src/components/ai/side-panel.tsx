@@ -65,8 +65,8 @@ export function AiSidePanel() {
       aria-label="STRATA AI"
       aria-hidden={!open}
       className={cn(
-        "fixed inset-y-0 right-0 z-50 w-full max-w-[420px] border-l border-line bg-bg shadow-[0_0_60px_rgba(0,0,0,0.45)] transition-transform duration-200 ease-out",
-        open ? "translate-x-0" : "pointer-events-none translate-x-full",
+        "fixed inset-y-0 right-0 z-50 w-full max-w-[420px] border-l border-line bg-bg transition-[transform,visibility] duration-200 ease-out",
+        open ? "visible translate-x-0 shadow-[var(--shadow-pop)]" : "pointer-events-none invisible translate-x-full",
       )}
     >
       {open && <ChatPanel key={key} variant="panel" getContext={getContext} onClose={() => setOpen(false)} initialPrompt={prompt} />}

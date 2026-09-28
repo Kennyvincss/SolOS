@@ -86,6 +86,8 @@ export interface UserState {
   /** When this state last changed (used to reconcile with account sync). */
   updatedAt?: number;
   theme: "dark" | "light" | "system";
+  /** Set once the user picks a theme in Settings; until then the default (light) applies. */
+  themeChosen?: boolean;
   watchlist: string[];
   followed: FollowedWallet[];
   walletAlerts: WalletAlert[];
@@ -148,7 +150,7 @@ export interface WebLibrary {
 
 export const DEFAULT_STATE: UserState = {
   v: 1,
-  theme: "dark",
+  theme: "light",
   watchlist: ["So11111111111111111111111111111111111111112", "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN", "jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL"],
   followed: [],
   walletAlerts: [],
@@ -200,6 +202,9 @@ export const localStorageAdapter: StorageAdapter = {
   },
 };
 
+/** Themes saved before the light redesign weren't picked by the user: use the new default. */
+const withTheme = (s: UserState): UserState => (s.themeChosen ? s : { ...s, theme: DEFAULT_STATE.theme });
+
 class Store {
   state: UserState = DEFAULT_STATE;
   key = "sos:v1:guest";
@@ -208,7 +213,7 @@ class Store {
   hydrate(uid: string | null) {
     this.key = `sos:v1:${uid ?? "guest"}`;
     const saved = this.adapter.load(this.key);
-    this.state = saved ? { ...DEFAULT_STATE, ...saved, profile: { ...DEFAULT_STATE.profile, ...saved.profile } } : { ...DEFAULT_STATE, profile: { ...DEFAULT_STATE.profile, joinedAt: Date.now() } };
+    this.state = saved ? withTheme({ ...DEFAULT_STATE, ...saved, profile: { ...DEFAULT_STATE.profile, ...saved.profile } }) : { ...DEFAULT_STATE, profile: { ...DEFAULT_STATE.profile, joinedAt: Date.now() } };
     this.emit();
   }
   subscribe = (fn: () => void) => {
@@ -224,7 +229,7 @@ class Store {
   };
   /** Replace state with a copy from account sync (does not trigger another upload). */
   replaceFromSync(remote: UserState) {
-    this.state = { ...DEFAULT_STATE, ...remote, profile: { ...DEFAULT_STATE.profile, ...remote.profile } };
+    this.state = withTheme({ ...DEFAULT_STATE, ...remote, profile: { ...DEFAULT_STATE.profile, ...remote.profile } });
     this.adapter.save(this.key, this.state);
     this.emit();
   }

@@ -21,8 +21,8 @@ export function PageHeader({ title, subtitle, actions, eyebrow }: { title: React
     <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-end sm:justify-between animate-fade-up">
       <div className="min-w-0">
         {eyebrow && <div className="mb-2 text-[13px] font-medium text-muted">{eyebrow}</div>}
-        <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.02em] sm:text-[34px]">{title}</h1>
-        {subtitle && <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-muted">{subtitle}</p>}
+        <h1 className="text-[24px] font-semibold leading-tight tracking-[-0.02em] sm:text-[28px]">{title}</h1>
+        {subtitle && <p className="mt-1.5 max-w-2xl text-[14px] leading-relaxed text-muted">{subtitle}</p>}
       </div>
       {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
     </div>
@@ -35,7 +35,7 @@ export function Section({ title, action, children, className, id, subtitle }: { 
       {(title || action) && (
         <div className="mb-3 flex items-end justify-between gap-3">
           <div>
-            {title && <h2 className="text-[17px] font-semibold tracking-[-0.01em]">{title}</h2>}
+            {title && <h2 className="text-[16px] font-semibold tracking-[-0.01em]">{title}</h2>}
             {subtitle && <p className="mt-0.5 text-[13px] text-muted">{subtitle}</p>}
           </div>
           {action}
@@ -176,27 +176,142 @@ export function Stat({ label, value, sub, className }: { label: ReactNode; value
   );
 }
 
+/** Joined segmented control (bordered group with a dark active segment). Scrolls sideways on small screens. */
 export function Tabs<T extends string>({ value, onChange, options, className }: { value: T; onChange: (v: T) => void; options: { value: T; label: ReactNode }[]; className?: string }) {
   return (
-    <div className={cn("no-scrollbar flex gap-1.5 overflow-x-auto", className)}>
+    <div className={cn("no-scrollbar -mx-1 flex overflow-x-auto px-1 py-0.5", className)}>
+      <div className="seg" role="tablist">
+        {options.map((o) => (
+          <button key={o.value} role="tab" aria-selected={o.value === value} data-active={o.value === value} onClick={() => onChange(o.value)}>
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function Segmented<T extends string>({ value, onChange, options, labels }: { value: T; onChange: (v: T) => void; options: T[]; labels?: Partial<Record<T, ReactNode>> }) {
+  return (
+    <div className="seg seg-sm" role="tablist">
       {options.map((o) => (
-        <button key={o.value} className="chip" data-active={o.value === value} onClick={() => onChange(o.value)}>
-          {o.label}
+        <button key={o} role="tab" aria-selected={o === value} data-active={o === value} onClick={() => onChange(o)} className="capitalize">
+          {labels?.[o] ?? o}
         </button>
       ))}
     </div>
   );
 }
 
-export function Segmented<T extends string>({ value, onChange, options }: { value: T; onChange: (v: T) => void; options: T[] }) {
+/* ------------------------------------------------------------ dashboard */
+
+export type Tone = "red" | "blue" | "green" | "pink" | "violet" | "amber" | "teal" | "neutral";
+const TONES: Record<Tone, string> = {
+  red: "bg-[#ff5a3c]/10 text-[#f0492b]",
+  blue: "bg-[#2f6bff]/10 text-[#2f6bff]",
+  green: "bg-[#12a150]/10 text-[#12a150]",
+  pink: "bg-[#d63fd0]/10 text-[#c238c7]",
+  violet: "bg-[#6a4ff0]/10 text-[#6a4ff0]",
+  amber: "bg-[#eda100]/12 text-[#c27a12]",
+  teal: "bg-[#0ea5a4]/10 text-[#0e9594]",
+  neutral: "bg-surface-2 text-muted",
+};
+
+/** Round tinted icon tile used on stat cards and card headers. */
+export function IconTile({ icon, tone = "blue", size = 36, className }: { icon: ReactNode; tone?: Tone; size?: number; className?: string }) {
   return (
-    <div className="inline-flex rounded-full bg-surface-2 p-0.5">
-      {options.map((o) => (
-        <button key={o} onClick={() => onChange(o)} className={cn("rounded-full px-3 py-1 text-[12px] font-medium transition-colors", o === value ? "bg-surface-3 text-fg shadow-sm" : "text-muted hover:text-fg")}>
-          {o}
-        </button>
-      ))}
+    <span className={cn("grid shrink-0 place-items-center rounded-full", TONES[tone], className)} style={{ width: size, height: size }}>
+      {icon}
+    </span>
+  );
+}
+
+/** KPI card: icon, label, big number and a change line ("+2% increased"). */
+export function StatCard({
+  icon,
+  tone = "blue",
+  label,
+  value,
+  change,
+  changeLabel,
+  sub,
+  href,
+  loading,
+  className,
+}: {
+  icon: ReactNode;
+  tone?: Tone;
+  label: ReactNode;
+  value: ReactNode;
+  change?: number;
+  changeLabel?: string;
+  sub?: ReactNode;
+  href?: string;
+  loading?: boolean;
+  className?: string;
+}) {
+  const body = (
+    <>
+      <IconTile icon={icon} tone={tone} />
+      <div className="mt-3 text-[13px] text-muted">{label}</div>
+      {loading ? (
+        <Skeleton className="mt-1.5 h-7 w-28" />
+      ) : (
+        <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+          <span className="truncate text-[24px] font-semibold tabular tracking-[-0.02em]">{value}</span>
+          {change !== undefined && Number.isFinite(change) && (
+            <span className="text-[12.5px] text-muted">
+              <Change value={change} className="font-medium" /> {changeLabel ?? (change >= 0 ? "increased" : "decreased")}
+            </span>
+          )}
+          {sub && <span className="text-[12.5px] text-muted">{sub}</span>}
+        </div>
+      )}
+    </>
+  );
+  return href ? (
+    <Card href={href} className={cn("p-4", className)}>
+      {body}
+    </Card>
+  ) : (
+    <Card className={cn("p-4", className)}>{body}</Card>
+  );
+}
+
+/** Card title row: icon tile, title and subtitle on the left, actions on the right. */
+export function CardHeader({ icon, tone = "blue", title, subtitle, action, className }: { icon?: ReactNode; tone?: Tone; title: ReactNode; subtitle?: ReactNode; action?: ReactNode; className?: string }) {
+  return (
+    <div className={cn("flex items-center gap-3", className)}>
+      {icon && <IconTile icon={icon} tone={tone} size={38} className="bg-surface ring-1 ring-line" />}
+      <div className="min-w-0 flex-1">
+        <h2 className="truncate text-[15px] font-semibold tracking-[-0.01em]">{title}</h2>
+        {subtitle && <p className="truncate text-[12.5px] text-muted">{subtitle}</p>}
+      </div>
+      {action && <div className="flex shrink-0 items-center gap-2">{action}</div>}
     </div>
+  );
+}
+
+/** Small bordered dropdown ("7 Days ▾"). */
+export function Select<T extends string>({ value, onChange, options, className, label }: { value: T; onChange: (v: T) => void; options: { value: T; label: string }[]; className?: string; label?: string }) {
+  return (
+    <label className={cn("relative inline-flex", className)}>
+      <span className="sr-only">{label}</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value as T)}
+        className="h-8 appearance-none rounded-[10px] border border-line bg-surface py-0 pl-3 pr-8 text-[13px] font-medium text-fg shadow-[var(--shadow)] outline-none hover:border-line-strong focus:ring-2 focus:ring-[var(--ring)]"
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+      <svg viewBox="0 0 10 6" className="pointer-events-none absolute right-3 top-1/2 h-1.5 w-2.5 -translate-y-1/2 text-muted" aria-hidden>
+        <path d="M0 0h10L5 6z" fill="currentColor" />
+      </svg>
+    </label>
   );
 }
 
@@ -325,7 +440,7 @@ export function Toggle({ checked, onChange, label }: { checked: boolean; onChang
       onClick={() => onChange(!checked)}
       className={cn("relative h-6 w-10 shrink-0 rounded-full transition-colors", checked ? "bg-sol-green" : "bg-surface-3")}
     >
-      <span className={cn("absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform", checked ? "translate-x-[18px]" : "translate-x-0.5")} />
+      <span className={cn("absolute left-0 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform", checked ? "translate-x-[18px]" : "translate-x-0.5")} />
     </button>
   );
 }

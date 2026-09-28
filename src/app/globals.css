@@ -3,69 +3,83 @@
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 /* ------------------------------------------------------------------ tokens */
-:root {
-  --bg: #07070b;
-  --bg-elev: #0c0c11;
-  --surface: #111116;
-  --surface-2: #17171e;
-  --surface-3: #1f1f27;
-  --border: rgba(255, 255, 255, 0.07);
-  --border-strong: rgba(255, 255, 255, 0.13);
-  --text: #f3f4f6;
-  --muted: #9ba1ab;
-  --faint: #666c76;
-  /* STRATA accent (the logo's glass violet); "up" stays green for gains. */
-  --green: #9b9cff;
-  --purple: #7f6bff;
-  --teal: #6fb7ff;
-  --up: #2fd98a;
-  --down: #ff5c6c;
-  --warn: #f5b841;
-  --ring: rgba(155, 156, 255, 0.4);
-  /* Categorical chart slots (validated palette, dark steps) */
-  --series-1: #3987e5;
-  --series-2: #d95926;
-  --series-3: #199e70;
-  --series-4: #c98500;
-  --series-5: #d55181;
-  --series-other: #5f646c;
-  --glow: radial-gradient(60% 50% at 50% 0%, rgba(127, 107, 255, 0.10), transparent 70%),
-    radial-gradient(40% 40% at 80% 10%, rgba(111, 183, 255, 0.05), transparent 70%);
-  color-scheme: dark;
-}
-
+/* Light is the default look: white panels on a soft grey sidebar, hairline
+   borders and blue data. Dark mode mirrors the same structure. */
+:root,
 [data-theme="light"] {
-  --bg: #f7f7f8;
+  --bg: #ffffff;
   --bg-elev: #ffffff;
+  --sidebar: #f6f6f7;
   --surface: #ffffff;
-  --surface-2: #f3f4f6;
-  --surface-3: #e9ebee;
-  --border: rgba(10, 12, 16, 0.08);
-  --border-strong: rgba(10, 12, 16, 0.16);
-  --text: #0b0c0f;
-  --muted: #5a606a;
-  --faint: #8a9099;
-  --green: #5b54e8;
+  --surface-2: #f4f4f6;
+  --surface-3: #e9e9ec;
+  --border: #ebebee;
+  --border-strong: #d9d9de;
+  --text: #16171a;
+  --muted: #5f636b;
+  --faint: #9a9ea6;
+  /* STRATA accent (links, focus, selected); "up" stays green for gains. */
+  --green: #2f6bff;
   --purple: #6a4ff0;
   --teal: #2f7fe0;
-  --up: #0a9f61;
+  --chart: #3d8ef0;
+  --up: #12a150;
   --down: #e0364a;
-  --warn: #b7791f;
-  --ring: rgba(91, 84, 232, 0.35);
+  --warn: #c27a12;
+  --ring: rgba(47, 107, 255, 0.3);
+  --shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  --shadow-pop: 0 10px 30px -8px rgba(16, 24, 40, 0.18), 0 2px 6px rgba(16, 24, 40, 0.06);
+  --seg-active: linear-gradient(180deg, #3a3c42 0%, #1d1e22 100%);
   --series-1: #2a78d6;
   --series-2: #eb6834;
   --series-3: #1baf7a;
   --series-4: #eda100;
   --series-5: #e87ba4;
   --series-other: #a3a7ad;
-  --glow: radial-gradient(60% 50% at 50% 0%, rgba(106, 79, 240, 0.06), transparent 70%),
-    radial-gradient(40% 40% at 80% 10%, rgba(47, 127, 224, 0.04), transparent 70%);
+  --glow: radial-gradient(60% 50% at 50% 0%, rgba(47, 107, 255, 0.06), transparent 70%),
+    radial-gradient(40% 40% at 80% 10%, rgba(106, 79, 240, 0.04), transparent 70%);
   color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --bg: #0b0b0e;
+  --bg-elev: #111115;
+  --sidebar: #0f0f13;
+  --surface: #131317;
+  --surface-2: #1a1a1f;
+  --surface-3: #24242a;
+  --border: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.14);
+  --text: #f3f4f6;
+  --muted: #9ba1ab;
+  --faint: #666c76;
+  --green: #7fa2ff;
+  --purple: #9b8cff;
+  --teal: #6fb7ff;
+  --chart: #5aa2f5;
+  --up: #2fd98a;
+  --down: #ff5c6c;
+  --warn: #f5b841;
+  --ring: rgba(127, 162, 255, 0.4);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-pop: 0 12px 32px -8px rgba(0, 0, 0, 0.6);
+  --seg-active: linear-gradient(180deg, #f4f4f6 0%, #dcdce0 100%);
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --series-5: #d55181;
+  --series-other: #5f646c;
+  --glow: radial-gradient(60% 50% at 50% 0%, rgba(127, 162, 255, 0.08), transparent 70%),
+    radial-gradient(40% 40% at 80% 10%, rgba(155, 140, 255, 0.05), transparent 70%);
+  color-scheme: dark;
 }
 
 @theme inline {
   --color-bg: var(--bg);
   --color-elev: var(--bg-elev);
+  --color-sidebar: var(--sidebar);
+  --color-chart: var(--chart);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
   --color-surface-3: var(--surface-3);
@@ -85,6 +99,7 @@
 
 /* -------------------------------------------------------------------- base */
 html {
+  --sb-w: 248px;
   background: var(--bg);
   -webkit-text-size-adjust: 100%;
 }
@@ -117,14 +132,15 @@ body {
   .card {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 18px;
+    border-radius: 16px;
+    box-shadow: var(--shadow);
   }
   .card-hover {
     transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
   }
   .card-hover:hover {
     border-color: var(--border-strong);
-    background: color-mix(in srgb, var(--surface) 70%, var(--surface-2));
+    box-shadow: var(--shadow-pop);
   }
   .hairline {
     border-color: var(--border);
@@ -145,7 +161,7 @@ body {
     gap: 0.5rem;
     height: 2.5rem;
     padding: 0 1rem;
-    border-radius: 999px;
+    border-radius: 10px;
     font-size: 0.875rem;
     font-weight: 500;
     transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.1s ease;
@@ -167,9 +183,10 @@ body {
     opacity: 0.9;
   }
   .btn-ghost {
-    background: transparent;
+    background: var(--surface);
     border: 1px solid var(--border);
     color: var(--text);
+    box-shadow: var(--shadow);
   }
   .btn-ghost:hover {
     background: var(--surface-2);
@@ -191,11 +208,12 @@ body {
     width: 100%;
     height: 2.75rem;
     padding: 0 0.95rem;
-    background: var(--surface-2);
+    background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 12px;
     color: var(--text);
     font-size: 0.9rem;
+    box-shadow: var(--shadow);
     transition: border-color 0.15s ease, background 0.15s ease;
   }
   .input::placeholder {
@@ -203,8 +221,8 @@ body {
   }
   .input:focus {
     outline: none;
-    border-color: var(--border-strong);
-    background: var(--surface);
+    border-color: color-mix(in srgb, var(--green) 45%, var(--border));
+    box-shadow: 0 0 0 3px var(--ring);
   }
   .skeleton {
     background: linear-gradient(90deg, var(--surface-2) 0%, var(--surface-3) 50%, var(--surface-2) 100%);
@@ -230,9 +248,55 @@ body {
     border-color: var(--border-strong);
   }
   .chip[data-active="true"] {
-    background: var(--text);
+    background: var(--seg-active);
     color: var(--bg);
-    border-color: var(--text);
+    border-color: transparent;
+  }
+  /* Joined segmented control: bordered group, dark active segment. */
+  .seg {
+    display: inline-flex;
+    align-items: stretch;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .seg > button,
+  .seg > a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0 0.9rem;
+    height: 2.1rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--muted);
+    white-space: nowrap;
+    transition: color 0.15s ease, background 0.15s ease;
+  }
+  .seg > * + * {
+    border-left: 1px solid var(--border);
+  }
+  .seg > button:hover,
+  .seg > a:hover {
+    color: var(--text);
+    background: var(--surface-2);
+  }
+  .seg > [data-active="true"] {
+    background: var(--seg-active);
+    color: var(--bg);
+    border-left-color: transparent;
+  }
+  .seg > [data-active="true"] + * {
+    border-left-color: transparent;
+  }
+  .seg-sm > button,
+  .seg-sm > a {
+    height: 1.8rem;
+    padding: 0 0.7rem;
+    font-size: 0.75rem;
   }
   .prose-ai {
     line-height: 1.65;
@@ -372,8 +436,12 @@ body {
 /* The website's STRATA AI panel pushes the page aside on wide screens instead of covering it. */
 @media (min-width: 1280px) {
   html.ai-panel-open main,
-  html.ai-panel-open body > div > header {
+  html.ai-panel-open #app-header {
     margin-right: 420px;
     transition: margin-right 0.2s ease-out;
   }
+}
+
+html.sb-collapsed {
+  --sb-w: 72px;
 }

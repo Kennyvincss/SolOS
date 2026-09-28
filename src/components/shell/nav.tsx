@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
-import { Bell, Command, Compass, Home, Menu, Search, Sparkles, Wallet, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Bell, ChevronDown, ChevronRight, Command, Compass, Home, Menu, PanelLeft, Plus, Search, Sparkles, Wallet, X } from "lucide-react";
 import { PAGES } from "@/lib/catalog/pages";
 import { useSession } from "@/lib/client/session";
 import { useStore } from "@/lib/client/store";
@@ -14,86 +14,205 @@ import { shortAddr } from "@/lib/format";
 import { openCommandBar } from "./command-bar";
 import { openAiPanel } from "../ai/side-panel";
 
-const SIDEBAR = ["/", "/search", "/discover", "/apps", "/extensions", "/ai", "/tokens", "/wallets", "/defi", "/rwa", "/payments", "/news", "/security", "/portfolio", "/bookmarks", "/history", "/notifications", "/settings"];
-const LABEL: Record<string, string> = { "/ai": "AI" };
+type NavItem = { href: string; label?: string };
+type NavGroup = { id: string; title?: string; badge?: string; add?: { href: string; label: string }; items: NavItem[] };
+
+const GROUPS: NavGroup[] = [
+  { id: "main", items: [{ href: "/", label: "Overview" }, { href: "/search" }, { href: "/discover" }, { href: "/ai" }, { href: "/portfolio" }, { href: "/notifications" }] },
+  { id: "explore", title: "Explore", items: [{ href: "/tokens" }, { href: "/wallets" }, { href: "/defi" }, { href: "/rwa" }, { href: "/payments" }, { href: "/news" }, { href: "/security" }] },
+  { id: "apps", title: "Apps & tools", badge: "New", add: { href: "/apps", label: "Browse apps" }, items: [{ href: "/apps" }, { href: "/extensions" }, { href: "/developers" }] },
+  { id: "library", title: "Library", items: [{ href: "/bookmarks" }, { href: "/history" }, { href: "/reading-list" }] },
+];
 
 function isActive(path: string, href: string) {
   if (href === "/") return path === "/";
   return path === href || path.startsWith(`${href}/`) || (href === "/wallets" && path.startsWith("/tx"));
 }
 
-function WalletButton({ compact }: { compact?: boolean }) {
+/** The catalog page the current path belongs to (longest matching prefix). */
+function pageFor(path: string) {
+  return [...PAGES].sort((a, b) => b.href.length - a.href.length).find((p) => isActive(path, p.href));
+}
+
+function WalletButton({ compact, rail }: { compact?: boolean; rail?: boolean }) {
   const s = useSession();
   const label = s.wallet ? shortAddr(s.wallet.address) : s.address ? (s.address === "demo" ? "Demo wallet" : `Watching ${shortAddr(s.address)}`) : "Connect wallet";
+  const icon = s.wallet?.icon ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={s.wallet.icon} alt="" className="h-full w-full rounded-[inherit]" />
+  ) : (
+    <Wallet size={compact ? 14 : 16} />
+  );
+  if (rail)
+    return (
+      <button onClick={() => s.setWalletModal(true)} title={label} aria-label={label} className="mx-auto grid h-10 w-10 place-items-center rounded-xl border border-line bg-surface text-muted shadow-[var(--shadow)] hover:text-fg">
+        <span className="grid h-6 w-6 place-items-center rounded-lg">{icon}</span>
+      </button>
+    );
   return (
     <button
       onClick={() => s.setWalletModal(true)}
-      className={cn("flex w-full items-center gap-2.5 rounded-2xl border border-line p-2.5 text-left transition-colors hover:bg-surface-2", compact && "w-auto rounded-full px-3 py-1.5")}
+      className={cn(
+        "flex items-center gap-2.5 text-left transition-colors",
+        compact ? "h-9 rounded-[10px] border border-line bg-surface px-2.5 shadow-[var(--shadow)] hover:border-line-strong" : "w-full rounded-xl border border-line bg-surface p-2.5 shadow-[var(--shadow)] hover:border-line-strong",
+      )}
     >
-      <span className={cn("grid h-8 w-8 shrink-0 place-items-center rounded-xl", s.wallet ? "bg-sol-green/10 text-sol-green" : "bg-surface-2 text-muted", compact && "h-6 w-6 rounded-full")}>
-        {s.wallet?.icon ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={s.wallet.icon} alt="" className="h-full w-full rounded-[inherit]" />
-        ) : (
-          <Wallet size={compact ? 13 : 16} />
-        )}
-      </span>
+      <span className={cn("grid shrink-0 place-items-center rounded-lg", s.wallet ? "bg-sol-green/10 text-sol-green" : "bg-surface-2 text-muted", compact ? "h-6 w-6" : "h-8 w-8")}>{icon}</span>
       <span className="min-w-0 flex-1">
         {!compact && <span className="block text-[11px] text-faint">{s.wallet ? s.wallet.name : s.address ? "Read-only" : "Wallet"}</span>}
-        <span className={cn("block truncate font-medium", compact ? "text-[12px]" : "text-[13px]")}>{label}</span>
+        <span className={cn("block truncate font-medium", compact ? "text-[12.5px]" : "text-[13px]")}>{label}</span>
       </span>
-      {s.wallet && !compact && <span className="h-2 w-2 rounded-full bg-sol-green" />}
+      {s.wallet && !compact && <span className="h-2 w-2 rounded-full bg-up" />}
     </button>
   );
+}
+
+function readJson<T>(key: string, fallback: T): T {
+  try {
+    const v = localStorage.getItem(key);
+    return v ? (JSON.parse(v) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+/** Sidebar collapsed to an icon rail (remembered; applied before paint by the layout script). */
+export function useSidebarCollapsed() {
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => setCollapsed(document.documentElement.classList.contains("sb-collapsed")), []);
+  const toggle = () => {
+    const next = !document.documentElement.classList.contains("sb-collapsed");
+    document.documentElement.classList.toggle("sb-collapsed", next);
+    try {
+      localStorage.setItem("strata:sidebar", next ? "collapsed" : "open");
+    } catch {}
+    setCollapsed(next);
+  };
+  return { collapsed, toggle };
 }
 
 export function Sidebar() {
   const path = usePathname();
   const unread = useStore((s) => s.notifications.filter((n) => !n.read).length);
-  const items = SIDEBAR.map((h) => PAGES.find((p) => p.href === h)!).filter(Boolean);
-  return (
-    <aside className="fixed inset-y-0 left-0 z-40 hidden w-[240px] flex-col border-r border-line bg-bg/80 backdrop-blur-xl md:flex">
-      <Link href="/" className="flex h-16 items-center px-5">
-        <Wordmark />
+  const { collapsed, toggle } = useSidebarCollapsed();
+  const [closed, setClosed] = useState<Record<string, boolean>>({});
+  useEffect(() => setClosed(readJson("strata:nav-sections", {})), []);
+  const toggleGroup = (id: string) =>
+    setClosed((c) => {
+      const next = { ...c, [id]: !c[id] };
+      try {
+        localStorage.setItem("strata:nav-sections", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  const byHref = (h: string) => PAGES.find((p) => p.href === h);
+
+  const link = (it: NavItem) => {
+    const p = byHref(it.href);
+    if (!p) return null;
+    const active = isActive(path, p.href);
+    const label = it.label ?? p.title;
+    const badge = p.href === "/notifications" && unread > 0 ? (unread > 99 ? "99+" : String(unread)) : null;
+    return (
+      <Link
+        key={p.href}
+        href={p.href}
+        prefetch
+        title={collapsed ? label : undefined}
+        aria-current={active ? "page" : undefined}
+        className={cn(
+          "group relative flex items-center gap-3 rounded-[10px] text-[13.5px] transition-colors",
+          collapsed ? "mx-auto h-10 w-10 justify-center" : "px-3 py-[6px]",
+          active ? "bg-surface-3/80 font-medium text-fg" : "text-muted hover:bg-surface-3/50 hover:text-fg",
+        )}
+      >
+        <Icon name={p.icon} size={17} strokeWidth={1.8} className={active ? "text-fg" : "text-muted group-hover:text-fg"} />
+        {!collapsed && <span className="flex-1 truncate">{label}</span>}
+        {badge && (collapsed ? <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-down" /> : <span className="rounded-full bg-down px-1.5 text-[10.5px] font-semibold text-white">{badge}</span>)}
       </Link>
-      <button onClick={openCommandBar} className="mx-3 mb-2 flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-[13px] text-faint transition-colors hover:border-line-strong hover:text-muted">
-        <Search size={14} />
-        <span className="flex-1 text-left">Search or jump to…</span>
-        <kbd className="flex items-center gap-0.5 rounded-md border border-line px-1.5 text-[10.5px]">
-          <Command size={10} />K
-        </kbd>
-      </button>
-      <button onClick={() => openAiPanel()} className="mx-3 mb-2 flex items-center gap-2 rounded-xl border border-[color-mix(in_srgb,var(--green)_30%,var(--border))] bg-[color-mix(in_srgb,var(--green)_8%,transparent)] px-3 py-2 text-[13px] text-fg transition-colors hover:bg-[color-mix(in_srgb,var(--green)_14%,transparent)]">
-        <Sparkles size={14} className="text-sol-green" />
-        <span className="flex-1 text-left">Ask STRATA AI</span>
-        <kbd className="flex items-center gap-0.5 rounded-md border border-line px-1.5 text-[10.5px] text-faint">
-          <Command size={10} />J
-        </kbd>
-      </button>
-      <nav className="no-scrollbar flex-1 overflow-y-auto px-3 py-1">
-        {items.map((p) => {
-          const active = isActive(path, p.href);
-          return (
-            <Link
-              key={p.href}
-              href={p.href}
-              prefetch
-              className={cn(
-                "group flex items-center gap-3 rounded-xl px-3 py-[7px] text-[13.5px] transition-colors",
-                active ? "bg-surface-2 font-medium text-fg" : "text-muted hover:bg-surface hover:text-fg",
-              )}
-            >
-              <Icon name={p.icon} size={17} className={active ? "text-sol-green" : "text-faint group-hover:text-muted"} />
-              <span className="flex-1">{LABEL[p.href] ?? p.title}</span>
-              {p.href === "/notifications" && unread > 0 && <span className="rounded-full bg-sol-green px-1.5 text-[10.5px] font-semibold text-black">{unread > 99 ? "99+" : unread}</span>}
-            </Link>
-          );
-        })}
+    );
+  };
+
+  return (
+    <aside className="fixed inset-y-0 left-0 z-40 hidden w-[var(--sb-w)] flex-col border-r border-line bg-sidebar transition-[width] duration-200 md:flex">
+      <div className={cn("flex h-[60px] shrink-0 items-center border-b border-line", collapsed ? "justify-center" : "justify-between pl-5 pr-3")}>
+        {!collapsed && (
+          <Link href="/" aria-label="STRATA home">
+            <Wordmark />
+          </Link>
+        )}
+        <button onClick={toggle} className="grid h-8 w-8 place-items-center rounded-lg text-muted hover:bg-surface-3/60 hover:text-fg" aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} title={collapsed ? "Expand sidebar" : "Collapse sidebar"}>
+          {collapsed ? <LogoMark size={22} /> : <PanelLeft size={17} />}
+        </button>
+      </div>
+      <nav className="no-scrollbar flex-1 overflow-y-auto px-3 py-3">
+        {GROUPS.map((g) => (
+          <div key={g.id} className={cn(g.title && (collapsed ? "mt-3 border-t border-line pt-3" : "mt-4"))}>
+            {g.title && !collapsed && (
+              <div className="mb-1 flex items-center gap-1 px-1.5">
+                <button onClick={() => toggleGroup(g.id)} className="flex flex-1 items-center gap-1.5 py-1 text-[11px] font-medium uppercase tracking-[0.06em] text-faint hover:text-muted" aria-expanded={!closed[g.id]}>
+                  <ChevronDown size={13} className={cn("transition-transform", closed[g.id] && "-rotate-90")} />
+                  {g.title}
+                  {g.badge && <span className="ml-1 rounded-full bg-sol-green/12 px-1.5 py-px text-[10px] font-semibold normal-case tracking-normal text-sol-green">{g.badge}</span>}
+                </button>
+                {g.add && (
+                  <Link href={g.add.href} className="grid h-6 w-6 place-items-center rounded-md text-faint hover:bg-surface-3/60 hover:text-fg" aria-label={g.add.label} title={g.add.label}>
+                    <Plus size={14} />
+                  </Link>
+                )}
+              </div>
+            )}
+            {(collapsed || !closed[g.id]) && <div className="space-y-0.5">{g.items.map(link)}</div>}
+          </div>
+        ))}
       </nav>
-      <div className="border-t border-line p-3">
-        <WalletButton />
+      <div className={cn("space-y-2 border-t border-line p-3", collapsed && "px-2")}>
+        {link({ href: "/settings" })}
+        <WalletButton rail={collapsed} />
       </div>
     </aside>
+  );
+}
+
+/** Desktop top bar: where you are, search, STRATA AI, notifications and wallet. */
+export function DesktopHeader() {
+  const path = usePathname();
+  const unread = useStore((s) => s.notifications.filter((n) => !n.read).length);
+  if (path.startsWith("/ai")) return null; // STRATA AI has its own full-screen header
+  const page = pageFor(path);
+  const deeper = page && page.href !== "/" && path !== page.href;
+  return (
+    <header id="app-header" className="sticky top-0 z-30 hidden h-[60px] items-center gap-3 border-b border-line bg-bg/85 px-6 backdrop-blur-xl md:flex">
+      <nav aria-label="Breadcrumb" className="flex min-w-0 flex-1 items-center gap-2 text-[14px]">
+        <Icon name={page?.icon ?? "Home"} size={17} className="shrink-0 text-muted" />
+        {deeper ? (
+          <>
+            <Link href={page.href} className="truncate text-muted hover:text-fg">
+              {page.title}
+            </Link>
+            <ChevronRight size={14} className="shrink-0 text-faint" />
+            <span className="truncate font-medium">Details</span>
+          </>
+        ) : (
+          <span className="truncate font-medium">{page?.href === "/" ? "Overview" : page?.title ?? "STRATA"}</span>
+        )}
+      </nav>
+      <button onClick={openCommandBar} className="flex h-10 w-full max-w-[420px] items-center gap-2.5 rounded-full border border-line bg-surface px-4 text-[13px] text-faint shadow-[var(--shadow)] transition-colors hover:border-line-strong">
+        <Search size={15} className="text-muted" />
+        <span className="flex-1 truncate text-left">Search (tokens, wallets, apps, transactions)</span>
+        <kbd className="flex items-center gap-0.5 rounded-md bg-surface-2 px-1.5 py-0.5 text-[11px] font-medium text-muted">
+          <Command size={11} />K
+        </kbd>
+      </button>
+      <button onClick={() => openAiPanel()} className="flex h-10 items-center gap-1.5 rounded-full border border-line bg-surface px-3.5 text-[13px] font-medium shadow-[var(--shadow)] hover:border-line-strong" title="Ask STRATA AI (⌘J)">
+        <Sparkles size={15} className="text-sol-green" /> Ask AI
+      </button>
+      <Link href="/notifications" className="relative grid h-10 w-10 place-items-center rounded-full border border-line bg-surface text-muted shadow-[var(--shadow)] hover:text-fg" aria-label="Notifications">
+        <Bell size={16} />
+        {unread > 0 && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-down ring-2 ring-surface" />}
+      </Link>
+      <WalletButton compact />
+    </header>
   );
 }
 
@@ -102,11 +221,11 @@ export function TopBar() {
   const unread = useStore((s) => s.notifications.filter((n) => !n.read).length);
   if (path.startsWith("/ai")) return null; // STRATA AI has its own full-screen header
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-line bg-bg/80 px-4 backdrop-blur-xl md:hidden">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-line bg-bg/85 px-4 backdrop-blur-xl md:hidden">
       <Link href="/" aria-label="STRATA home">
         <LogoMark size={26} />
       </Link>
-      <button onClick={openCommandBar} className="flex h-9 flex-1 items-center gap-2 rounded-full border border-line bg-surface px-3 text-[13px] text-faint">
+      <button onClick={openCommandBar} className="flex h-9 flex-1 items-center gap-2 rounded-full border border-line bg-surface px-3 text-[13px] text-faint shadow-[var(--shadow)]">
         <Search size={14} /> Search Solana…
       </button>
       <button onClick={() => openAiPanel()} className="grid h-9 w-9 place-items-center rounded-full text-sol-green" aria-label="Ask STRATA AI">
@@ -114,7 +233,7 @@ export function TopBar() {
       </button>
       <Link href="/notifications" className="relative grid h-9 w-9 place-items-center rounded-full text-muted" aria-label="Notifications">
         <Bell size={18} />
-        {unread > 0 && <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-sol-green" />}
+        {unread > 0 && <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-down" />}
       </Link>
     </header>
   );

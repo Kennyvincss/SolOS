@@ -50,7 +50,7 @@ function HoldingsHistory({ p }: { p: Portfolio }) {
         <h3 className="text-[15px] font-semibold">Value of current holdings · 30 days</h3>
         <DataBadge meta={h0.data?.meta} />
       </div>
-      {loading ? <Skeleton className="h-[220px] w-full rounded-xl" /> : <AreaChart data={series} height={220} label="Holdings value" />}
+      {loading ? <Skeleton className="h-[220px] w-full rounded-xl" /> : <AreaChart data={series} height={220} label="Holdings value" axisFormat={(v) => fmtUsd(v, { compact: true })} />}
       <p className="mt-2 text-[11.5px] leading-relaxed text-faint">Your current balances priced at each point in time. It ignores past trades and transfers, so it is not a record of realized performance.</p>
     </Card>
   );

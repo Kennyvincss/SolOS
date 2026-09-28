@@ -69,8 +69,8 @@ export default function SettingsPage() {
 
       <Section title="Appearance">
         <Card className="px-5">
-          <Row label="Theme" hint="Dark is the default">
-            <Segmented value={theme} onChange={(t) => set((s) => ({ ...s, theme: t }))} options={["dark", "light", "system"]} />
+          <Row label="Theme" hint="Light is the default">
+            <Segmented value={theme} onChange={(t) => set((s) => ({ ...s, theme: t, themeChosen: true }))} options={["light", "dark", "system"]} />
           </Row>
         </Card>
       </Section>
