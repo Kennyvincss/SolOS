@@ -234,6 +234,21 @@ class BrowserShell {
   }
 }
 
+/** Resolve chrome.windows.create URLs relative to the extension, like Chrome does. */
+function resolveWindowUrls(details, extension) {
+  if (!details || !details.url || !extension?.url) return details;
+  const resolve = (u) => {
+    try {
+      const abs = new URL(String(u), extension.url).href;
+      return /^(chrome|javascript|file):/i.test(abs) ? null : abs;
+    } catch {
+      return null;
+    }
+  };
+  const urls = (Array.isArray(details.url) ? details.url : [details.url]).map(resolve).filter(Boolean);
+  return { ...details, url: Array.isArray(details.url) ? urls : urls[0] };
+}
+
 function isGoogleSignIn(url) {
   try {
     const u = new URL(url);
@@ -837,6 +852,18 @@ app.whenReady().then(async () => {
       if (!win.isDestroyed()) win.close();
     },
   });
+
+  // chrome.windows.create doesn't resolve relative URLs in electron-chrome-extensions
+  // (tabs.create does). Wallets open their approval window with a relative URL
+  // like "notification.html?...", which left the window blank and the site's
+  // "Connect" spinning forever. Resolve them against the calling extension.
+  const store = extensions.ctx?.store;
+  if (store && typeof store.createWindow === "function") {
+    const createWindow = store.createWindow.bind(store);
+    store.createWindow = (event, details = {}) => createWindow(event, resolveWindowUrls(details, event?.extension));
+  } else {
+    console.warn("[extensions] could not patch windows.create URL handling");
+  }
 
   // Extension icons in the toolbar are served over crx:// in the toolbar's session.
   ElectronChromeExtensions.handleCRXProtocol(session.defaultSession);

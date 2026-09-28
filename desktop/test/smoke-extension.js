@@ -52,10 +52,19 @@ app.whenReady().then(() => {
         result.apis = await popup.webContents.executeJavaScript(
           "chrome.storage.local.get('swProbe').then((r) => ({ page: { identity: chrome.identity.getRedirectURL('x'), sidePanel: typeof chrome.sidePanel.open, tabsCreate: typeof chrome.tabs.create, browserIsChrome: typeof browser === 'undefined' || browser === chrome }, worker: r.swProbe || null }))",
         );
+        // Like Phantom's approval window: chrome.windows.create with a relative URL.
+        const beforeApprove = new Set(BrowserWindow.getAllWindows());
+        await popup.webContents.executeJavaScript("chrome.windows.create({ url: 'popup.html?approve=1', type: 'popup', width: 360, height: 600 }).then(() => true)").catch((e) => String(e));
+        let approve = null;
+        for (let i = 0; i < 30 && !approve; i++) {
+          await new Promise((r) => setTimeout(r, 200));
+          approve = BrowserWindow.getAllWindows().find((w) => !beforeApprove.has(w) && w.webContents.getURL().includes("popup.html?approve=1"));
+        }
+        result.approvalWindow = approve ? approve.webContents.getURL() : null;
       } else result.popup = { visible: false };
       const img = await win.webContents.capturePage();
       fs.writeFileSync(process.env.SMOKE_OUT || "smoke-ext.png", img.toPNG());
-      result.ok = result.contentScript === "injected" && result.toolbarActions > 0 && result.desktopUA === true && result.popup.visible && result.popupInsideWindow &&
+      result.ok = result.contentScript === "injected" && result.toolbarActions > 0 && result.desktopUA === true && result.popup.visible && result.popupInsideWindow && /^chrome-extension:\/\/[a-p]{32}\/popup\.html\?approve=1$/.test(result.approvalWindow || "") &&
         /chromiumapp\.org\/x$/.test(result.apis?.page?.identity) && /chromiumapp\.org\/cb$/.test(result.apis?.worker?.identity || "") && result.apis.worker.sidePanel === true && result.apis.worker.browserIsChrome === true && result.apis.page.browserIsChrome === true;
     } catch (e) {
       result.error = String(e && e.stack || e);
