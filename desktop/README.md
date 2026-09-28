@@ -12,7 +12,20 @@ A desktop browser for the Solana ecosystem, built on Chromium (Electron).
   Center (known-app registry, lookalike domains, bait keywords) and flagged in
   the address bar.
 - **Tabs, back/forward, zoom, DevTools**, and the usual shortcuts
-  (Ctrl/⌘+T, W, L, R, [, ]).
+  (Ctrl/⌘+T, W, L, R, D, [, ]).
+- **Password manager.** Offers to save logins, fills them next time, and
+  keeps them encrypted with the system keychain (Keychain on macOS, DPAPI on
+  Windows, libsecret/KWallet on Linux). Manage them in **File → Passwords…**,
+  where revealing a password asks for Touch ID or confirmation. Passwords
+  never leave the computer.
+- **Bookmarks and history.** Star any page (Ctrl/⌘+D). Bookmarks and history
+  are in the menu bar.
+- **Sync.** Sign in to Solana OS in any tab and your bookmarks and browser
+  settings sync to your account (File → Sync). History and passwords stay on
+  the device.
+- **Automatic updates.** Installed copies check GitHub Releases for new
+  versions, download them in the background and offer to restart
+  (Solana OS → Check for Updates… on Mac, File → Check for Updates… elsewhere).
 
 ## Get the installers
 
@@ -22,14 +35,34 @@ Installers are built by GitHub Actions (`.github/workflows/desktop.yml`):
 2. When it finishes, download the artifact for your OS from the run page:
    `.dmg` (macOS), `.exe` (Windows), `.AppImage` or `.deb` (Linux).
 
-To publish a release instead, push a tag such as `desktop-v0.1.0`. The
-installers are attached to a GitHub Release.
+To publish a release, push a tag such as `desktop-v0.3.0`. The version comes
+from the tag, the installers are attached to a GitHub Release, and installed
+copies update themselves to it.
 
-The builds are **not code-signed** yet, so the first launch shows a warning:
+```bash
+git tag desktop-v0.3.0 && git push origin desktop-v0.3.0
+```
 
-- **macOS:** right-click the app → **Open** → **Open**. (Signing needs an
-  Apple Developer ID, which costs $99/year.)
-- **Windows:** SmartScreen → **More info** → **Run anyway**.
+## Code signing
+
+Without signing, the first launch shows a warning (macOS: right-click →
+**Open**; Windows: **More info → Run anyway**), and macOS copies can't
+auto-update. Signing turns on automatically when these repository secrets
+exist (GitHub → Settings → Secrets and variables → Actions):
+
+| Secret | What it is |
+|---|---|
+| `MAC_CERT_P12_BASE64` | Your "Developer ID Application" certificate exported as .p12, base64-encoded (`base64 -i cert.p12`) |
+| `MAC_CERT_PASSWORD` | The .p12 export password |
+| `APPLE_ID` | Your Apple ID email (for notarization) |
+| `APPLE_APP_SPECIFIC_PASSWORD` | An app-specific password from appleid.apple.com |
+| `APPLE_TEAM_ID` | Your 10-character Apple Developer Team ID |
+| `WIN_CERT_P12_BASE64` | A Windows code-signing certificate (.pfx), base64-encoded |
+| `WIN_CERT_PASSWORD` | The .pfx password |
+
+Apple's certificate needs an Apple Developer account ($99/year). For Windows,
+any OV/EV code-signing certificate works. EV certificates, or Azure Trusted
+Signing, get past SmartScreen fastest.
 
 ## Run from source
 
@@ -52,10 +85,14 @@ npm run dist      # installers for the current OS, into dist/
 | File | Purpose |
 |---|---|
 | `src/main.js` | Windows, tabs (`WebContentsView`), extension support, menus, safety checks |
-| `src/lib.js` | Pure helpers: wallet list, address-bar parsing, risk summary |
+| `src/lib.js` | Pure helpers: wallet list, address-bar parsing, risk summary, bookmark merge |
+| `src/passwords.js` | Encrypted password storage (OS keychain via `safeStorage`) |
+| `src/preload-tab.js` | Runs isolated from pages; detects logins to save and fills saved ones |
+| `src/library.js` | Bookmarks, history, settings and account sync |
+| `src/updater.js` | Automatic updates from GitHub Releases |
 | `src/preload-shell.js` | Bridge between the toolbar UI and the main process |
 | `src/ui/` | Toolbar: tabs, address bar, safety badge, extension icons, Wallets menu |
-| `test/` | Unit tests, plus smoke tests that boot the app with a test wallet extension |
+| `test/` | Unit tests, plus smoke tests that boot the app (test wallet extension, password save/fill, bookmarks) |
 
 Extension support comes from
 [electron-chrome-extensions](https://github.com/samuelmaddock/electron-browser-shell)

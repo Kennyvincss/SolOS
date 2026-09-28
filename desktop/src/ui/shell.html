@@ -24,6 +24,9 @@
         <form id="address-form">
           <span id="risk" class="risk" hidden></span>
           <input id="address" spellcheck="false" autocomplete="off" placeholder="Search Solana or enter an address" aria-label="Address or search" />
+          <button id="star" type="button" class="star" title="Bookmark this page (Ctrl/⌘+D)" aria-label="Bookmark this page" aria-pressed="false">
+            <svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" /></svg>
+          </button>
         </form>
         <browser-action-list id="actions" partition="persist:solanaos" alignment="bottom right"></browser-action-list>
         <button id="wallets" class="pill" title="Wallet extensions">

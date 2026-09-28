@@ -1,7 +1,7 @@
 {
   "name": "solana-os-desktop",
   "productName": "Solana OS",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Solana OS desktop browser with Chrome wallet extensions (Phantom, Solflare, Backpack).",
   "main": "src/main.js",
   "license": "GPL-3.0-only",
@@ -21,7 +21,8 @@
     "files": [
       "src/**/*",
       "package.json",
-      "LICENSE"
+      "LICENSE",
+      "!src/**/*.test.js"
     ],
     "directories": {
       "buildResources": "build",
@@ -30,10 +31,26 @@
     "mac": {
       "category": "public.app-category.finance",
       "target": [
-        "dmg",
-        "zip"
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
       ],
-      "icon": "build/icon.png"
+      "icon": "build/icon.png",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
     },
     "win": {
       "target": [
@@ -66,7 +83,8 @@
   },
   "dependencies": {
     "electron-chrome-extensions": "^4.9.0",
-    "electron-chrome-web-store": "^0.13.0"
+    "electron-chrome-web-store": "^0.13.0",
+    "electron-updater": "^6.8.9"
   },
   "devDependencies": {
     "electron": "^44.4.5",

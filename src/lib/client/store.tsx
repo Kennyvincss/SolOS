@@ -83,6 +83,8 @@ export interface Submission {
 
 export interface UserState {
   v: 1;
+  /** When this state last changed (used to reconcile with account sync). */
+  updatedAt?: number;
   theme: "dark" | "light" | "system";
   watchlist: string[];
   followed: FollowedWallet[];
@@ -181,10 +183,18 @@ class Store {
   };
   get = () => this.state;
   set = (fn: (s: UserState) => UserState) => {
-    this.state = fn(this.state);
+    this.state = { ...fn(this.state), updatedAt: Date.now() };
     this.adapter.save(this.key, this.state);
     this.emit();
+    this.onLocalChange?.();
   };
+  /** Replace state with a copy from account sync (does not trigger another upload). */
+  replaceFromSync(remote: UserState) {
+    this.state = { ...DEFAULT_STATE, ...remote, profile: { ...DEFAULT_STATE.profile, ...remote.profile } };
+    this.adapter.save(this.key, this.state);
+    this.emit();
+  }
+  onLocalChange?: () => void;
   private emit() {
     this.subs.forEach((f) => f());
   }
@@ -193,10 +203,50 @@ class Store {
 const store = new Store(localStorageAdapter);
 const StoreCtx = createContext(store);
 
+/**
+ * Account sync for signed-in users: on sign-in the newer of the local and
+ * server copies wins; afterwards local changes upload after a short pause.
+ * Works when the server has sync storage configured; otherwise it's a no-op.
+ */
+function useAccountSync(uid: string | null) {
+  useEffect(() => {
+    if (!uid) {
+      store.onLocalChange = undefined;
+      return;
+    }
+    let cancelled = false;
+    let enabled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const upload = () =>
+      fetch("/api/sync/web", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ data: store.get() }) }).catch(() => {});
+    store.onLocalChange = () => {
+      if (!enabled) return;
+      clearTimeout(timer);
+      timer = setTimeout(upload, 2000);
+    };
+    fetch("/api/sync/web")
+      .then((r) => (r.ok ? (r.json() as Promise<{ data: UserState | null; updatedAt: number }>) : null))
+      .then((remote) => {
+        if (cancelled || !remote) return;
+        enabled = true;
+        const local = store.get();
+        if (remote.data && (remote.data.updatedAt ?? remote.updatedAt) > (local.updatedAt ?? 0)) store.replaceFromSync(remote.data);
+        else if ((local.updatedAt ?? 0) > 0) upload();
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      store.onLocalChange = undefined;
+    };
+  }, [uid]);
+}
+
 export function StoreProvider({ uid, children }: { uid: string | null; children: ReactNode }) {
   useEffect(() => {
     store.hydrate(uid);
   }, [uid]);
+  useAccountSync(uid);
   // Sync across tabs.
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {

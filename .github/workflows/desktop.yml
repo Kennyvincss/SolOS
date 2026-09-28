@@ -1,8 +1,15 @@
 name: Desktop app
 
 # Builds Solana OS Desktop installers for macOS, Windows and Linux.
-# Run it from the Actions tab ("Run workflow"), or push a tag like desktop-v0.1.0
-# to also attach the installers to a GitHub Release.
+#
+# - "Run workflow" (Actions tab): builds installers as downloadable artifacts.
+# - Push a tag like desktop-v0.2.0: builds and publishes a GitHub Release.
+#   Installed copies of the app update themselves from the latest release.
+#
+# Code signing (optional; builds are unsigned until these secrets exist):
+#   macOS:   MAC_CERT_P12_BASE64, MAC_CERT_PASSWORD,
+#            APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, APPLE_TEAM_ID (notarization)
+#   Windows: WIN_CERT_P12_BASE64, WIN_CERT_PASSWORD
 on:
   workflow_dispatch:
   push:
@@ -21,6 +28,7 @@ jobs:
     defaults:
       run:
         working-directory: desktop
+        shell: bash
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -30,11 +38,25 @@ jobs:
           cache-dependency-path: desktop/package-lock.json
       - run: npm ci
       - run: npm test
-      - name: Build installers
-        run: npm run dist
+
+      - name: Use the tag as the app version
+        if: startsWith(github.ref, 'refs/tags/desktop-v')
+        run: npm version "${GITHUB_REF_NAME#desktop-v}" --no-git-tag-version --allow-same-version
+
+      - name: Build (and publish on tags)
+        run: npx electron-builder --publish "${{ startsWith(github.ref, 'refs/tags/desktop-v') && 'always' || 'never' }}"
         env:
-          # Unsigned builds. Add signing certificates here to remove OS warnings.
-          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Signing turns on automatically when the certificate secrets are set.
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ (runner.os == 'macOS' && secrets.MAC_CERT_P12_BASE64 != '') && 'true' || 'false' }}
+          CSC_LINK: ${{ runner.os == 'macOS' && secrets.MAC_CERT_P12_BASE64 || '' }}
+          CSC_KEY_PASSWORD: ${{ runner.os == 'macOS' && secrets.MAC_CERT_PASSWORD || '' }}
+          WIN_CSC_LINK: ${{ secrets.WIN_CERT_P12_BASE64 }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CERT_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
       - uses: actions/upload-artifact@v4
         with:
           name: solana-os-desktop-${{ matrix.os }}
@@ -44,13 +66,5 @@ jobs:
             desktop/dist/*.exe
             desktop/dist/*.AppImage
             desktop/dist/*.deb
+            desktop/dist/*.yml
           if-no-files-found: error
-      - name: Attach to release
-        if: startsWith(github.ref, 'refs/tags/desktop-v')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            desktop/dist/*.dmg
-            desktop/dist/*.exe
-            desktop/dist/*.AppImage
-            desktop/dist/*.deb

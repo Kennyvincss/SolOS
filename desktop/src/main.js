@@ -10,6 +10,9 @@ const { app, BrowserWindow, Menu, WebContentsView, dialog, ipcMain, net, session
 const { ElectronChromeExtensions } = require("electron-chrome-extensions");
 const { installChromeWebStore, installExtension, uninstallExtension } = require("electron-chrome-web-store");
 const { WALLETS, SOLANA_OS_URL, normalizeInput, riskFromReport, hostOf } = require("./lib");
+const library = require("./library");
+const passwords = require("./passwords");
+const { initUpdater, checkForUpdatesInteractive } = require("./updater");
 
 const PARTITION = "persist:solanaos";
 const TOOLBAR_HEIGHT = 88;
@@ -84,6 +87,8 @@ class BrowserShell {
         sandbox: true,
         contextIsolation: true,
         nodeIntegration: false,
+        // Password manager (save/fill logins). Runs isolated from the page.
+        preload: path.join(__dirname, "preload-tab.js"),
       },
     });
     const wc = view.webContents;
@@ -102,9 +107,11 @@ class BrowserShell {
       if (t) t.favicon = favicons[0];
       push();
     });
+    wc.on("page-title-updated", (_e, title) => library.addHistory(wc.getURL(), title));
     wc.on("did-navigate", async (_e, navUrl) => {
       const t = this.tabs.get(wc.id);
       if (!t) return;
+      library.addHistory(navUrl, wc.getTitle());
       t.risk = null;
       push();
       const risk = await checkSite(navUrl);
@@ -175,6 +182,7 @@ class BrowserShell {
         canGoBack: wc.navigationHistory.canGoBack(),
         canGoForward: wc.navigationHistory.canGoForward(),
         risk: t.risk,
+        bookmarked: library.isBookmarked(wc.getURL()),
       };
     });
     this.win.webContents.send("shell:state", { tabs, activeId: this.activeId, home: SOLANA_OS_URL, platform: process.platform });
@@ -265,6 +273,102 @@ function registerIpc() {
     if (!wallet) throw new Error("Unknown wallet");
     return removeWallet(shellFor(e.sender), wallet);
   });
+
+  /* bookmarks */
+  on("shell:toggleBookmark", (s) => {
+    const wc = s.activeTab?.view.webContents;
+    if (!wc || !/^https?:/.test(wc.getURL())) return;
+    library.toggleBookmark(wc.getURL(), wc.getTitle());
+    s.sendState();
+  });
+
+  /* password manager (messages come from the tab preload) */
+  const prompting = new Set();
+  const mainFrameOrigin = (e) => {
+    const frame = e.senderFrame;
+    // Only top-level pages in our tabs; the origin comes from the frame, not the page.
+    if (!frame || frame.parent !== null || !shellFor(e.sender)) return null;
+    return passwords.eligibleOrigin(frame.url);
+  };
+  ipcMain.on("pw:captured", async (e, payload) => {
+    const origin = mainFrameOrigin(e);
+    const username = typeof payload?.username === "string" ? payload.username.slice(0, 256) : "";
+    const password = typeof payload?.password === "string" ? payload.password : "";
+    if (!origin || !password || password.length > 512 || !passwords.available() || !library.getSetting("savePasswords", true)) return;
+    const kind = passwords.classify(origin, username, password);
+    if (kind === "never" || kind === "same" || prompting.has(origin)) return;
+    const s = shellFor(e.sender);
+    prompting.add(origin);
+    try {
+      const host = new URL(origin).host;
+      const update = kind === "update";
+      const { response } = await dialog.showMessageBox(s.win, {
+        type: "question",
+        buttons: update ? ["Update password", "Not now"] : ["Save password", "Never for this site", "Not now"],
+        defaultId: 0,
+        cancelId: update ? 1 : 2,
+        message: update ? `Update your saved password for ${host}?` : `Save password for ${host}?`,
+        detail: `${username ? `Username: ${username}\n` : ""}Stored encrypted on this computer with your system keychain. It is never synced or uploaded.`,
+      });
+      if (response === 0) passwords.save(origin, username, password);
+      else if (!update && response === 1) passwords.neverFor(origin);
+    } finally {
+      prompting.delete(origin);
+    }
+  });
+  ipcMain.handle("pw:get", (e) => {
+    const origin = mainFrameOrigin(e);
+    if (!origin || !library.getSetting("autofillPasswords", true)) return [];
+    return passwords.forOrigin(origin).map(({ username, password }) => ({ username, password }));
+  });
+
+  /* Passwords page (a local, privileged window) */
+  const fromPasswordsPage = (e) => passwordsWindow && e.sender === passwordsWindow.webContents;
+  ipcMain.handle("pwm:list", (e) => (fromPasswordsPage(e) ? { entries: passwords.list(), never: passwords.neverList(), available: passwords.available(), save: library.getSetting("savePasswords", true), autofill: library.getSetting("autofillPasswords", true) } : null));
+  ipcMain.handle("pwm:reveal", async (e, id) => {
+    if (!fromPasswordsPage(e)) return null;
+    if (!(await confirmIdentity("show a saved password"))) return null;
+    return passwords.reveal(id);
+  });
+  ipcMain.handle("pwm:remove", (e, id) => fromPasswordsPage(e) && (passwords.remove(id), true));
+  ipcMain.handle("pwm:allowAgain", (e, origin) => fromPasswordsPage(e) && (passwords.allowAgain(origin), true));
+  ipcMain.handle("pwm:setting", (e, key, value) => {
+    if (!fromPasswordsPage(e) || !["savePasswords", "autofillPasswords"].includes(key)) return false;
+    library.setSetting(key, Boolean(value));
+    return true;
+  });
+}
+
+/** Ask for Touch ID on Macs that have it; otherwise a confirmation dialog. */
+async function confirmIdentity(reason) {
+  const { systemPreferences } = require("electron");
+  if (process.platform === "darwin" && systemPreferences.canPromptTouchID?.()) {
+    return systemPreferences.promptTouchID(reason).then(() => true, () => false);
+  }
+  const { response } = await dialog.showMessageBox(passwordsWindow ?? undefined, {
+    type: "warning",
+    buttons: ["Show password", "Cancel"],
+    defaultId: 1,
+    cancelId: 1,
+    message: "Show this password?",
+    detail: "Make sure no one else can see your screen.",
+  });
+  return response === 0;
+}
+
+let passwordsWindow = null;
+function openPasswords() {
+  if (passwordsWindow && !passwordsWindow.isDestroyed()) return passwordsWindow.focus();
+  passwordsWindow = new BrowserWindow({
+    width: 720,
+    height: 640,
+    title: "Passwords — Solana OS",
+    backgroundColor: "#07080a",
+    autoHideMenuBar: true,
+    webPreferences: { preload: path.join(__dirname, "preload-passwords.js"), contextIsolation: true, sandbox: true },
+  });
+  passwordsWindow.loadFile(path.join(__dirname, "ui", "passwords.html"));
+  passwordsWindow.on("closed", () => (passwordsWindow = null));
 }
 
 async function removeWallet(s, wallet) {
@@ -288,8 +392,14 @@ function buildMenu() {
     const s = focusedShell();
     if (s) fn(s);
   };
+  const sync = library.getSyncState();
+  const syncLabel =
+    sync.status === "ok" ? `Synced ${new Date(sync.at).toLocaleTimeString()}` : sync.status === "signed-out" ? "Sign in to Solana OS to sync" : sync.status === "unavailable" ? "Sync not set up on server" : sync.status === "error" ? "Sync failed — retry" : "Sync now";
+  const updatesItem = { label: "Check for Updates…", click: () => checkForUpdatesInteractive() };
   const template = [
-    ...(process.platform === "darwin" ? [{ role: "appMenu" }] : []),
+    ...(process.platform === "darwin"
+      ? [{ label: app.name, submenu: [{ role: "about" }, updatesItem, { type: "separator" }, { role: "services" }, { type: "separator" }, { role: "hide" }, { role: "hideOthers" }, { role: "unhide" }, { type: "separator" }, { role: "quit" }] }]
+      : []),
     {
       label: "File",
       submenu: [
@@ -298,7 +408,10 @@ function buildMenu() {
         { label: "Close Tab", accelerator: "CmdOrCtrl+W", click: act((s) => s.closeTab(s.activeId)) },
         { type: "separator" },
         { label: "Open Location…", accelerator: "CmdOrCtrl+L", click: act((s) => s.win.webContents.send("shell:focusAddress")) },
-        ...(process.platform === "darwin" ? [] : [{ type: "separator" }, { role: "quit" }]),
+        { type: "separator" },
+        { label: "Passwords…", click: () => openPasswords() },
+        { label: syncLabel, click: act((s) => (sync.status === "signed-out" ? s.newTab(`${SOLANA_OS_URL}/login`) : library.syncNow().then(buildMenu))) },
+        ...(process.platform === "darwin" ? [] : [{ type: "separator" }, updatesItem, { type: "separator" }, { role: "quit" }]),
       ],
     },
     { role: "editMenu" },
@@ -323,6 +436,32 @@ function buildMenu() {
         { label: "Chrome Web Store", click: act((s) => s.newTab("https://chromewebstore.google.com/category/extensions")) },
         { type: "separator" },
         ...WALLETS.map((w) => ({ label: `Get ${w.name}`, click: act((s) => s.newTab(`https://chromewebstore.google.com/detail/${w.id}`)) })),
+      ],
+    },
+    {
+      label: "Bookmarks",
+      submenu: [
+        { label: "Bookmark This Page", accelerator: "CmdOrCtrl+D", click: act((s) => { const wc = s.activeTab?.view.webContents; if (wc && /^https?:/.test(wc.getURL())) { library.toggleBookmark(wc.getURL(), wc.getTitle()); s.sendState(); } }) },
+        { type: "separator" },
+        ...(library.bookmarks().length
+          ? library.bookmarks().slice(-40).reverse().map((b) => ({ label: b.title.slice(0, 60) || b.url, click: act((s) => s.newTab(b.url)) }))
+          : [{ label: "No bookmarks yet", enabled: false }]),
+      ],
+    },
+    {
+      label: "History",
+      submenu: [
+        ...(library.recentHistory(15).length
+          ? library.recentHistory(15).map((h) => ({ label: (h.title || h.url).slice(0, 60), click: act((s) => s.newTab(h.url)) }))
+          : [{ label: "No history yet", enabled: false }]),
+        { type: "separator" },
+        {
+          label: "Clear History…",
+          click: async () => {
+            const { response } = await dialog.showMessageBox({ type: "warning", buttons: ["Clear", "Cancel"], defaultId: 1, cancelId: 1, message: "Clear browsing history?", detail: "This removes the list of sites you visited. Bookmarks, passwords and cookies are kept." });
+            if (response === 0) library.clearHistory();
+          },
+        },
       ],
     },
     { role: "windowMenu" },
@@ -394,6 +533,28 @@ app.whenReady().then(async () => {
 
   registerIpc();
   buildMenu();
+
+  // Keep the Bookmarks/History menus current.
+  let menuTimer = null;
+  library.onChange(() => {
+    clearTimeout(menuTimer);
+    menuTimer = setTimeout(buildMenu, 500);
+  });
+
+  // Sync bookmarks and settings with the Solana OS account signed in inside the
+  // browser (the request carries that session's cookies).
+  library.configureSync((method, body) =>
+    browserSession.fetch(`${SOLANA_OS_URL}/api/sync/desktop`, {
+      method,
+      headers: body ? { "content-type": "application/json" } : undefined,
+      body: body ? JSON.stringify({ data: body }) : undefined,
+    }),
+  );
+  const syncAndRefresh = () => library.syncNow().then(buildMenu, () => {});
+  setTimeout(syncAndRefresh, 5000);
+  setInterval(syncAndRefresh, 30 * 60 * 1000);
+
+  initUpdater();
   new BrowserShell();
 
   app.on("activate", () => {

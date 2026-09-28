@@ -77,6 +77,12 @@ function render() {
   } else {
     riskEl.hidden = true;
   }
+  const star = $("star");
+  const bookmarkable = /^https?:/.test(t?.url ?? "");
+  star.hidden = !bookmarkable;
+  star.classList.toggle("on", Boolean(t?.bookmarked));
+  star.setAttribute("aria-pressed", String(Boolean(t?.bookmarked)));
+  star.title = t?.bookmarked ? "Remove bookmark" : "Bookmark this page (Ctrl/⌘+D)";
 }
 
 window.sos.onState((s) => {
@@ -94,6 +100,7 @@ $("back").onclick = () => window.sos.back();
 $("forward").onclick = () => window.sos.forward();
 $("reload").onclick = () => (state.tabs.find((x) => x.id === state.activeId)?.loading ? window.sos.stop() : window.sos.reload());
 $("home").onclick = () => window.sos.home();
+$("star").onclick = () => window.sos.toggleBookmark();
 $("wallets").onclick = (e) => {
   const r = e.currentTarget.getBoundingClientRect();
   window.sos.walletMenu(r.left, r.bottom + 4);

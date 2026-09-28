@@ -39,6 +39,12 @@ svg.logo { width: 20px; height: 20px; stroke: none; fill: var(--green); }
 #address-form:focus-within { border-color: rgba(20, 241, 149, 0.45); }
 #address { flex: 1; min-width: 0; height: 100%; border: 0; outline: none; background: none; color: var(--text); font: inherit; font-size: 13.5px; user-select: text; }
 #address::placeholder { color: #666c76; }
+.star { flex: none; width: 26px; height: 26px; margin-right: -6px; border: 0; border-radius: 999px; background: none; color: #666c76; display: grid; place-items: center; }
+.star:hover { color: var(--text); background: rgba(255, 255, 255, 0.06); }
+.star[hidden] { display: none; }
+.star svg { width: 16px; height: 16px; }
+.star.on { color: #f5b841; }
+.star.on svg { fill: currentColor; }
 .risk { flex: none; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
 .risk.low { color: #2fd98a; background: rgba(47, 217, 138, 0.12); }
 .risk.medium { color: var(--warn); background: rgba(245, 184, 65, 0.12); }

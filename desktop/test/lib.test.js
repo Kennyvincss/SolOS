@@ -1,6 +1,23 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { normalizeInput, riskFromReport, hostOf, WALLETS } = require("../src/lib");
+const { normalizeInput, riskFromReport, hostOf, WALLETS, mergeBookmarks } = require("../src/lib");
+
+test("bookmark sync: newest change per URL wins, deletions propagate", () => {
+  const local = {
+    "https://jup.ag/": { title: "Jupiter", createdAt: 1, updatedAt: 10 },
+    "https://kamino.finance/": { title: "Kamino", createdAt: 2, updatedAt: 5 },
+  };
+  const remote = {
+    "https://jup.ag/": { title: "Jupiter", createdAt: 1, updatedAt: 20, deleted: true }, // deleted later elsewhere
+    "https://kamino.finance/": { title: "Old", createdAt: 2, updatedAt: 1 }, // older than local
+    "https://drift.trade/": { title: "Drift", createdAt: 3, updatedAt: 3 }, // new elsewhere
+  };
+  const m = mergeBookmarks(local, remote);
+  assert.equal(m["https://jup.ag/"].deleted, true);
+  assert.equal(m["https://kamino.finance/"].title, "Kamino");
+  assert.equal(m["https://drift.trade/"].title, "Drift");
+  assert.deepEqual(mergeBookmarks({}, {}), {});
+});
 
 const base = "https://solanaos.example";
 

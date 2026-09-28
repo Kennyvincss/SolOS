@@ -10,7 +10,8 @@ extensions and a developer platform, all in one fast, dark-first interface.
 ## Desktop app
 
 `desktop/` contains **Solana OS Desktop**, a Chromium browser with Solana OS as
-its home and real Chrome wallet extensions (Phantom, Solflare, Backpack). See
+its home and real Chrome wallet extensions (Phantom, Solflare, Backpack), plus
+a password manager, bookmarks, account sync and automatic updates. See
 [desktop/README.md](desktop/README.md). Installers for macOS, Windows and Linux
 are built by the "Desktop app" GitHub Actions workflow. The desktop app is
 licensed GPL-3.0.

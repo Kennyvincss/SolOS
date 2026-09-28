@@ -46,4 +46,18 @@ function riskFromReport(report) {
   return { level: "low", label: known?.value ? `Known app · ${known.value}` : "No warnings", detail: known?.explanation };
 }
 
-module.exports = { SOLANA_OS_URL, WALLETS, hostOf, normalizeInput, riskFromReport };
+/**
+ * Merge two bookmark maps ({ [url]: { title, createdAt, updatedAt, deleted? } }).
+ * For each URL the most recently changed record wins, so deletions (kept as
+ * tombstones) sync correctly across computers.
+ */
+function mergeBookmarks(local = {}, remote = {}) {
+  const out = { ...local };
+  for (const [url, r] of Object.entries(remote)) {
+    const l = out[url];
+    if (!l || (r.updatedAt ?? 0) > (l.updatedAt ?? 0)) out[url] = r;
+  }
+  return out;
+}
+
+module.exports = { SOLANA_OS_URL, WALLETS, hostOf, normalizeInput, riskFromReport, mergeBookmarks };
