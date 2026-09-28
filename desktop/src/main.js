@@ -13,7 +13,7 @@ const { WALLETS, SOLANA_OS_URL, normalizeInput, riskFromReport, hostOf } = requi
 const library = require("./library");
 const passwords = require("./passwords");
 const { initUpdater, checkForUpdatesInteractive } = require("./updater");
-const { searchWebStore } = require("./webstore-search");
+const { searchWebStore, prefetch: prefetchWebStore } = require("./webstore-search");
 
 const PARTITION = "persist:solanaos";
 const TOOLBAR_HEIGHT = 88;
@@ -869,6 +869,8 @@ app.whenReady().then(async () => {
 
   initUpdater();
   new BrowserShell();
+  // Have the Extensions page's list ready before it's opened.
+  setTimeout(() => prefetchWebStore(browserSession), 8000);
   const launchUrl = process.argv.find((a) => a.startsWith(`${PROTOCOL}://`));
   if (launchUrl) setTimeout(() => handleProtocolUrl(launchUrl), 1500);
 

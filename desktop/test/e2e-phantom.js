@@ -57,8 +57,9 @@ const PAGE_STATE = `(() => {
 })()`;
 const clickText = (re) => `(() => {
   const vis = (el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
-  const els = [...document.querySelectorAll("button, [role=button], a, [data-testid]")].filter(vis);
-  const el = els.find((b) => ${re}.test((b.innerText || b.getAttribute("aria-label") || "").trim()) && !b.disabled);
+  const els = [...document.querySelectorAll("button, [role=button], a")].filter(vis);
+  const label = (b) => (b.innerText || b.getAttribute("aria-label") || "").trim().split("\\n")[0].trim();
+  const el = els.find((b) => ${re}.test(label(b)) && !b.disabled);
   if (!el) return false;
   el.click();
   return (el.innerText || "").trim().slice(0, 40) || true;
@@ -87,12 +88,12 @@ async function drive(wc, words, password) {
     log(`step ${step}`, JSON.stringify(st));
     if (st.error) continue;
     const text = st.text.toLowerCase();
-    if (/you're all (done|set)|all done|welcome to phantom|get started/.test(text) && (await wc.executeJavaScript(clickText("/get started|finish|done|open phantom/i")))) {
+    if (/you're all (done|set)|all done|welcome to phantom|get started/.test(text) && (await wc.executeJavaScript(clickText("/^(get started|finish|done|open phantom)$/i")))) {
       log("finished onboarding");
       return true;
     }
-    if (await wc.executeJavaScript(clickText("/already have a wallet|import an existing|i have a wallet/i"))) continue;
-    if (await wc.executeJavaScript(clickText("/^import (secret )?recovery phrase|^import seed phrase/i"))) continue;
+    if (await wc.executeJavaScript(clickText("/^i already have a wallet$/i"))) continue;
+    if (await wc.executeJavaScript(clickText("/^import (secret )?recovery phrase$/i"))) continue;
     const textInputs = st.inputs.filter((t) => t === "text" || t === "TEXTAREA" || t === "password");
     const pw = st.inputs.filter((t) => t === "password").length;
     if (st.inputs.length >= 12 && pw < 2) {
@@ -103,7 +104,7 @@ async function drive(wc, words, password) {
       }
       log("typed recovery phrase");
       await sleep(800);
-      await wc.executeJavaScript(clickText("/^import wallet$|^import$|continue|next/i"));
+      await wc.executeJavaScript(clickText("/^(import wallet|import|continue|next)$/i"));
       continue;
     }
     if (pw >= 1) {
@@ -116,7 +117,7 @@ async function drive(wc, words, password) {
       await wc.executeJavaScript(`document.querySelectorAll("input[type=checkbox]").forEach((c) => { if (!c.checked) c.click(); }); [...document.querySelectorAll("[role=checkbox]")].forEach((c) => { if (c.getAttribute("aria-checked") !== "true") c.click(); }); true`);
       log("typed password");
       await sleep(800);
-      await wc.executeJavaScript(clickText("/continue|next|save|submit/i"));
+      await wc.executeJavaScript(clickText("/^(continue|next|save|submit)$/i"));
       continue;
     }
     if (textInputs.length === 0 && (await wc.executeJavaScript(clickText("/^(continue|next|import|import wallet|skip|done|got it|agree)$/i")))) continue;

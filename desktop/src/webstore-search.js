@@ -6,10 +6,41 @@
 // rendered page: every link to /detail/<slug>/<id> is one extension. Reading
 // the DOM this way doesn't depend on the store's internal data format.
 
-const { BrowserWindow } = require("electron");
+const fs = require("node:fs");
+const path = require("node:path");
+const { app, BrowserWindow } = require("electron");
 
-const cache = new Map(); // query -> { at, results }
-const CACHE_MS = 10 * 60 * 1000;
+// Results are cached in memory and on disk. Cached results are returned
+// immediately; if they're older than FRESH_MS a background refresh updates them.
+const cache = new Map(); // key -> { at, results }
+const FRESH_MS = 30 * 60 * 1000;
+const KEEP_MS = 7 * 24 * 60 * 60 * 1000;
+const inflight = new Map();
+
+const cacheFile = () => path.join(app.getPath("userData"), "webstore-cache.json");
+let loaded = false;
+function loadDisk() {
+  if (loaded) return;
+  loaded = true;
+  try {
+    const d = JSON.parse(fs.readFileSync(cacheFile(), "utf8"));
+    for (const [k, v] of Object.entries(d)) if (v && Date.now() - v.at < KEEP_MS) cache.set(k, v);
+  } catch {
+    /* no cache yet */
+  }
+}
+let saveTimer = null;
+function saveDisk() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try {
+      const entries = [...cache.entries()].sort((a, b) => b[1].at - a[1].at).slice(0, 30);
+      fs.writeFileSync(cacheFile(), JSON.stringify(Object.fromEntries(entries)));
+    } catch {
+      /* best effort */
+    }
+  }, 500);
+}
 
 // Runs inside the store page. Returns [{ id, name, icon, description, rating, users }].
 const EXTRACT = `(() => {
@@ -72,9 +103,24 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function searchWebStore(session, query, { limit = 60, timeoutMs = 20000 } = {}) {
   const q = String(query || "").trim().slice(0, 100) || "solana";
   const key = `${q.toLowerCase()}|${limit}`;
+  loadDisk();
   const hit = cache.get(key);
-  if (hit && Date.now() - hit.at < CACHE_MS) return hit.results;
+  if (hit) {
+    // Serve instantly; refresh in the background when stale.
+    if (Date.now() - hit.at > FRESH_MS && !inflight.has(key)) fetchStore(session, q, key, limit, timeoutMs).catch(() => {});
+    return hit.results;
+  }
+  return fetchStore(session, q, key, limit, timeoutMs);
+}
 
+function fetchStore(session, q, key, limit, timeoutMs) {
+  if (inflight.has(key)) return inflight.get(key);
+  const p = loadStore(session, q, key, limit, timeoutMs).finally(() => inflight.delete(key));
+  inflight.set(key, p);
+  return p;
+}
+
+async function loadStore(session, q, key, limit, timeoutMs) {
   const win = new BrowserWindow({
     show: false,
     width: 1280,
@@ -89,7 +135,7 @@ async function searchWebStore(session, query, { limit = 60, timeoutMs = 20000 } 
     let loadMores = 0;
     let lastError = null;
     while (Date.now() - started < timeoutMs) {
-      await sleep(600);
+      await sleep(400);
       const now = await win.webContents.executeJavaScript(EXTRACT).catch((err) => {
         lastError = String(err && err.message ? err.message : err);
         return [];
@@ -101,14 +147,17 @@ async function searchWebStore(session, query, { limit = 60, timeoutMs = 20000 } 
       if (results.length >= limit) break;
       // Results rendered and stopped growing: ask for more a couple of times, then stop.
       if (results.length && stableRounds >= 2) {
-        if (loadMores >= 3) break;
+        if (loadMores >= 2 || (results.length >= 24 && loadMores >= 1)) break;
         loadMores++;
         stableRounds = 0;
         await win.webContents.executeJavaScript(LOAD_MORE).catch(() => false);
       }
     }
     results = results.slice(0, limit);
-    if (results.length) cache.set(key, { at: Date.now(), results });
+    if (results.length) {
+      cache.set(key, { at: Date.now(), results });
+      saveDisk();
+    }
     else if (lastError) throw new Error(`Couldn't read the Chrome Web Store results: ${lastError}`);
     return results;
   } finally {
@@ -116,4 +165,12 @@ async function searchWebStore(session, query, { limit = 60, timeoutMs = 20000 } 
   }
 }
 
-module.exports = { searchWebStore, EXTRACT };
+/** Warm the cache for the Extensions page's default list. */
+function prefetch(session) {
+  loadDisk();
+  const key = "solana|60";
+  const hit = cache.get(key);
+  if (!hit || Date.now() - hit.at > FRESH_MS) fetchStore(session, "solana", key, 60, 20000).catch(() => {});
+}
+
+module.exports = { searchWebStore, prefetch, EXTRACT };
