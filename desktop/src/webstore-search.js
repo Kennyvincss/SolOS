@@ -19,7 +19,16 @@ const EXTRACT = `(() => {
       const href = new URL(a.getAttribute("href"), document.baseURI).pathname;
       const m = href.match(/\\/detail\\/(?:[^/]+\\/)?([a-p]{32})\\/?$/);
       if (!m || out.has(m[1])) continue;
-      const card = a.closest("[role=listitem], li, article") || a;
+      // The link is often an empty overlay; its result card is the nearest
+      // ancestor that has an icon and text but no other extension's link.
+      let card = a;
+      for (let i = 0; i < 8 && card.parentElement; i++) {
+        const up = card.parentElement;
+        const ids = new Set([...up.querySelectorAll('a[href*="detail/"]')].map((x) => (x.getAttribute("href").match(/([a-p]{32})/) || [])[1]).filter(Boolean));
+        if (ids.size > 1) break;
+        card = up;
+        if (card.querySelector("img") && (card.innerText || "").trim().length > 10) break;
+      }
       const img = a.querySelector("img") || card.querySelector("img");
       const lines = String(card.innerText || a.innerText || "").split("\\n").map((s) => s.trim()).filter(Boolean);
       const heading = a.querySelector("h1,h2,h3,[role=heading]") || card.querySelector("h1,h2,h3,[role=heading]");
