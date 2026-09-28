@@ -16,9 +16,17 @@ A desktop browser for the Solana ecosystem, built on Chromium (Electron).
   The usual shortcuts work: Ctrl+T/W/N/L/R/D, Ctrl+Tab, Ctrl+1–9, Alt+←/→,
   Ctrl+±/0, F5, F11, F12. On macOS the menu bar at the top of the screen has
   the same items.
-- **One-click extensions from Solana OS.** The Extensions page in Solana OS
-  lists Solana wallets (Phantom, Solflare, Backpack, OKX, Coinbase, Trust and
-  more) with an Install button; each install is confirmed in a dialog.
+- **Every extension, from inside the app.** The Extensions page in Solana OS
+  lists every Solana extension on the Chrome Web Store (live, with icons and
+  ratings) and has a search box for any other extension. Install is one click
+  (confirmed in a dialog) and happens right in the app.
+- **Chrome APIs wallets need.** Electron lacks a few Chrome extension APIs
+  that wallets call at startup (`chrome.identity`, `chrome.sidePanel`, …),
+  and newer Chromium exposes a separate `browser` object without the added
+  APIs. `src/extension-polyfills.js` fills these in for extension pages and
+  service workers, so Phantom and Solflare start normally. The "Desktop
+  extension check" workflow installs real wallets on a CI machine and reports
+  what they log.
 - **Password manager.** Offers to save logins, fills them next time, and
   keeps them encrypted with the system keychain (Keychain on macOS, DPAPI on
   Windows, libsecret/KWallet on Linux). Manage them in **File → Passwords…**,
@@ -96,6 +104,8 @@ npm run dist      # installers for the current OS, into dist/
 | `src/preload-tab.js` | Runs isolated from pages; detects logins to save and fills saved ones |
 | `src/library.js` | Bookmarks, history, settings and account sync |
 | `src/updater.js` | Automatic updates from GitHub Releases |
+| `src/extension-polyfills.js` | Missing Chrome extension APIs (identity, sidePanel, …) for extension pages and service workers |
+| `src/webstore-search.js` | Searches the Chrome Web Store for the Extensions page |
 | `src/preload-shell.js` | Bridge between the toolbar UI and the main process |
 | `src/ui/` | Toolbar: tabs, address bar, safety badge, extension icons, Wallets menu |
 | `test/` | Unit tests, plus smoke tests that boot the app (test wallet extension and its popup, tab clicks and shortcuts, password save/fill, bookmarks) |

@@ -86,7 +86,9 @@ const featured: CardData[] = BROWSER_EXTENSIONS.map((x) => ({
   icon: x.app ? appLogo(x.app) : `/api/extensions/${x.id}/icon`,
 }));
 
-const fromStore = (r: StoreExtension): CardData => ({ id: r.id, name: r.name, description: r.description, icon: r.icon || `/api/extensions/${r.id}/icon`, rating: r.rating, users: r.users });
+// Store result images are sometimes wide promo tiles ("-w275-h175"); use the real icon then.
+const isSquareIcon = (url: string) => /^https:\/\/lh\d\.googleusercontent\.com\//.test(url) && !/-w\d+-h\d+/.test(url);
+const fromStore = (r: StoreExtension): CardData => ({ id: r.id, name: r.name, description: r.description, icon: isSquareIcon(r.icon) ? r.icon : `/api/extensions/${r.id}/icon`, rating: r.rating, users: r.users });
 
 export default function ExtensionsPage() {
   const shell = useAppShell();
@@ -104,7 +106,7 @@ export default function ExtensionsPage() {
   const featuredIds = new Set(featured.map((f) => f.id));
   const storeResults = (desktop.results ?? []).map(fromStore);
   // Use the store's own icon for featured wallets when the search returned it.
-  const storeIcon = new Map(storeResults.filter((r) => r.icon && !r.icon.startsWith("/api/")).map((r) => [r.id, r.icon]));
+  const storeIcon = new Map(storeResults.filter((r) => r.icon && isSquareIcon(r.icon)).map((r) => [r.id, r.icon]));
   const featuredShown = featured.map((f) => (storeIcon.has(f.id) ? { ...f, icon: storeIcon.get(f.id) } : f));
   const isDefault = query === DEFAULT_QUERY;
   // The default view shows featured wallets first, then the rest of the store's Solana extensions.

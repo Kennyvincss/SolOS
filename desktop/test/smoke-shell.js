@@ -87,7 +87,7 @@ app.whenReady().then(async () => {
   await tab.loadURL(OTHER);
   results.bridgeOnOther = await tab.executeJavaScript("typeof window.solanaOSDesktop");
 
-  fs.writeFileSync(path.join(__dirname, "..", "smoke-shell.png"), (await shell.capturePage()).toPNG());
+  fs.writeFileSync(process.env.SMOKE_OUT || path.join(__dirname, "..", "smoke-shell.png"), (await shell.capturePage()).toPNG());
 
   const ok =
     results.afterCtrlT === 3 &&

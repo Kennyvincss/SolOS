@@ -29,7 +29,11 @@ const EXTRACT = `(() => {
         card = up;
         if (card.querySelector("img") && (card.innerText || "").trim().length > 10) break;
       }
-      const img = a.querySelector("img") || card.querySelector("img");
+      // Cards can have a wide promo image as well as the square icon; prefer the
+      // icon (store icon URLs end in "=s<size>" with no width/height).
+      const imgs = [...card.querySelectorAll("img")];
+      const src = (i) => String(i.currentSrc || i.getAttribute("src") || i.getAttribute("data-src") || "");
+      const img = imgs.find((i) => /=s\\d+(-rj|-c|$)/.test(src(i)) && !/-w\\d+-h\\d+/.test(src(i))) || imgs.find((i) => i.naturalWidth && i.naturalWidth === i.naturalHeight) || imgs[imgs.length - 1] || null;
       const lines = String(card.innerText || a.innerText || "").split("\\n").map((s) => s.trim()).filter(Boolean);
       const heading = a.querySelector("h1,h2,h3,[role=heading]") || card.querySelector("h1,h2,h3,[role=heading]");
       const name = String((heading && heading.textContent) || (img && img.alt) || lines[0] || "").trim();
@@ -40,7 +44,7 @@ const EXTRACT = `(() => {
       out.set(m[1], {
         id: m[1],
         name: name.slice(0, 80),
-        icon: img ? String(img.currentSrc || img.getAttribute("src") || img.getAttribute("data-src") || "") : "",
+        icon: img ? src(img).replace(/=s\\d+$/, "=s128") : "",
         description: description.slice(0, 200),
         rating: ratingLine ? Number(ratingLine) : null,
         users: usersLine || null,
