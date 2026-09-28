@@ -81,6 +81,14 @@
         "tagNamePrefix": "desktop-v",
         "releaseType": "release"
       }
+    ],
+    "protocols": [
+      {
+        "name": "Solana OS",
+        "schemes": [
+          "solanaos-desktop"
+        ]
+      }
     ]
   },
   "dependencies": {

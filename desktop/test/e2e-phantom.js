@@ -96,14 +96,26 @@ async function drive(wc, words, password) {
     const textInputs = st.inputs.filter((t) => t === "text" || t === "TEXTAREA" || t === "password");
     const pw = st.inputs.filter((t) => t === "password").length;
     if (st.inputs.length >= 12 && pw < 2) {
-      log("filling recovery phrase", await wc.executeJavaScript(fillInputs(words)));
-      await sleep(500);
-      await wc.executeJavaScript(clickText("/import|continue|next/i"));
+      // Type like a person (Phantom ignores scripted value changes).
+      for (let i = 0; i < 12; i++) {
+        await wc.executeJavaScript(`(() => { const vis = (el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; }; const el = [...document.querySelectorAll("input")].filter(vis)[${i}]; el && el.focus(); })()`);
+        await wc.insertText(words[i]);
+      }
+      log("typed recovery phrase");
+      await sleep(800);
+      await wc.executeJavaScript(clickText("/^import wallet$|^import$|continue|next/i"));
       continue;
     }
     if (pw >= 1) {
-      log("filling password", await wc.executeJavaScript(fillInputs(st.inputs.map((t) => (t === "password" ? password : undefined)))));
-      await sleep(500);
+      const n = st.inputs.length;
+      for (let i = 0; i < n; i++) {
+        if (st.inputs[i] !== "password") continue;
+        await wc.executeJavaScript(`(() => { const vis = (el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; }; const el = [...document.querySelectorAll("input:not([type=checkbox])")].filter(vis)[${i}]; el && el.focus(); })()`);
+        await wc.insertText(password);
+      }
+      await wc.executeJavaScript(`document.querySelectorAll("input[type=checkbox]").forEach((c) => { if (!c.checked) c.click(); }); [...document.querySelectorAll("[role=checkbox]")].forEach((c) => { if (c.getAttribute("aria-checked") !== "true") c.click(); }); true`);
+      log("typed password");
+      await sleep(800);
       await wc.executeJavaScript(clickText("/continue|next|save|submit/i"));
       continue;
     }

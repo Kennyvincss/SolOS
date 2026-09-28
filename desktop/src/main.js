@@ -130,6 +130,13 @@ class BrowserShell {
     });
     wc.on("context-menu", (_e, params) => this.contextMenu(wc, params));
     wc.on("before-input-event", (e, input) => handleShortcut(this, e, input));
+    // Google blocks sign-in inside embedded browsers: do it in the system browser.
+    wc.on("will-navigate", (e, url) => {
+      if (isGoogleSignIn(url)) {
+        e.preventDefault();
+        shell.openExternal(`${SOLANA_OS_URL}/api/auth/google?desktop=1`);
+      }
+    });
 
     wc.loadURL(url).catch(() => {});
     if (!background || !this.activeId) this.selectTab(wc.id);
@@ -224,6 +231,15 @@ class BrowserShell {
     if (ext.length) items.push({ type: "separator" }, ...ext);
     items.push({ type: "separator" }, { label: "Inspect", click: () => wc.inspectElement(params.x, params.y) });
     Menu.buildFromTemplate(items).popup({ window: this.win });
+  }
+}
+
+function isGoogleSignIn(url) {
+  try {
+    const u = new URL(url);
+    return u.origin === new URL(SOLANA_OS_URL).origin && u.pathname === "/api/auth/google";
+  } catch {
+    return false;
   }
 }
 
@@ -727,6 +743,43 @@ function buildMenu() {
 
 app.setName("Solana OS");
 
+// Google sign-in runs in the system browser (Google blocks it inside embedded
+// browsers) and comes back as solanaos-desktop://auth?token=... .
+const PROTOCOL = "solanaos-desktop";
+if (process.defaultApp && process.argv.length >= 2) app.setAsDefaultProtocolClient(PROTOCOL, process.execPath, [path.resolve(process.argv[1])]);
+else app.setAsDefaultProtocolClient(PROTOCOL);
+
+function handleProtocolUrl(raw) {
+  let u;
+  try {
+    u = new URL(raw);
+  } catch {
+    return;
+  }
+  if (u.protocol !== `${PROTOCOL}:` || u.hostname !== "auth") return;
+  const token = u.searchParams.get("token");
+  if (!token || token.length > 4096) return;
+  const s = focusedShell() ?? new BrowserShell({ url: "about:blank" });
+  s.newTab(`${SOLANA_OS_URL}/api/auth/desktop?token=${encodeURIComponent(token)}`);
+  if (s.win.isMinimized()) s.win.restore();
+  s.win.focus();
+}
+
+// One running copy: a second launch (e.g. from the sign-in link) hands its URL over.
+if (!process.env.SOLANA_OS_ALLOW_MULTIPLE && !app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on("second-instance", (_e, argv) => {
+    const url = argv.find((a) => a.startsWith(`${PROTOCOL}://`));
+    if (url) app.whenReady().then(() => handleProtocolUrl(url));
+    else focusedShell()?.win.focus();
+  });
+}
+app.on("open-url", (e, url) => {
+  e.preventDefault();
+  app.whenReady().then(() => handleProtocolUrl(url));
+});
+
 app.whenReady().then(async () => {
   browserSession = session.fromPartition(PARTITION);
 
@@ -816,6 +869,8 @@ app.whenReady().then(async () => {
 
   initUpdater();
   new BrowserShell();
+  const launchUrl = process.argv.find((a) => a.startsWith(`${PROTOCOL}://`));
+  if (launchUrl) setTimeout(() => handleProtocolUrl(launchUrl), 1500);
 
   app.on("activate", () => {
     if (!windows.size) new BrowserShell();
