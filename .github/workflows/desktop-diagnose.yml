@@ -44,7 +44,11 @@ jobs:
           done
       - name: Phantom end-to-end
         if: contains(inputs.checks, 'phantom')
-        run: timeout 300 xvfb-run -a npx electron test/e2e-phantom.js 2>&1 | grep -E "^\[e2e" || true
+        run: |
+          set +e
+          timeout 300 xvfb-run -a npx electron test/e2e-phantom.js > e2e.log 2>&1
+          echo "exit code: $?"
+          grep -v -E "dbus|Fontconfig|viz_main|gpu_|NOTREACHED|DEPRECATED|Datadog|zustand" e2e.log | tail -150
       - name: Check extensions
         if: contains(inputs.checks, 'extensions')
         env:
