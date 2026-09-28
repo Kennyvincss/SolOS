@@ -125,6 +125,7 @@ async function drive(wc, words, password) {
   return false;
 }
 
+process.on("unhandledRejection", (e) => log("UNHANDLED", String(e && e.stack || e)));
 app.whenReady().then(async () => {
   const ses = session.fromPartition("persist:solanaos");
   const shellWin = BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().includes("shell.html")) || BrowserWindow.getAllWindows()[0];
@@ -169,6 +170,11 @@ app.whenReady().then(async () => {
   }
   log("approval window", popup ? `appeared after ${Date.now() - t}ms` : "NEVER appeared (30s)");
   if (popup) {
+    popup.on("closed", () => log("approval window closed", `${Date.now() - t}ms`));
+    popup.webContents.on("did-finish-load", () => log("approval loaded", popup.webContents.getURL(), `${Date.now() - t}ms`));
+    popup.webContents.on("render-process-gone", (_e, d) => log("approval renderer gone", d.reason));
+  }
+  if (popup) try {
     // Wait for content, then approve.
     let st = null;
     for (let i = 0; i < 40; i++) {
@@ -180,6 +186,8 @@ app.whenReady().then(async () => {
     fs.writeFileSync(path.join(OUT, "approval.png"), (await popup.webContents.capturePage()).toPNG());
     const clicked = await popup.webContents.executeJavaScript(clickText("/^(connect|approve|confirm)$/i")).catch(() => false);
     log("clicked", clicked);
+  } catch (e) {
+    log("approval step error", String(e && e.stack || e));
   }
   let result = null;
   for (let i = 0; i < 60 && !result; i++) {
