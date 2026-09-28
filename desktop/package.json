@@ -48,7 +48,8 @@
       ],
       "category": "Finance",
       "icon": "build/icon.png",
-      "syncDesktopName": true
+      "syncDesktopName": true,
+      "maintainer": "Kennyvincss <Kennyvincss@users.noreply.github.com>"
     },
     "nsis": {
       "oneClick": false,
