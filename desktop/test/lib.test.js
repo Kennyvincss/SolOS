@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { normalizeInput, riskFromReport, hostOf, WALLETS, mergeBookmarks } = require("../src/lib");
+const { normalizeInput, routeInput, classifyUrl, normalizeOrder, moveInOrder, folderForType, riskFromReport, hostOf, WALLETS, mergeBookmarks } = require("../src/lib");
 
 test("bookmark sync: newest change per URL wins, deletions propagate", () => {
   const local = {
@@ -29,11 +29,49 @@ test("address bar: URLs and domains open directly", () => {
   assert.equal(normalizeInput("", base), base);
 });
 
-test("address bar: everything else searches STRATA", () => {
-  assert.equal(normalizeInput("what is trending", base), `${base}/search?q=what%20is%20trending`);
-  assert.equal(normalizeInput("JUP", base), `${base}/search?q=JUP`);
+test("address bar: universal STRATA search", () => {
+  assert.equal(normalizeInput("best solana prediction markets", base), `${base}/search?q=best%20solana%20prediction%20markets`);
+  // Tickers and addresses are resolved by STRATA (token page, wallet explorer…).
+  assert.equal(normalizeInput("BONK", base), `${base}/open?q=BONK`);
+  assert.equal(normalizeInput("$wif", base), `${base}/open?q=%24wif`);
   const addr = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
-  assert.equal(normalizeInput(addr, base), `${base}/search?q=${addr}`);
+  assert.equal(normalizeInput(addr, base), `${base}/open?q=${addr}`);
+  const sig = "5VERv8NMvzbJMEkV8xnrLkEaWRtSz9CosKDYjCJjBRnbJLgp8uirBgmQpjKhoR4tjF3ZpRzrFmBV6UjKdiSZkQUW";
+  assert.equal(normalizeInput(sig, base), `${base}/tx/${sig}`);
+  // Requests about "this" page go to STRATA AI.
+  assert.deepEqual(routeInput("Analyze this wallet", base), { kind: "ai", prompt: "Analyze this wallet" });
+  assert.deepEqual(routeInput("explain this transaction", base), { kind: "ai", prompt: "explain this transaction" });
+  assert.equal(routeInput("what is trending", base).kind, "url");
+  // Not domains: words with dots but no real TLD.
+  assert.equal(normalizeInput("v1.2", base), `${base}/search?q=v1.2`);
+});
+
+test("page types for history and bookmarks", () => {
+  assert.equal(classifyUrl(`${base}/tokens/JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN`, base), "token");
+  assert.equal(classifyUrl(`${base}/wallets/abc`, base), "wallet");
+  assert.equal(classifyUrl(`${base}/tx/abc`, base), "transaction");
+  assert.equal(classifyUrl("https://solscan.io/tx/abc", base), "transaction");
+  assert.equal(classifyUrl("https://solscan.io/account/abc", base), "wallet");
+  assert.equal(classifyUrl("https://dexscreener.com/solana/abc", base), "token");
+  assert.equal(classifyUrl("https://polymarket.com/event/x", base), "market");
+  assert.equal(classifyUrl("https://magiceden.io/marketplace/x", base), "nft");
+  assert.equal(classifyUrl("https://docs.kamino.finance/", base), "research");
+  assert.equal(classifyUrl("https://jup.ag/swap", base, new Set(["jup.ag"])), "app");
+  assert.equal(classifyUrl("https://example.com/", base), "website");
+  assert.equal(folderForType("token"), "f-trading");
+});
+
+test("tab order: pinned first, groups kept together", () => {
+  const tabs = new Map([
+    [1, { pinned: false }],
+    [2, { pinned: true }],
+    [3, { groupId: "g" }],
+    [4, {}],
+    [5, { groupId: "g" }],
+  ]);
+  assert.deepEqual(normalizeOrder([1, 2, 3, 4, 5], tabs), [2, 1, 3, 5, 4]);
+  assert.deepEqual(moveInOrder([1, 2, 3], 1, 2), [2, 3, 1]);
+  assert.deepEqual(moveInOrder([1, 2, 3], 3, 0), [3, 1, 2]);
 });
 
 test("risk badge summarises the worst indicator", () => {

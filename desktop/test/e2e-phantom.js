@@ -155,8 +155,7 @@ app.whenReady().then(async () => {
   if (!onboarding.isDestroyed()) fs.writeFileSync(path.join(OUT, "onboarding.png"), (await onboarding.capturePage()).toPNG());
 
   // Connect from a dApp in a real tab.
-  const shell = BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().includes("shell.html"));
-  const tab = shell.contentView.children.at(-1).webContents;
+  const tab = [...require("../src/window").shells][0].activeTab.view.webContents;
   await tab.loadURL(`http://localhost:${PORT}/dapp`);
   await sleep(2000);
   log("provider", await tab.executeJavaScript("({ phantom: !!(window.phantom && window.phantom.solana), isPhantom: !!(window.phantom && window.phantom.solana && window.phantom.solana.isPhantom) })"));

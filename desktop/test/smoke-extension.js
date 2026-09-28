@@ -20,8 +20,9 @@ app.whenReady().then(() => {
       const ses = session.fromPartition("persist:solanaos");
       const ext = await ses.extensions.loadExtension(path.join(__dirname, "fixtures", "fake-wallet"));
       result.extension = ext.name;
-      const win = BrowserWindow.getAllWindows()[0];
-      const tab = win.contentView.children.find((v) => v.webContents)?.webContents;
+      const shell = [...require("../src/window").shells][0];
+      const win = shell.win;
+      const tab = shell.activeTab.view.webContents;
       tab.reload();
       await new Promise((r) => tab.once("did-finish-load", r));
       await new Promise((r) => setTimeout(r, 1500));

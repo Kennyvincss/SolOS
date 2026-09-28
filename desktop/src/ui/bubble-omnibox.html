@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+    <link rel="stylesheet" href="bubble.css" />
+    <style>
+      .wrap { padding: 6px 0; }
+      .sug { display: flex; align-items: center; gap: 12px; height: 38px; padding: 0 14px; }
+      .sug:hover { background: var(--hover); }
+      .sug.sel { background: rgba(155, 156, 255, 0.16); }
+      .sug .ic { width: 18px; height: 18px; color: var(--muted); display: grid; place-items: center; flex: none; }
+      .sug .ic svg { width: 16px; height: 16px; }
+      .sug .t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 55%; }
+      .sug .s { color: var(--faint); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
+      .sug.ai .ic { color: var(--accent); }
+    </style>
+  </head>
+  <body>
+    <div class="wrap" id="root"></div>
+    <script src="bubble-common.js"></script>
+    <script src="bubble-omnibox.js"></script>
+  </body>
+</html>

@@ -14,12 +14,32 @@ const { contextBridge, ipcRenderer } = require("electron");
 // re-checks the origin from the frame itself).
 try {
   if (location.origin === ipcRenderer.sendSync("desktop:homeOrigin")) {
+    const lib = (area, action, args) => ipcRenderer.invoke("desktop:library", area, action, args ?? {});
+    const listen = (channel) => (cb) => {
+      const fn = (_e, payload) => cb(payload);
+      ipcRenderer.on(channel, fn);
+      return () => ipcRenderer.removeListener(channel, fn);
+    };
     contextBridge.exposeInMainWorld("solanaOSDesktop", {
+      version: 2,
+      // extensions (of the current profile)
       extensions: () => ipcRenderer.invoke("desktop:extensions"),
       installExtension: (id, name) => ipcRenderer.invoke("desktop:installExtension", String(id), String(name ?? "")),
       removeExtension: (id) => ipcRenderer.invoke("desktop:removeExtension", String(id)),
       searchExtensions: (query) => ipcRenderer.invoke("desktop:searchExtensions", String(query ?? "")),
       setExtensionHidden: (id, hidden) => ipcRenderer.invoke("desktop:setExtensionHidden", String(id), Boolean(hidden)),
+      // profile
+      profile: () => ipcRenderer.invoke("desktop:profile"),
+      // bookmarks, history, reading list (this profile's library)
+      library: (area, action, args) => lib(String(area), String(action), args),
+      open: (url, where) => lib("open", String(where ?? "current"), { url: String(url) }),
+      // STRATA AI side panel
+      pageContext: (opts) => ipcRenderer.invoke("desktop:pageContext", opts ?? {}),
+      panel: (action, arg) => ipcRenderer.invoke("desktop:panel", String(action), arg ?? null),
+      onPageChanged: listen("desktop:pageChanged"),
+      onPanelPrompt: listen("desktop:panelPrompt"),
+      // developer mode
+      dev: (action, arg) => ipcRenderer.invoke("desktop:dev", String(action), arg ?? null),
     });
   }
 } catch {

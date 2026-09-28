@@ -12,26 +12,6 @@ const path = require("node:path");
 const crypto = require("node:crypto");
 const { app, safeStorage } = require("electron");
 
-function storePath() {
-  return path.join(app.getPath("userData"), "passwords.json");
-}
-
-function load() {
-  try {
-    const d = JSON.parse(fs.readFileSync(storePath(), "utf8"));
-    return { entries: Array.isArray(d.entries) ? d.entries : [], never: Array.isArray(d.never) ? d.never : [] };
-  } catch {
-    return { entries: [], never: [] };
-  }
-}
-
-function persist(d) {
-  fs.mkdirSync(path.dirname(storePath()), { recursive: true });
-  const tmp = storePath() + ".tmp";
-  fs.writeFileSync(tmp, JSON.stringify(d), { mode: 0o600 });
-  fs.renameSync(tmp, storePath());
-}
-
 /** Origins allowed to save/fill: https, or http on localhost for development. */
 function eligibleOrigin(url) {
   try {
@@ -58,6 +38,26 @@ function encrypt(plain) {
 
 function decrypt(b64) {
   return safeStorage.decryptString(Buffer.from(b64, "base64"));
+}
+
+/** A password store for one profile (dir defaults to the app's data folder). */
+function createPasswords(dir = app.getPath("userData")) {
+const storePath = () => path.join(dir, "passwords.json");
+
+function load() {
+  try {
+    const d = JSON.parse(fs.readFileSync(storePath(), "utf8"));
+    return { entries: Array.isArray(d.entries) ? d.entries : [], never: Array.isArray(d.never) ? d.never : [] };
+  } catch {
+    return { entries: [], never: [] };
+  }
+}
+
+function persist(d) {
+  fs.mkdirSync(path.dirname(storePath()), { recursive: true });
+  const tmp = storePath() + ".tmp";
+  fs.writeFileSync(tmp, JSON.stringify(d), { mode: 0o600 });
+  fs.renameSync(tmp, storePath());
 }
 
 /** Credentials for an origin, most recently used first. */
@@ -133,4 +133,7 @@ function allowAgain(origin) {
   persist(d);
 }
 
-module.exports = { available, eligibleOrigin, forOrigin, classify, save, neverFor, list, reveal, remove, neverList, allowAgain };
+return { available, eligibleOrigin, forOrigin, classify, save, neverFor, list, reveal, remove, neverList, allowAgain };
+}
+
+module.exports = { createPasswords, eligibleOrigin, available };

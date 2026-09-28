@@ -22,14 +22,14 @@ const page = `<!doctype html><form id="f" action="/done" method="post" onsubmit=
 const server = http.createServer((_req, res) => res.end(page)).listen(0, "127.0.0.1");
 
 require("../src/main.js");
-const passwords = require("../src/passwords.js");
-const library = require("../src/library.js");
+const { getRuntime } = require("../src/runtime");
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 app.whenReady().then(async () => {
   const result = {};
   try {
     await wait(5000);
+    const { passwords, library } = getRuntime("default");
     const origin = `http://localhost:${server.address().port}`;
     const win = BrowserWindow.getAllWindows()[0];
     const tab = win.contentView.children.find((v) => v.webContents)?.webContents;
