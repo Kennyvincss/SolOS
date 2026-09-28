@@ -10,6 +10,10 @@ on:
         description: "Comma-separated Chrome Web Store extension IDs"
         required: false
         default: "bfnaelmomeimhlpmgjnjophhpkkoljpa,bhhhlbepdkbapadjdnnojkbgioiodbic,aflkmfhebedbjioipglgcbcmnbpgliof"
+      checks:
+        description: "Which checks to run: extensions, phantom, site (comma-separated)"
+        required: false
+        default: "extensions,phantom,site"
 
 jobs:
   check:
@@ -29,7 +33,20 @@ jobs:
       # service-worker preloads only run when sandboxed).
       - name: Allow the Chromium sandbox
         run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - name: Website speed
+        if: contains(inputs.checks, 'site')
+        working-directory: .
+        run: |
+          for u in / /extensions /wallets /tokens /ai /apps /api/tokens?list=trending /api/apps /api/news /api/network /api/account/6UhUkSBc9RBB9gVJcjCWtcQv4t771rQF7bdn2qK7pump /api/wallets/5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1 /api/status /api/search?q=jup; do
+            for i in 1 2; do
+              curl -s -o /dev/null -w "[site] %{http_code} ttfb=%{time_starttransfer}s total=%{time_total}s size=%{size_download} $u\n" "https://solos-rho.vercel.app$u"
+            done
+          done
+      - name: Phantom end-to-end
+        if: contains(inputs.checks, 'phantom')
+        run: timeout 300 xvfb-run -a npx electron test/e2e-phantom.js 2>&1 | grep -E "^\[e2e" || true
       - name: Check extensions
+        if: contains(inputs.checks, 'extensions')
         env:
           EXT_IDS: ${{ inputs.ids }}
         run: timeout 300 xvfb-run -a npx electron test/check-real-extensions.js 2>&1 | grep -v -E "dbus|Fontconfig|viz_main|gpu_" || true
