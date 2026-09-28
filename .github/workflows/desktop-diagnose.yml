@@ -52,9 +52,18 @@ jobs:
           # A wallet that trades: the signer of a recent Jupiter swap.
           SIG=$(curl -s -m 20 $RPC -H 'content-type: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"getSignaturesForAddress","params":["JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4",{"limit":20}]}' | jq -r '[.result[] | select(.err == null)][5].signature')
           W=$(curl -s -m 20 $RPC -H 'content-type: application/json' -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"getTransaction\",\"params\":[\"$SIG\",{\"encoding\":\"json\",\"maxSupportedTransactionVersion\":0}]}" | jq -r '.result.transaction.message.accountKeys[0]')
+          SIGS=$(curl -s -m 20 $RPC -H 'content-type: application/json' -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"getSignaturesForAddress\",\"params\":[\"$W\",{\"limit\":10}]}" | jq -c '[.result[].signature]')
+          for R in $RPC https://solana-rpc.publicnode.com; do
+            BODY=$(echo "$SIGS" | jq -c '[to_entries[] | {jsonrpc:"2.0",id:.key,method:"getTransaction",params:[.value,{encoding:"jsonParsed",maxSupportedTransactionVersion:0,commitment:"confirmed"}]}]')
+            echo "[pnl] $R batch getTransaction x10:"
+            curl -s -m 30 -w "\n http=%{http_code} total=%{time_total}s\n" $R -H 'content-type: application/json' -d "$BODY" > b.json; tail -1 b.json
+            head -n -1 b.json | jq -c 'if type=="array" then {items: length, ok: map(select(.result != null)) | length, errors: map(.error.message // empty) | unique} else . end' 2>/dev/null || head -c 300 b.json
+          done
           for w in $W; do
-            echo "[pnl] wallet $w"
-            curl -s -m 70 -w "\n[pnl] http=%{http_code} total=%{time_total}s\n" "https://solos-rho.vercel.app/api/wallets/$w/pnl" | head -c 1200; echo
+            for i in 1 2; do
+              echo "[pnl] live wallet $w (try $i)"
+              curl -s -m 70 -w "\n[pnl] http=%{http_code} total=%{time_total}s\n" "https://solos-rho.vercel.app/api/wallets/$w/pnl" | head -c 1200; echo
+            done
           done
       - name: Jupiter links
         if: contains(inputs.checks, 'jupiter')
