@@ -92,7 +92,7 @@ async function drive(wc, words, password) {
       return true;
     }
     if (await wc.executeJavaScript(clickText("/already have a wallet|import an existing|i have a wallet/i"))) continue;
-    if (await wc.executeJavaScript(clickText("/import (secret )?recovery phrase|import seed phrase|recovery phrase/i"))) continue;
+    if (await wc.executeJavaScript(clickText("/^import (secret )?recovery phrase|^import seed phrase/i"))) continue;
     const textInputs = st.inputs.filter((t) => t === "text" || t === "TEXTAREA" || t === "password");
     const pw = st.inputs.filter((t) => t === "password").length;
     if (st.inputs.length >= 12 && pw < 2) {
