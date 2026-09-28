@@ -7,6 +7,7 @@ const { SOLANA_OS_URL, WALLETS } = require("./lib");
 const { BrowserShell, shellsOf, focusedShell, GROUP_COLORS } = require("./window");
 const profiles = require("./profiles");
 const devices = require("./devices");
+const appearance = require("./appearance");
 
 const acc = (a) => ({ accelerator: a, registerAccelerator: false });
 const colorName = (c) => c.charAt(0).toUpperCase() + c.slice(1);
@@ -402,6 +403,14 @@ function appMenu(s, actions) {
       ],
     },
     { label: syncLabel(sync), click: () => (sync.status === "signed-out" ? s.newTab(`${SOLANA_OS_URL}/login`) : lib.syncNow()) },
+    {
+      label: "Appearance",
+      submenu: [
+        ["light", "Light"],
+        ["dark", "Dark"],
+        ["system", "Match system"],
+      ].map(([id, label]) => ({ label, type: "radio", checked: appearance.get() === id, click: () => appearance.set(id) })),
+    },
     { label: "Settings", click: () => s.newTab(`${SOLANA_OS_URL}/settings`) },
     { label: "Check for updates…", click: () => actions.checkForUpdates() },
     { label: "About STRATA", click: () => s.newTab(SOLANA_OS_URL) },

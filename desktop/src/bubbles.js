@@ -49,7 +49,7 @@ function open(shell, opts) {
     focusable: !opts.inactive,
     show: false,
     transparent: false,
-    backgroundColor: "#16161d",
+    backgroundColor: require("./appearance").colors().bubble,
     roundedCorners: true,
     webPreferences: { preload: path.join(__dirname, "preload-bubble.js"), contextIsolation: true, sandbox: true },
   });

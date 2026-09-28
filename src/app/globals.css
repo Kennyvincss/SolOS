@@ -445,3 +445,11 @@ body {
 html.sb-collapsed {
   --sb-w: 72px;
 }
+@media (min-width: 768px) and (max-width: 1099px) {
+  html:not(.sb-expanded) {
+    --sb-w: 72px;
+  }
+  html.sb-expanded {
+    --sb-w: 248px;
+  }
+}

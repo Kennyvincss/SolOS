@@ -190,6 +190,7 @@ app.on("open-url", (e, url) => {
 /* ------------------------------------------------------------ startup */
 
 app.whenReady().then(() => {
+  require("./appearance").init();
   // Extension icons in the toolbar are served over crx:// in the toolbar's session.
   ElectronChromeExtensions.handleCRXProtocol(session.defaultSession);
   ipc.register();

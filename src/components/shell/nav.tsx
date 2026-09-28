@@ -54,10 +54,10 @@ function WalletButton({ compact, rail }: { compact?: boolean; rail?: boolean }) 
       onClick={() => s.setWalletModal(true)}
       className={cn(
         "flex items-center gap-2.5 text-left transition-colors",
-        compact ? "h-9 rounded-[10px] border border-line bg-surface px-2.5 shadow-[var(--shadow)] hover:border-line-strong" : "w-full rounded-xl border border-line bg-surface p-2.5 shadow-[var(--shadow)] hover:border-line-strong",
+        compact ? "h-10 shrink-0 rounded-full border border-line bg-surface px-2 shadow-[var(--shadow)] hover:border-line-strong xl:px-2.5 [&>span:nth-child(2)]:hidden xl:[&>span:nth-child(2)]:block" : "w-full rounded-xl border border-line bg-surface p-2.5 shadow-[var(--shadow)] hover:border-line-strong",
       )}
     >
-      <span className={cn("grid shrink-0 place-items-center rounded-lg", s.wallet ? "bg-sol-green/10 text-sol-green" : "bg-surface-2 text-muted", compact ? "h-6 w-6" : "h-8 w-8")}>{icon}</span>
+      <span className={cn("grid shrink-0 place-items-center", s.wallet ? "bg-sol-green/10 text-sol-green" : "bg-surface-2 text-muted", compact ? "h-6 w-6 rounded-full" : "h-8 w-8 rounded-lg")}>{icon}</span>
       <span className="min-w-0 flex-1">
         {!compact && <span className="block text-[11px] text-faint">{s.wallet ? s.wallet.name : s.address ? "Read-only" : "Wallet"}</span>}
         <span className={cn("block truncate font-medium", compact ? "text-[12.5px]" : "text-[13px]")}>{label}</span>
@@ -76,17 +76,36 @@ function readJson<T>(key: string, fallback: T): T {
   }
 }
 
-/** Sidebar collapsed to an icon rail (remembered; applied before paint by the layout script). */
+const NARROW = "(min-width: 768px) and (max-width: 1099px)";
+
+/**
+ * Sidebar collapsed to an icon rail. Wide screens remember the choice; on
+ * narrow ones (e.g. next to the AI panel) it starts as a rail and expands on demand.
+ */
 export function useSidebarCollapsed() {
-  const [collapsed, setCollapsed] = useState(false);
-  useEffect(() => setCollapsed(document.documentElement.classList.contains("sb-collapsed")), []);
+  const [, rerender] = useState(0);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+    const mq = window.matchMedia(NARROW);
+    const on = () => rerender((n) => n + 1);
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
+  const html = typeof document !== "undefined" ? document.documentElement : null;
+  const narrow = mounted && window.matchMedia(NARROW).matches;
+  const collapsed = mounted && html ? (narrow ? !html.classList.contains("sb-expanded") : html.classList.contains("sb-collapsed")) : false;
   const toggle = () => {
-    const next = !document.documentElement.classList.contains("sb-collapsed");
-    document.documentElement.classList.toggle("sb-collapsed", next);
-    try {
-      localStorage.setItem("strata:sidebar", next ? "collapsed" : "open");
-    } catch {}
-    setCollapsed(next);
+    if (!html) return;
+    if (narrow) html.classList.toggle("sb-expanded");
+    else {
+      const next = !html.classList.contains("sb-collapsed");
+      html.classList.toggle("sb-collapsed", next);
+      try {
+        localStorage.setItem("strata:sidebar", next ? "collapsed" : "open");
+      } catch {}
+    }
+    rerender((n) => n + 1);
   };
   return { collapsed, toggle };
 }
@@ -183,7 +202,7 @@ export function DesktopHeader() {
   const deeper = page && page.href !== "/" && path !== page.href;
   return (
     <header id="app-header" className="sticky top-0 z-30 hidden h-[60px] items-center gap-3 border-b border-line bg-bg/85 px-6 backdrop-blur-xl md:flex">
-      <nav aria-label="Breadcrumb" className="flex min-w-0 flex-1 items-center gap-2 text-[14px]">
+      <nav aria-label="Breadcrumb" className="flex min-w-[96px] flex-1 items-center gap-2 text-[14px]">
         <Icon name={page?.icon ?? "Home"} size={17} className="shrink-0 text-muted" />
         {deeper ? (
           <>
@@ -197,17 +216,17 @@ export function DesktopHeader() {
           <span className="truncate font-medium">{page?.href === "/" ? "Overview" : page?.title ?? "STRATA"}</span>
         )}
       </nav>
-      <button onClick={openCommandBar} className="flex h-10 w-full max-w-[420px] items-center gap-2.5 rounded-full border border-line bg-surface px-4 text-[13px] text-faint shadow-[var(--shadow)] transition-colors hover:border-line-strong">
+      <button onClick={openCommandBar} className="flex h-10 min-w-0 flex-[2] max-w-[420px] items-center gap-2.5 rounded-full border border-line bg-surface px-4 text-[13px] text-faint shadow-[var(--shadow)] transition-colors hover:border-line-strong">
         <Search size={15} className="text-muted" />
         <span className="flex-1 truncate text-left">Search (tokens, wallets, apps, transactions)</span>
         <kbd className="flex items-center gap-0.5 rounded-md bg-surface-2 px-1.5 py-0.5 text-[11px] font-medium text-muted">
           <Command size={11} />K
         </kbd>
       </button>
-      <button onClick={() => openAiPanel()} className="flex h-10 items-center gap-1.5 rounded-full border border-line bg-surface px-3.5 text-[13px] font-medium shadow-[var(--shadow)] hover:border-line-strong" title="Ask STRATA AI (⌘J)">
-        <Sparkles size={15} className="text-sol-green" /> Ask AI
+      <button onClick={() => openAiPanel()} className="flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-line bg-surface px-3 text-[13px] font-medium shadow-[var(--shadow)] hover:border-line-strong" title="Ask STRATA AI (⌘J)" aria-label="Ask STRATA AI">
+        <Sparkles size={15} className="text-sol-green" /> <span className="hidden xl:inline">Ask AI</span>
       </button>
-      <Link href="/notifications" className="relative grid h-10 w-10 place-items-center rounded-full border border-line bg-surface text-muted shadow-[var(--shadow)] hover:text-fg" aria-label="Notifications">
+      <Link href="/notifications" className="relative grid h-10 w-10 shrink-0 place-items-center rounded-full border border-line bg-surface text-muted shadow-[var(--shadow)] hover:text-fg" aria-label="Notifications">
         <Bell size={16} />
         {unread > 0 && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-down ring-2 ring-surface" />}
       </Link>

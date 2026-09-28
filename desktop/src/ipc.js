@@ -263,7 +263,7 @@ function openPasswords(s) {
     width: 720,
     height: 640,
     title: `Passwords — ${rt.meta.name} — STRATA`,
-    backgroundColor: "#07070b",
+    backgroundColor: require("./appearance").colors().page,
     autoHideMenuBar: true,
     webPreferences: { preload: path.join(__dirname, "preload-passwords.js"), contextIsolation: true, sandbox: true },
   });
@@ -830,7 +830,7 @@ function openExtensionsPanel(s, anchor) {
     fullscreenable: false,
     skipTaskbar: true,
     show: false,
-    backgroundColor: "#16161d",
+    backgroundColor: require("./appearance").colors().panel,
     webPreferences: { preload: path.join(__dirname, "preload-panel.js"), contextIsolation: true, sandbox: true },
   });
   extPanel = { win, shell: s, anchor, holdOpen: false };

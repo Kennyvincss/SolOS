@@ -5,6 +5,7 @@
 const path = require("node:path");
 const crypto = require("node:crypto");
 const { BrowserWindow, WebContentsView, net, shell } = require("electron");
+const appearance = require("./appearance");
 const { SOLANA_OS_URL, hostOf, riskFromReport, normalizeOrder, moveInOrder } = require("./lib");
 const { getRuntime } = require("./runtime");
 
@@ -107,11 +108,11 @@ class BrowserShell {
       minHeight: 480,
       title: "STRATA",
       icon: path.join(__dirname, "ui", "app-icon.png"),
-      backgroundColor: "#07070b",
+      backgroundColor: appearance.colors().bg,
       // Tabs live in the title bar, like Chrome. macOS keeps its traffic lights;
       // Windows/Linux draw the window buttons over the top-right corner.
       titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "hidden",
-      ...(process.platform === "darwin" ? {} : { titleBarOverlay: { color: "#0d0d12", symbolColor: "#9ba1ab", height: this.vertical ? NAVBAR_H : TABSTRIP_H } }),
+      ...(process.platform === "darwin" ? {} : { titleBarOverlay: { color: appearance.colors().bar, symbolColor: appearance.colors().symbol, height: this.vertical ? NAVBAR_H : TABSTRIP_H } }),
       webPreferences: {
         preload: path.join(__dirname, "preload-shell.js"),
         contextIsolation: true,
@@ -824,9 +825,12 @@ class BrowserShell {
   }
 
   applyChrome() {
-    if (process.platform !== "darwin" && !this.win.isDestroyed()) {
+    if (this.win.isDestroyed()) return;
+    const c = appearance.colors();
+    this.win.setBackgroundColor(c.bg);
+    if (process.platform !== "darwin") {
       try {
-        this.win.setTitleBarOverlay({ color: "#0d0d12", symbolColor: "#9ba1ab", height: this.vertical ? NAVBAR_H : TABSTRIP_H });
+        this.win.setTitleBarOverlay({ color: c.bar, symbolColor: c.symbol, height: this.vertical ? NAVBAR_H : TABSTRIP_H });
       } catch {
         /* not supported */
       }
@@ -1088,5 +1092,9 @@ function saveAllSessions() {
     lib.flush();
   }
 }
+
+appearance.onChange(() => {
+  for (const s of shells) if (!s.win.isDestroyed()) s.applyChrome();
+});
 
 module.exports = { saveAllSessions, BrowserShell, shells, shellFor, shellOfTab, shellsOf, focusedShell, setHooks, GROUP_COLORS, TABSTRIP_H, NAVBAR_H };
