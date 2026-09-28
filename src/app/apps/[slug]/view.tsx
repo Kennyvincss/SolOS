@@ -9,6 +9,7 @@ import { getApp, appsByCategory, domainOf, appLogo } from "@/lib/catalog/apps";
 import { useApi } from "@/lib/client/fetch";
 import { useActions, useStore } from "@/lib/client/store";
 import { useSession } from "@/lib/client/session";
+import { useIsDesktop } from "@/lib/client/desktop";
 import type { AppMetrics, DataMeta } from "@/lib/types";
 import { fmtUsd, timeAgo } from "@/lib/format";
 
@@ -80,6 +81,7 @@ export function AppDetail({ slug }: { slug: string }) {
   const { toggleFavorite, toggleAddedApp } = useActions();
   const related = appsByCategory(app.category).filter((a) => a.slug !== slug).slice(0, 3);
   const openUrl = app.appUrl ?? app.website;
+  const desktop = useIsDesktop();
 
   return (
     <Page>
@@ -96,9 +98,16 @@ export function AppDetail({ slug }: { slug: string }) {
           <p className="mt-1 text-[15px] text-muted">{app.tagline}</p>
           <p className="mt-1 text-[13px] text-faint">by {app.developer}</p>
           <div className="mt-4 flex flex-wrap gap-2">
-            <Link href={`/browser?url=${encodeURIComponent(openUrl)}`} className="btn btn-primary">
-              Open App
-            </Link>
+            {desktop ? (
+              // In the desktop app, open a real browser tab so wallet extensions work.
+              <a href={openUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary">
+                Open App
+              </a>
+            ) : (
+              <Link href={`/browser?url=${encodeURIComponent(openUrl)}`} className="btn btn-primary">
+                Open App
+              </Link>
+            )}
             <button onClick={() => toggleAddedApp(slug)} className={cn("btn", added ? "btn-soft" : "btn-ghost")}>
               {added ? <Check size={15} /> : <Plus size={15} />} {added ? "Added to Solana OS" : "Add to Solana OS"}
             </button>

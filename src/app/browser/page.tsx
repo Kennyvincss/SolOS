@@ -7,6 +7,7 @@ import { ArrowRight, ExternalLink, Lock, RotateCw, ShieldAlert, ShieldCheck, Unl
 import { Card, Monogram, RiskPill, cn } from "@/components/ui";
 import { useApi } from "@/lib/client/fetch";
 import { useSession } from "@/lib/client/session";
+import { useIsDesktop } from "@/lib/client/desktop";
 import { APPS, domainOf, appLogo } from "@/lib/catalog/apps";
 import type { RiskReport } from "@/lib/types";
 import { shortAddr } from "@/lib/format";
@@ -42,10 +43,21 @@ function BrowserInner() {
     setAcknowledged(false);
   }, [url]);
 
+  const desktop = useIsDesktop();
   const go = (v: string) => {
     const n = normalize(v);
-    if (n) router.push(`/browser?url=${encodeURIComponent(n)}`);
+    if (!n) return;
+    // The desktop app opens real tabs, where wallet extensions work.
+    if (desktop) window.open(n, "_blank", "noopener");
+    else router.push(`/browser?url=${encodeURIComponent(n)}`);
   };
+
+  useEffect(() => {
+    if (desktop && url) {
+      window.open(url, "_blank", "noopener");
+      router.replace("/browser");
+    }
+  }, [desktop, url, router]);
 
   return (
     <div className="flex h-[calc(100dvh-3.5rem-4rem)] flex-col md:h-dvh">

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src * data: crx:; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+    <title>Solana OS</title>
+    <link rel="stylesheet" href="shell.css" />
+  </head>
+  <body>
+    <header id="toolbar">
+      <div id="tabstrip">
+        <div id="tabs" role="tablist"></div>
+        <button id="new-tab" class="icon" title="New tab (Ctrl/⌘+T)" aria-label="New tab">
+          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
+        </button>
+      </div>
+      <nav id="navbar">
+        <button id="back" class="icon" title="Back" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" /></svg></button>
+        <button id="forward" class="icon" title="Forward" aria-label="Forward"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6" /></svg></button>
+        <button id="reload" class="icon" title="Reload" aria-label="Reload"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6" /></svg></button>
+        <button id="home" class="icon" title="Solana OS home" aria-label="Home">
+          <svg viewBox="0 0 32 32" class="logo"><path d="M9 11.5h11.5l2.5-2.5H11.5zM9 17.25h14l-2.5 2.5H9zM11.5 23H23l-2.5 2.5H9z" transform="translate(0 -1.5)" /></svg>
+        </button>
+        <form id="address-form">
+          <span id="risk" class="risk" hidden></span>
+          <input id="address" spellcheck="false" autocomplete="off" placeholder="Search Solana or enter an address" aria-label="Address or search" />
+        </form>
+        <browser-action-list id="actions" partition="persist:solanaos" alignment="bottom right"></browser-action-list>
+        <button id="wallets" class="pill" title="Wallet extensions">
+          <svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h13v4M3 7v10a2 2 0 0 0 2 2h15V9H5a2 2 0 0 1-2-2zm14 6h.01" /></svg>
+          Wallets
+        </button>
+      </nav>
+    </header>
+    <script src="shell.js"></script>
+  </body>
+</html>

@@ -2,7 +2,7 @@ export function LogoMark({ size = 26 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden>
       <defs>
-        <linearGradient id="sos-g" x1="0" y1="32" x2="32" y2="0">
+        <linearGradient id="sos-g" x1="0" y1="32" x2="32" y2="0" gradientUnits="userSpaceOnUse">
           <stop offset="0" stopColor="#9945ff" />
           <stop offset="1" stopColor="#14f195" />
         </linearGradient>

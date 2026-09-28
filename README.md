@@ -7,6 +7,14 @@ Solana AI, wallet and portfolio, token and transaction explorers, a security
 center, DeFi/RWA/payments hubs, news, a social feed,
 extensions and a developer platform, all in one fast, dark-first interface.
 
+## Desktop app
+
+`desktop/` contains **Solana OS Desktop**, a Chromium browser with Solana OS as
+its home and real Chrome wallet extensions (Phantom, Solflare, Backpack). See
+[desktop/README.md](desktop/README.md). Installers for macOS, Windows and Linux
+are built by the "Desktop app" GitHub Actions workflow. The desktop app is
+licensed GPL-3.0.
+
 ## Deploy to Vercel
 
 1. Import this repository in Vercel. The framework (Next.js) is detected

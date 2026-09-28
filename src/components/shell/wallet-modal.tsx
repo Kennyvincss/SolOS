@@ -6,6 +6,7 @@ import { Eye, Loader2, LogOut, ShieldCheck, Wallet as WalletIcon } from "lucide-
 import { useSession } from "@/lib/client/session";
 import { Modal, cn } from "../ui";
 import { isAddress } from "@/lib/solana/address";
+import { useIsDesktop } from "@/lib/client/desktop";
 import { shortAddr } from "@/lib/format";
 
 const SUGGESTED = [
@@ -19,6 +20,7 @@ export function WalletModal() {
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [watch, setWatch] = useState("");
+  const desktop = useIsDesktop();
 
   const connect = async (name: string) => {
     setErr(null);
@@ -94,8 +96,12 @@ export function WalletModal() {
           ) : (
             <div className="rounded-2xl border border-line p-4">
               <div className="text-[14px] font-medium">No Solana wallet detected</div>
-              <p className="mt-1 text-[13px] text-muted">Install a wallet extension, or open Solana OS inside your wallet app&apos;s browser on mobile.</p>
-              <div className="mt-3 flex flex-wrap gap-2">
+              <p className="mt-1 text-[13px] text-muted">
+                {desktop
+                  ? "Click “Wallets” in the toolbar above to install Phantom, Solflare or Backpack, then open this again."
+                  : "Install a wallet extension, or open Solana OS inside your wallet app’s browser on mobile."}
+              </p>
+              <div className={desktop ? "hidden" : "mt-3 flex flex-wrap gap-2"}>
                 {SUGGESTED.map((w) => (
                   <a key={w.name} href={w.url} target="_blank" rel="noopener noreferrer" className="btn btn-soft btn-sm">
                     Get {w.name}
