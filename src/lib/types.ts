@@ -201,6 +201,8 @@ export interface AppEntry {
   subcategories?: string[];
   website: string;
   appUrl?: string;
+  /** Official page for downloading the app's phone/desktop app (wallets). */
+  download?: string;
   twitter?: string;
   discord?: string;
   github?: string;

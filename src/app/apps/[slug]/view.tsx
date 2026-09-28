@@ -2,14 +2,14 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { BookOpen, Check, Code2, ExternalLink, Globe, Heart, ImageOff, MessageCircle, Plus, Share2, ShieldCheck, Star } from "lucide-react";
+import { BookOpen, Check, Code2, Download, ExternalLink, Globe, Heart, ImageOff, MessageCircle, Plus, Share2, ShieldCheck, Star } from "lucide-react";
 import { Address, Badge, Card, DataBadge, Monogram, Page, Section, Stat, cn, share } from "@/components/ui";
 import { AppCard } from "@/components/domain";
 import { getApp, appsByCategory, domainOf, appLogo } from "@/lib/catalog/apps";
 import { useApi } from "@/lib/client/fetch";
 import { useActions, useStore } from "@/lib/client/store";
 import { useSession } from "@/lib/client/session";
-import { useIsDesktop } from "@/lib/client/desktop";
+import { useAppShell } from "@/lib/client/desktop";
 import type { AppMetrics, DataMeta } from "@/lib/types";
 import { fmtUsd, timeAgo } from "@/lib/format";
 
@@ -81,7 +81,7 @@ export function AppDetail({ slug }: { slug: string }) {
   const { toggleFavorite, toggleAddedApp } = useActions();
   const related = appsByCategory(app.category).filter((a) => a.slug !== slug).slice(0, 3);
   const openUrl = app.appUrl ?? app.website;
-  const desktop = useIsDesktop();
+  const shell = useAppShell();
 
   return (
     <Page>
@@ -98,15 +98,25 @@ export function AppDetail({ slug }: { slug: string }) {
           <p className="mt-1 text-[15px] text-muted">{app.tagline}</p>
           <p className="mt-1 text-[13px] text-faint">by {app.developer}</p>
           <div className="mt-4 flex flex-wrap gap-2">
-            {desktop ? (
+            {shell === "desktop" ? (
               // In the desktop app, open a real browser tab so wallet extensions work.
               <a href={openUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary">
+                Open App
+              </a>
+            ) : shell === "mobile" ? (
+              // In the phone app, open it in place; its wallet connections work there.
+              <a href={openUrl} className="btn btn-primary">
                 Open App
               </a>
             ) : (
               <Link href={`/browser?url=${encodeURIComponent(openUrl)}`} className="btn btn-primary">
                 Open App
               </Link>
+            )}
+            {app.download && (
+              <a href={app.download} target="_blank" rel="noopener noreferrer" className="btn btn-soft">
+                <Download size={15} /> Get the app
+              </a>
             )}
             <button onClick={() => toggleAddedApp(slug)} className={cn("btn", added ? "btn-soft" : "btn-ghost")}>
               {added ? <Check size={15} /> : <Plus size={15} />} {added ? "Added to Solana OS" : "Add to Solana OS"}

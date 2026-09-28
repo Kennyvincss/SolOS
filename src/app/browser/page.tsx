@@ -7,7 +7,7 @@ import { ArrowRight, ExternalLink, Lock, RotateCw, ShieldAlert, ShieldCheck, Unl
 import { Card, Monogram, RiskPill, cn } from "@/components/ui";
 import { useApi } from "@/lib/client/fetch";
 import { useSession } from "@/lib/client/session";
-import { useIsDesktop } from "@/lib/client/desktop";
+import { useAppShell } from "@/lib/client/desktop";
 import { APPS, domainOf, appLogo } from "@/lib/catalog/apps";
 import type { RiskReport } from "@/lib/types";
 import { shortAddr } from "@/lib/format";
@@ -43,21 +43,24 @@ function BrowserInner() {
     setAcknowledged(false);
   }, [url]);
 
-  const desktop = useIsDesktop();
+  const shell = useAppShell();
   const go = (v: string) => {
     const n = normalize(v);
     if (!n) return;
-    // The desktop app opens real tabs, where wallet extensions work.
-    if (desktop) window.open(n, "_blank", "noopener");
+    // The apps open the site for real (the desktop app in a new tab with its
+    // wallet extensions, the phone app in place with its wallet connections).
+    if (shell === "desktop") window.open(n, "_blank", "noopener");
+    else if (shell === "mobile") window.location.assign(n);
     else router.push(`/browser?url=${encodeURIComponent(n)}`);
   };
 
   useEffect(() => {
-    if (desktop && url) {
+    if (!url) return;
+    if (shell === "desktop") {
       window.open(url, "_blank", "noopener");
       router.replace("/browser");
-    }
-  }, [desktop, url, router]);
+    } else if (shell === "mobile") window.location.replace(url);
+  }, [shell, url, router]);
 
   return (
     <div className="flex h-[calc(100dvh-3.5rem-4rem)] flex-col md:h-dvh">

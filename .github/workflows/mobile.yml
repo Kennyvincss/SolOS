@@ -1,0 +1,160 @@
+name: Mobile app
+
+# Builds the Solana OS phone app (mobile/).
+#
+# - "Run workflow" (Actions tab): builds an Android APK you can download from
+#   the run page and install on a phone.
+# - Push a tag like mobile-v0.1.0 (or publish a release with that tag), or
+#   "Run workflow" with release_tag: attaches the APK to that GitHub Release.
+#   Installed copies offer to update when a newer release appears.
+#
+# Optional secrets:
+#   Android (your own signing key, required for Google Play):
+#     ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
+#   iPhone (built by Expo EAS, needs an Apple Developer account):
+#     EXPO_TOKEN, EAS_PROJECT_ID
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Attach the APK to this release tag (e.g. mobile-v0.1.0). Leave empty to only build."
+        required: false
+        default: ""
+      ios:
+        description: "Also start an iPhone build on Expo EAS (needs EXPO_TOKEN)"
+        type: boolean
+        default: false
+  push:
+    tags: ["mobile-v*"]
+
+permissions:
+  contents: write
+
+env:
+  RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/mobile-v') && github.ref_name || inputs.release_tag }}
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm test
+
+      - name: Version
+        run: |
+          if [ -n "$RELEASE_TAG" ]; then
+            case "$RELEASE_TAG" in mobile-v[0-9]*.[0-9]*.[0-9]*) ;; *) echo "release_tag must look like mobile-v1.2.3"; exit 1;; esac
+            V="${RELEASE_TAG#mobile-v}"
+          else
+            V="$(node -p "require('./package.json').version")"
+          fi
+          echo "APP_VERSION=$V" >> "$GITHUB_ENV"
+          echo "Building version $V"
+
+      - name: Generate the Android project
+        run: npx expo prebuild --platform android --no-install
+        env:
+          APP_DISTRIBUTION: github
+
+      - name: Signing key
+        env:
+          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE" ]; then
+            echo "$KEYSTORE" | base64 -d > "$RUNNER_TEMP/release.jks"
+            {
+              echo "SIGNING_ARGS=-Pandroid.injected.signing.store.file=$RUNNER_TEMP/release.jks -Pandroid.injected.signing.store.password=$KS_PASS -Pandroid.injected.signing.key.alias=$KEY_ALIAS -Pandroid.injected.signing.key.password=$KEY_PASS"
+              echo "HAS_KEY=1"
+            } >> "$GITHUB_ENV"
+            echo "Signing with your release key."
+          else
+            echo "No ANDROID_KEYSTORE_BASE64 secret: the APK is signed with a development key (fine for installing directly, not for Google Play)."
+          fi
+
+      - name: Build
+        working-directory: mobile/android
+        run: |
+          TASKS="assembleRelease"
+          [ -n "$HAS_KEY" ] && TASKS="$TASKS bundleRelease"
+          ./gradlew $TASKS --no-daemon -PreactNativeArchitectures=armeabi-v7a,arm64-v8a -Dorg.gradle.jvmargs=-Xmx4g $SIGNING_ARGS
+        env:
+          APP_DISTRIBUTION: github
+
+      - name: Collect
+        run: |
+          mkdir -p dist
+          cp android/app/build/outputs/apk/release/app-release.apk "dist/solana-os-$APP_VERSION-android.apk"
+          if [ -f android/app/build/outputs/bundle/release/app-release.aab ]; then
+            cp android/app/build/outputs/bundle/release/app-release.aab "dist/solana-os-$APP_VERSION-android.aab"
+          fi
+          ls -la dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: solana-os-android
+          path: mobile/dist/*
+          if-no-files-found: error
+
+      - name: Attach to the GitHub Release
+        if: env.RELEASE_TAG != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" --target "$GITHUB_SHA" --title "Solana OS for Android $APP_VERSION" \
+              --notes "Download the .apk on your Android phone and open it to install. You may need to allow installs from your browser." --latest=false
+          fi
+          gh release upload "$RELEASE_TAG" dist/*.apk --clobber
+          # The desktop app updates from the repository's "latest" release, so keep that a desktop release.
+          DESKTOP=$(gh release list --limit 50 --json tagName,isDraft,isPrerelease --jq '[.[] | select((.tagName | startswith("desktop-v")) and (.isDraft | not) and (.isPrerelease | not))][0].tagName')
+          if [ -n "$DESKTOP" ]; then gh release edit "$DESKTOP" --latest; fi
+
+  ios:
+    if: startsWith(github.ref, 'refs/tags/mobile-v') || inputs.ios
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EAS_PROJECT_ID: ${{ secrets.EAS_PROJECT_ID }}
+    steps:
+      - name: Check for Expo credentials
+        working-directory: .
+        run: |
+          if [ -z "$EXPO_TOKEN" ] || [ -z "$EAS_PROJECT_ID" ]; then
+            echo "::notice::Skipping the iPhone build: add the EXPO_TOKEN and EAS_PROJECT_ID secrets (see mobile/README.md)."
+            echo "SKIP=1" >> "$GITHUB_ENV"
+          fi
+      - uses: actions/checkout@v4
+        if: env.SKIP != '1'
+      - uses: actions/setup-node@v4
+        if: env.SKIP != '1'
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - if: env.SKIP != '1'
+        run: npm ci
+      - name: Build on EAS and send to TestFlight
+        if: env.SKIP != '1'
+        run: |
+          [ -n "$RELEASE_TAG" ] && export APP_VERSION="${RELEASE_TAG#mobile-v}"
+          npx eas-cli@latest build --platform ios --profile production --non-interactive --no-wait --auto-submit

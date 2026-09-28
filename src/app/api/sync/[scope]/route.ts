@@ -5,7 +5,8 @@ import { readSync, syncConfigured, writeSync } from "@/lib/sync-store";
 /**
  * Account sync. GET returns the signed-in user's saved data for a scope;
  * PUT replaces it. Scopes: "web" (watchlist, follows, extensions, settings…)
- * and "desktop" (desktop app bookmarks and settings). Passwords never go here.
+ * and "desktop" (bookmarks and settings of the desktop and phone apps, which
+ * share them). Passwords never go here.
  */
 const SCOPES = new Set(["web", "desktop"]);
 const MAX_BYTES = 512 * 1024;

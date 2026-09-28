@@ -16,6 +16,15 @@ a password manager, bookmarks, account sync and automatic updates. See
 are built by the "Desktop app" GitHub Actions workflow. The desktop app is
 licensed GPL-3.0.
 
+## Phone app
+
+`mobile/` contains **Solana OS for Android and iPhone** (Expo / React Native):
+the same browser with Solana OS as its home, connecting sites to your Phantom
+or Solflare app (and to any wallet through Mobile Wallet Adapter on Android),
+with bookmarks that sync with the desktop app. The "Mobile app" GitHub Actions
+workflow builds an Android APK; iPhone builds go through Expo EAS and need an
+Apple Developer account. See [mobile/README.md](mobile/README.md).
+
 ## Deploy to Vercel
 
 1. Import this repository in Vercel. The framework (Next.js) is detected
