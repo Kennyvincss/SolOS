@@ -11,8 +11,14 @@ A desktop browser for the Solana ecosystem, built on Chromium (Electron).
 - **Site safety badge.** Every site is checked against the Solana OS Security
   Center (known-app registry, lookalike domains, bait keywords) and flagged in
   the address bar.
-- **Tabs, back/forward, zoom, DevTools**, and the usual shortcuts
-  (Ctrl/⌘+T, W, L, R, D, [, ]).
+- **Chrome-style window.** Tabs sit in the title bar, and everything else is in
+  the **⋮** menu (history, bookmarks, passwords, extensions, zoom, updates).
+  The usual shortcuts work: Ctrl+T/W/N/L/R/D, Ctrl+Tab, Ctrl+1–9, Alt+←/→,
+  Ctrl+±/0, F5, F11, F12. On macOS the menu bar at the top of the screen has
+  the same items.
+- **One-click extensions from Solana OS.** The Extensions page in Solana OS
+  lists Solana wallets (Phantom, Solflare, Backpack, OKX, Coinbase, Trust and
+  more) with an Install button; each install is confirmed in a dialog.
 - **Password manager.** Offers to save logins, fills them next time, and
   keeps them encrypted with the system keychain (Keychain on macOS, DPAPI on
   Windows, libsecret/KWallet on Linux). Manage them in **File → Passwords…**,
@@ -92,7 +98,7 @@ npm run dist      # installers for the current OS, into dist/
 | `src/updater.js` | Automatic updates from GitHub Releases |
 | `src/preload-shell.js` | Bridge between the toolbar UI and the main process |
 | `src/ui/` | Toolbar: tabs, address bar, safety badge, extension icons, Wallets menu |
-| `test/` | Unit tests, plus smoke tests that boot the app (test wallet extension, password save/fill, bookmarks) |
+| `test/` | Unit tests, plus smoke tests that boot the app (test wallet extension and its popup, tab clicks and shortcuts, password save/fill, bookmarks) |
 
 Extension support comes from
 [electron-chrome-extensions](https://github.com/samuelmaddock/electron-browser-shell)

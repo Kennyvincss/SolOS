@@ -5,7 +5,24 @@
 // (to offer saving) and fills saved logins. The main process decides the
 // origin from the frame itself, never from anything the page says.
 
-const { ipcRenderer } = require("electron");
+const { contextBridge, ipcRenderer } = require("electron");
+
+/* ------------------------------------------------------------ Solana OS bridge */
+
+// On the Solana OS site only, let its Extensions page list and install browser
+// extensions (each install is confirmed in a native dialog; the main process
+// re-checks the origin from the frame itself).
+try {
+  if (location.origin === ipcRenderer.sendSync("desktop:homeOrigin")) {
+    contextBridge.exposeInMainWorld("solanaOSDesktop", {
+      extensions: () => ipcRenderer.invoke("desktop:extensions"),
+      installExtension: (id, name) => ipcRenderer.invoke("desktop:installExtension", String(id), String(name ?? "")),
+      removeExtension: (id) => ipcRenderer.invoke("desktop:removeExtension", String(id)),
+    });
+  }
+} catch {
+  /* not available */
+}
 
 function visible(el) {
   const r = el.getBoundingClientRect();

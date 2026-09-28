@@ -1,6 +1,7 @@
 "use client";
 
-import { Check, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowRight, Plus } from "lucide-react";
 import { useActions, useStore } from "@/lib/client/store";
 import type { ExtensionManifest } from "@/lib/extensions/sdk";
 import { Toggle, cn } from "../ui";
@@ -8,6 +9,7 @@ import { Toggle, cn } from "../ui";
 export function InstallControls({ ext, compact }: { ext: ExtensionManifest; compact?: boolean }) {
   const inst = useStore((s) => s.installed.find((i) => i.id === ext.id));
   const { install, uninstall, toggleExtension } = useActions();
+  const router = useRouter();
   if (!inst)
     return (
       <button onClick={(e) => (e.preventDefault(), install(ext.id))} className={cn("btn btn-primary", compact && "btn-sm")}>
@@ -23,7 +25,12 @@ export function InstallControls({ ext, compact }: { ext: ExtensionManifest; comp
           Remove
         </button>
       )}
-      {compact && <Check size={14} className="text-sol-green" />}
+      {compact && (
+        // A button, not a link: this sits inside the card's own link.
+        <button onClick={(e) => (e.preventDefault(), e.stopPropagation(), router.push("/workspace"))} className="btn btn-soft btn-sm ml-1">
+          Open <ArrowRight size={13} />
+        </button>
+      )}
     </div>
   );
 }

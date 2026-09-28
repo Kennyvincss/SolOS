@@ -55,7 +55,10 @@ class BrowserShell {
       minHeight: 480,
       title: "Solana OS",
       backgroundColor: "#07080a",
-      titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "default",
+      // Tabs live in the title bar, like Chrome. macOS keeps its traffic lights;
+      // Windows/Linux draw the window buttons over the right end of the tab strip.
+      titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "hidden",
+      ...(process.platform === "darwin" ? {} : { titleBarOverlay: { color: "#0d0f12", symbolColor: "#9ba1ab", height: 40 } }),
       webPreferences: {
         preload: path.join(__dirname, "preload-shell.js"),
         contextIsolation: true,
@@ -64,6 +67,9 @@ class BrowserShell {
       },
     });
     windows.add(this);
+    // No menu bar on Windows/Linux: the ⋮ button opens the menu and shortcuts are handled below.
+    if (process.platform !== "darwin") this.win.removeMenu();
+    this.win.webContents.on("before-input-event", (e, input) => handleShortcut(this, e, input));
     this.win.loadFile(path.join(__dirname, "ui", "shell.html"));
     this.win.on("resize", () => this.layout());
     this.win.on("closed", () => {
@@ -122,6 +128,7 @@ class BrowserShell {
       }
     });
     wc.on("context-menu", (_e, params) => this.contextMenu(wc, params));
+    wc.on("before-input-event", (e, input) => handleShortcut(this, e, input));
 
     wc.loadURL(url).catch(() => {});
     if (!background || !this.activeId) this.selectTab(wc.id);
@@ -167,6 +174,18 @@ class BrowserShell {
     const tab = this.activeTab;
     if (tab) tab.view.webContents.loadURL(url).catch(() => {});
     else this.newTab(url);
+  }
+
+  focusAddress() {
+    this.win.webContents.focus();
+    this.win.webContents.send("shell:focusAddress");
+  }
+
+  toggleBookmark() {
+    const wc = this.activeTab?.view.webContents;
+    if (!wc || !/^https?:/.test(wc.getURL())) return;
+    library.toggleBookmark(wc.getURL(), wc.getTitle());
+    this.sendState();
   }
 
   sendState() {
@@ -218,6 +237,121 @@ function focusedShell() {
   return [...windows][0] ?? null;
 }
 
+/* ------------------------------------------------------------ keyboard shortcuts */
+
+// Windows/Linux have no menu bar (so no menu accelerators); handle Chrome's
+// shortcuts directly. macOS uses the menu bar at the top of the screen.
+function handleShortcut(s, event, input) {
+  if (process.platform === "darwin" || input.type !== "keyDown") return;
+  const ctrl = input.control && !input.alt;
+  const key = input.key;
+  const lower = key.length === 1 ? key.toLowerCase() : key;
+  const wc = s.activeTab?.view.webContents;
+  const ids = [...s.tabs.keys()];
+  const idx = ids.indexOf(s.activeId);
+  const zoom = (d) => wc && wc.setZoomLevel(d === 0 ? 0 : wc.getZoomLevel() + d);
+  let act = null;
+  if (ctrl && !input.shift) {
+    act = {
+      t: () => s.newTab(SOLANA_OS_URL),
+      n: () => new BrowserShell(),
+      w: () => s.closeTab(s.activeId),
+      F4: () => s.closeTab(s.activeId),
+      l: () => s.focusAddress(),
+      r: () => wc?.reload(),
+      d: () => s.toggleBookmark(),
+      Tab: () => ids.length && s.selectTab(ids[(idx + 1) % ids.length]),
+      PageDown: () => ids.length && s.selectTab(ids[(idx + 1) % ids.length]),
+      PageUp: () => ids.length && s.selectTab(ids[(idx - 1 + ids.length) % ids.length]),
+      "=": () => zoom(0.5),
+      "+": () => zoom(0.5),
+      "-": () => zoom(-0.5),
+      0: () => zoom(0),
+      F5: () => wc?.reloadIgnoringCache(),
+    }[lower];
+    if (!act && /^[1-9]$/.test(key)) act = () => s.selectTab(key === "9" ? ids[ids.length - 1] : ids[Number(key) - 1]);
+  } else if (ctrl && input.shift) {
+    act = {
+      Tab: () => ids.length && s.selectTab(ids[(idx - 1 + ids.length) % ids.length]),
+      r: () => wc?.reloadIgnoringCache(),
+      i: () => wc?.toggleDevTools(),
+      w: () => s.win.close(),
+      "+": () => zoom(0.5),
+    }[lower];
+  } else if (input.alt && !input.control && !input.shift) {
+    act = { ArrowLeft: () => wc?.navigationHistory.goBack(), ArrowRight: () => wc?.navigationHistory.goForward(), d: () => s.focusAddress(), Home: () => s.navigate(SOLANA_OS_URL) }[lower];
+  } else if (!input.control && !input.alt && !input.meta) {
+    act = { F5: () => wc?.reload(), F6: () => s.focusAddress(), F11: () => s.win.setFullScreen(!s.win.isFullScreen()), F12: () => wc?.toggleDevTools() }[key];
+  }
+  if (act) {
+    event.preventDefault();
+    act();
+  }
+}
+
+/** The ⋮ menu (Chrome-style). Accelerators here are only labels; see handleShortcut. */
+function chromeMenu(s) {
+  const wc = s.activeTab?.view.webContents;
+  const acc = (a) => ({ accelerator: a, registerAccelerator: false });
+  const sync = library.getSyncState();
+  const zoomPct = wc ? Math.round(Math.pow(1.2, wc.getZoomLevel()) * 100) : 100;
+  const bookmarks = library.bookmarks();
+  const history = library.recentHistory(15);
+  const installed = browserSession.extensions.getAllExtensions();
+  return Menu.buildFromTemplate([
+    { label: "New tab", ...acc("Ctrl+T"), click: () => s.newTab(SOLANA_OS_URL) },
+    { label: "New window", ...acc("Ctrl+N"), click: () => new BrowserShell() },
+    { type: "separator" },
+    {
+      label: "History",
+      submenu: [
+        ...(history.length ? history.map((h) => ({ label: (h.title || h.url).slice(0, 60), click: () => s.newTab(h.url) })) : [{ label: "No history yet", enabled: false }]),
+        { type: "separator" },
+        { label: "Clear browsing history…", click: () => confirmClearHistory() },
+      ],
+    },
+    {
+      label: "Bookmarks",
+      submenu: [
+        { label: wc && library.isBookmarked(wc.getURL()) ? "Remove bookmark" : "Bookmark this page", ...acc("Ctrl+D"), enabled: Boolean(wc && /^https?:/.test(wc.getURL())), click: () => s.toggleBookmark() },
+        { type: "separator" },
+        ...(bookmarks.length ? bookmarks.slice(-40).reverse().map((b) => ({ label: b.title.slice(0, 60) || b.url, click: () => s.newTab(b.url) })) : [{ label: "No bookmarks yet", enabled: false }]),
+      ],
+    },
+    { label: "Passwords", click: () => openPasswords() },
+    {
+      label: "Extensions",
+      submenu: [
+        { label: "Solana extensions…", click: () => s.newTab(`${SOLANA_OS_URL}/extensions`) },
+        { label: "Chrome Web Store", click: () => s.newTab("https://chromewebstore.google.com/category/extensions") },
+        ...(installed.length
+          ? [{ type: "separator" }, ...installed.map((x) => ({ label: x.name, submenu: [{ label: `Remove ${x.name}…`, click: () => removeExtension(s, x.id, x.name) }] }))]
+          : []),
+      ],
+    },
+    { type: "separator" },
+    { label: `Zoom in (${zoomPct}%)`, ...acc("Ctrl+="), click: () => wc && wc.setZoomLevel(wc.getZoomLevel() + 0.5) },
+    { label: "Zoom out", ...acc("Ctrl+-"), click: () => wc && wc.setZoomLevel(wc.getZoomLevel() - 0.5) },
+    { label: "Reset zoom", ...acc("Ctrl+0"), click: () => wc?.setZoomLevel(0) },
+    { label: "Full screen", ...acc("F11"), click: () => s.win.setFullScreen(!s.win.isFullScreen()) },
+    { type: "separator" },
+    {
+      label: sync.status === "ok" ? `Synced ${new Date(sync.at).toLocaleTimeString()}` : sync.status === "signed-out" ? "Sign in to sync bookmarks" : sync.status === "unavailable" ? "Sync isn't set up on the server" : sync.status === "error" ? "Sync failed — retry" : "Sync now",
+      click: () => (sync.status === "signed-out" ? s.newTab(`${SOLANA_OS_URL}/login`) : library.syncNow().then(buildMenu)),
+    },
+    { label: "Check for updates…", click: () => checkForUpdatesInteractive() },
+    { label: "Developer tools", ...acc("F12"), click: () => wc?.toggleDevTools() },
+    { label: "About Solana OS", click: () => s.newTab(SOLANA_OS_URL) },
+    { type: "separator" },
+    { label: "Exit", click: () => app.quit() },
+  ]);
+}
+
+async function confirmClearHistory() {
+  const { response } = await dialog.showMessageBox({ type: "warning", buttons: ["Clear", "Cancel"], defaultId: 1, cancelId: 1, message: "Clear browsing history?", detail: "This removes the list of sites you visited. Bookmarks, passwords and cookies are kept." });
+  if (response === 0) library.clearHistory();
+}
+
 /* ------------------------------------------------------------ IPC from toolbar */
 
 function registerIpc() {
@@ -255,7 +389,7 @@ function registerIpc() {
     const installed = new Set(browserSession.extensions.getAllExtensions().map((x) => x.id));
     const items = WALLETS.map((w) =>
       installed.has(w.id)
-        ? { label: `${w.name}  ✓ Installed`, submenu: [{ label: `Remove ${w.name}…`, click: () => removeWallet(s, w) }] }
+        ? { label: `${w.name}  ✓ Installed`, submenu: [{ label: `Remove ${w.name}…`, click: () => removeExtension(s, w.id, w.name) }] }
         : {
             label: `Install ${w.name}`,
             click: () =>
@@ -264,23 +398,73 @@ function registerIpc() {
                 .catch((err) => dialog.showErrorBox(`Couldn't install ${w.name}`, String(err?.message ?? err))),
           },
     );
-    items.push({ type: "separator" }, { label: "Browse Chrome Web Store…", click: () => s.newTab("https://chromewebstore.google.com/category/extensions") });
+    items.push(
+      { type: "separator" },
+      { label: "More Solana wallets and extensions…", click: () => s.newTab(`${SOLANA_OS_URL}/extensions#browser`) },
+      { label: "Browse Chrome Web Store…", click: () => s.newTab("https://chromewebstore.google.com/category/extensions") },
+    );
     Menu.buildFromTemplate(items).popup({ window: s.win, x: Math.round(pos?.x ?? 0), y: Math.round(pos?.y ?? 0) });
   });
 
   ipcMain.handle("shell:removeWallet", async (e, id) => {
     const wallet = WALLETS.find((w) => w.id === id);
     if (!wallet) throw new Error("Unknown wallet");
-    return removeWallet(shellFor(e.sender), wallet);
+    return removeExtension(shellFor(e.sender), wallet.id, wallet.name);
+  });
+
+
+  /* Solana OS site -> browser extensions (one-click install from the Extensions page).
+     Only the Solana OS home site, in a top-level frame of our tabs, may call these;
+     every install is confirmed in a native dialog. */
+  const HOME_ORIGIN = new URL(SOLANA_OS_URL).origin;
+  const fromHome = (e) => {
+    const f = e.senderFrame;
+    if (!f || f.parent !== null || !shellFor(e.sender)) return false;
+    try {
+      return new URL(f.url).origin === HOME_ORIGIN;
+    } catch {
+      return false;
+    }
+  };
+  ipcMain.on("desktop:homeOrigin", (e) => (e.returnValue = HOME_ORIGIN));
+  ipcMain.handle("desktop:extensions", (e) => (fromHome(e) ? browserSession.extensions.getAllExtensions().map((x) => ({ id: x.id, name: x.name, version: x.version })) : null));
+  ipcMain.handle("desktop:installExtension", async (e, id, claimedName) => {
+    if (!fromHome(e) || typeof id !== "string" || !/^[a-p]{32}$/.test(id)) return { ok: false, error: "Not allowed" };
+    if (browserSession.extensions.getExtension(id)) return { ok: true };
+    const s = shellFor(e.sender);
+    const label = typeof claimedName === "string" && claimedName.trim() ? claimedName.trim().slice(0, 60) : "this extension";
+    const { response } = await dialog.showMessageBox(s?.win, {
+      type: "question",
+      buttons: ["Install", "Cancel"],
+      defaultId: 0,
+      cancelId: 1,
+      message: `Install ${label}?`,
+      detail: `From the Chrome Web Store (ID ${id}). Extensions can read and change the sites you visit, so only install ones you trust.`,
+    });
+    if (response !== 0) return { ok: false, cancelled: true };
+    try {
+      const ext = await installExtension(id, { session: browserSession });
+      // Guard against a wrong ID in the catalog: the store's name must match what the page said.
+      const word = label.split(/\s+/)[0].toLowerCase();
+      if (label !== "this extension" && !ext.name.toLowerCase().includes(word)) {
+        await uninstallExtension(id, { session: browserSession }).catch(() => {});
+        return { ok: false, error: `The Chrome Web Store returned "${ext.name}" instead of ${label}, so it was not kept.` };
+      }
+      return { ok: true, name: ext.name };
+    } catch (err) {
+      return { ok: false, error: String(err?.message ?? err) };
+    }
+  });
+  ipcMain.handle("desktop:removeExtension", async (e, id) => {
+    if (!fromHome(e) || typeof id !== "string") return false;
+    const x = browserSession.extensions.getExtension(id);
+    if (!x) return true;
+    return removeExtension(shellFor(e.sender), id, x.name);
   });
 
   /* bookmarks */
-  on("shell:toggleBookmark", (s) => {
-    const wc = s.activeTab?.view.webContents;
-    if (!wc || !/^https?:/.test(wc.getURL())) return;
-    library.toggleBookmark(wc.getURL(), wc.getTitle());
-    s.sendState();
-  });
+  on("shell:toggleBookmark", (s) => s.toggleBookmark());
+  on("shell:appMenu", (s, pos) => chromeMenu(s).popup({ window: s.win, x: Math.round(pos?.x ?? 0), y: Math.round(pos?.y ?? 0) }));
 
   /* password manager (messages come from the tab preload) */
   const prompting = new Set();
@@ -371,17 +555,17 @@ function openPasswords() {
   passwordsWindow.on("closed", () => (passwordsWindow = null));
 }
 
-async function removeWallet(s, wallet) {
+async function removeExtension(s, id, name) {
   const { response } = await dialog.showMessageBox(s?.win, {
     type: "warning",
     buttons: ["Cancel", "Remove"],
     defaultId: 0,
     cancelId: 0,
-    message: `Remove ${wallet.name}?`,
-    detail: "Make sure you have your recovery phrase saved. Removing the extension deletes its data from Solana OS Desktop.",
+    message: `Remove ${name}?`,
+    detail: "If this is a wallet, make sure you have its recovery phrase saved. Removing the extension deletes its data from Solana OS Desktop.",
   });
   if (response !== 1) return false;
-  await uninstallExtension(wallet.id, { session: browserSession });
+  await uninstallExtension(id, { session: browserSession });
   return true;
 }
 
@@ -455,13 +639,7 @@ function buildMenu() {
           ? library.recentHistory(15).map((h) => ({ label: (h.title || h.url).slice(0, 60), click: act((s) => s.newTab(h.url)) }))
           : [{ label: "No history yet", enabled: false }]),
         { type: "separator" },
-        {
-          label: "Clear History…",
-          click: async () => {
-            const { response } = await dialog.showMessageBox({ type: "warning", buttons: ["Clear", "Cancel"], defaultId: 1, cancelId: 1, message: "Clear browsing history?", detail: "This removes the list of sites you visited. Bookmarks, passwords and cookies are kept." });
-            if (response === 0) library.clearHistory();
-          },
-        },
+        { label: "Clear History…", click: () => confirmClearHistory() },
       ],
     },
     { role: "windowMenu" },

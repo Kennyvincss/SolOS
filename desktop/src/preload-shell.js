@@ -23,6 +23,7 @@ contextBridge.exposeInMainWorld("sos", {
   installWallet: (id) => ipcRenderer.invoke("shell:installWallet", id),
   removeWallet: (id) => ipcRenderer.invoke("shell:removeWallet", id),
   walletMenu: (x, y) => ipcRenderer.send("shell:walletMenu", { x, y }),
+  appMenu: (x, y) => ipcRenderer.send("shell:appMenu", { x, y }),
   toggleBookmark: () => ipcRenderer.send("shell:toggleBookmark"),
   onState: (cb) => ipcRenderer.on("shell:state", (_e, state) => cb(state)),
   onFocusAddress: (cb) => ipcRenderer.on("shell:focusAddress", () => cb()),

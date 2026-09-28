@@ -19,44 +19,76 @@ function displayUrl(url) {
   return url;
 }
 
+// Tab elements are kept and updated in place (keyed by tab id). Rebuilding
+// them on every state change would destroy a close button between mousedown
+// and click, so the click would never land.
+const tabEls = new Map();
+
+function makeTab(id) {
+  const el = document.createElement("div");
+  el.setAttribute("role", "tab");
+  const icon = document.createElement("span");
+  const title = document.createElement("span");
+  title.className = "title";
+  const close = document.createElement("button");
+  close.className = "close";
+  close.setAttribute("aria-label", "Close tab");
+  close.title = "Close tab (Ctrl/⌘+W)";
+  close.innerHTML = '<svg viewBox="0 0 24 24" style="width:12px;height:12px"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+  close.addEventListener("mousedown", (e) => e.stopPropagation());
+  close.addEventListener("click", (e) => {
+    e.stopPropagation();
+    window.sos.closeTab(id);
+  });
+  el.append(icon, title, close);
+  el.addEventListener("mousedown", (e) => {
+    if (e.button === 0) window.sos.selectTab(id);
+  });
+  // Middle-click closes, like Chrome.
+  el.addEventListener("auxclick", (e) => {
+    if (e.button === 1) window.sos.closeTab(id);
+  });
+  const rec = { el, icon, title, iconKey: "" };
+  tabEls.set(id, rec);
+  return rec;
+}
+
+function setIcon(rec, t) {
+  const key = t.loading ? "loading" : t.favicon ? `img:${t.favicon}` : "dot";
+  if (key === rec.iconKey) return;
+  rec.iconKey = key;
+  let icon;
+  if (t.loading) {
+    icon = document.createElement("span");
+    icon.className = "spinner";
+  } else if (t.favicon) {
+    icon = document.createElement("img");
+    icon.src = t.favicon;
+    icon.onerror = () => icon.replaceWith(Object.assign(document.createElement("span"), { className: "dot" }));
+  } else {
+    icon = document.createElement("span");
+    icon.className = "dot";
+  }
+  rec.icon.replaceWith(icon);
+  rec.icon = icon;
+}
+
 function renderTabs() {
-  tabsEl.replaceChildren(
-    ...state.tabs.map((t) => {
-      const el = document.createElement("div");
-      el.className = "tab" + (t.id === state.activeId ? " active" : "");
-      el.setAttribute("role", "tab");
-      el.title = t.title;
-      let icon;
-      if (t.loading) {
-        icon = document.createElement("span");
-        icon.className = "spinner";
-      } else if (t.favicon) {
-        icon = document.createElement("img");
-        icon.src = t.favicon;
-        icon.onerror = () => icon.replaceWith(Object.assign(document.createElement("span"), { className: "dot" }));
-      } else {
-        icon = document.createElement("span");
-        icon.className = "dot";
-      }
-      const title = document.createElement("span");
-      title.className = "title";
-      title.textContent = t.title;
-      const close = document.createElement("button");
-      close.className = "close";
-      close.setAttribute("aria-label", "Close tab");
-      close.innerHTML = '<svg viewBox="0 0 24 24" style="width:12px;height:12px"><path d="M6 6l12 12M18 6L6 18"/></svg>';
-      close.onclick = (e) => {
-        e.stopPropagation();
-        window.sos.closeTab(t.id);
-      };
-      el.append(icon, title, close);
-      el.onmousedown = (e) => {
-        if (e.button === 1) window.sos.closeTab(t.id);
-        else if (e.button === 0) window.sos.selectTab(t.id);
-      };
-      return el;
-    }),
-  );
+  const ids = new Set(state.tabs.map((t) => t.id));
+  for (const [id, rec] of tabEls) {
+    if (!ids.has(id)) {
+      rec.el.remove();
+      tabEls.delete(id);
+    }
+  }
+  state.tabs.forEach((t, i) => {
+    const rec = tabEls.get(t.id) ?? makeTab(t.id);
+    rec.el.className = "tab" + (t.id === state.activeId ? " active" : "");
+    rec.el.title = t.title;
+    if (rec.title.textContent !== t.title) rec.title.textContent = t.title;
+    setIcon(rec, t);
+    if (tabsEl.children[i] !== rec.el) tabsEl.insertBefore(rec.el, tabsEl.children[i] ?? null);
+  });
 }
 
 function render() {
@@ -88,6 +120,7 @@ function render() {
 window.sos.onState((s) => {
   state = s;
   document.body.classList.toggle("darwin", s.platform === "darwin");
+  document.body.classList.toggle("overlay", s.platform !== "darwin");
   render();
 });
 window.sos.onFocusAddress(() => {
@@ -101,6 +134,10 @@ $("forward").onclick = () => window.sos.forward();
 $("reload").onclick = () => (state.tabs.find((x) => x.id === state.activeId)?.loading ? window.sos.stop() : window.sos.reload());
 $("home").onclick = () => window.sos.home();
 $("star").onclick = () => window.sos.toggleBookmark();
+$("menu").onclick = (e) => {
+  const r = e.currentTarget.getBoundingClientRect();
+  window.sos.appMenu(r.left, r.bottom + 4);
+};
 $("wallets").onclick = (e) => {
   const r = e.currentTarget.getBoundingClientRect();
   window.sos.walletMenu(r.left, r.bottom + 4);
