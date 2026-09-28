@@ -99,7 +99,7 @@ export function WalletModal() {
               <p className="mt-1 text-[13px] text-muted">
                 {desktop
                   ? "Click “Wallets” in the toolbar above to install Phantom, Solflare or Backpack, then open this again."
-                  : "Install a wallet extension, or open Solana OS inside your wallet app’s browser on mobile."}
+                  : "Install a wallet extension, or open STRATA inside your wallet app’s browser on mobile."}
               </p>
               <div className={desktop ? "hidden" : "mt-3 flex flex-wrap gap-2"}>
                 {SUGGESTED.map((w) => (
@@ -132,7 +132,7 @@ export function WalletModal() {
             </p>
           </div>
           {err && <p className={cn("text-[12px] text-down")}>{err}</p>}
-          <p className="text-[11.5px] leading-relaxed text-faint">Solana OS never asks for your seed phrase and never holds your keys. You can browse everything without connecting.</p>
+          <p className="text-[11.5px] leading-relaxed text-faint">STRATA never asks for your seed phrase and never holds your keys. You can browse everything without connecting.</p>
         </div>
       )}
     </Modal>

@@ -1,11 +1,11 @@
 {
   "name": "solana-os-desktop",
-  "productName": "Solana OS",
+  "productName": "STRATA",
   "version": "0.2.0",
-  "description": "Solana OS desktop browser with Chrome wallet extensions (Phantom, Solflare, Backpack).",
+  "description": "STRATA desktop browser with Chrome wallet extensions (Phantom, Solflare, Backpack).",
   "main": "src/main.js",
   "license": "GPL-3.0-only",
-  "author": "Solana OS",
+  "author": "STRATA",
   "private": true,
   "scripts": {
     "start": "electron .",
@@ -17,7 +17,7 @@
   },
   "build": {
     "appId": "app.solanaos.desktop",
-    "productName": "Solana OS",
+    "productName": "STRATA",
     "files": [
       "src/**/*",
       "package.json",
@@ -72,7 +72,7 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
     },
-    "artifactName": "solana-os-${version}-${os}-${arch}.${ext}",
+    "artifactName": "strata-${version}-${os}-${arch}.${ext}",
     "publish": [
       {
         "provider": "github",
@@ -84,7 +84,7 @@
     ],
     "protocols": [
       {
-        "name": "Solana OS",
+        "name": "STRATA",
         "schemes": [
           "solanaos-desktop"
         ]

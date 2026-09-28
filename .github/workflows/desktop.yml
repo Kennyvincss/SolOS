@@ -1,6 +1,6 @@
 name: Desktop app
 
-# Builds Solana OS Desktop installers for macOS, Windows and Linux.
+# Builds STRATA installers for macOS, Windows and Linux.
 #
 # - "Run workflow" (Actions tab): builds installers as downloadable artifacts.
 # - Push a tag like desktop-v0.2.0 (or publish a release with that tag):
@@ -40,7 +40,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           case "$RELEASE_TAG" in desktop-v[0-9]*) ;; *) echo "release_tag must look like desktop-v1.2.3"; exit 1;; esac
-          gh release view "$RELEASE_TAG" >/dev/null 2>&1 || gh release create "$RELEASE_TAG" --target "$GITHUB_SHA" --title "Solana OS Desktop ${RELEASE_TAG#desktop-v}" --notes "Installers for macOS, Windows and Linux. Installed copies update automatically."
+          gh release view "$RELEASE_TAG" >/dev/null 2>&1 || gh release create "$RELEASE_TAG" --target "$GITHUB_SHA" --title "STRATA ${RELEASE_TAG#desktop-v}" --notes "Installers for macOS, Windows and Linux. Installed copies update automatically."
 
   build:
     needs: release

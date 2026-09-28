@@ -8,7 +8,7 @@ import { streamChat, useAiContext } from "@/lib/client/ai";
 import { useSession } from "@/lib/client/session";
 import { Badge, Card, cn } from "../ui";
 
-/** A one-shot Solana AI panel, triggered by a button, that streams an answer in place. */
+/** A one-shot STRATA AI panel, triggered by a button, that streams an answer in place. */
 export function AskAIPanel({ label, prompt, description, className }: { label: string; prompt: string; description?: string; className?: string }) {
   const session = useSession();
   const aiContext = useAiContext();
@@ -42,7 +42,7 @@ export function AskAIPanel({ label, prompt, description, className }: { label: s
           <AssistantBubble m={m} viewer={session.address} />
           {m.done && (
             <Link href={`/ai?q=${encodeURIComponent(prompt)}`} className="mt-3 inline-flex items-center gap-1 text-[12.5px] text-muted hover:text-fg">
-              Continue in Solana AI <ArrowRight size={12} />
+              Continue in STRATA AI <ArrowRight size={12} />
             </Link>
           )}
         </div>

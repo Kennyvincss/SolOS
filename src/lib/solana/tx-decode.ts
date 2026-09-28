@@ -317,14 +317,14 @@ export function assessTransaction(tx: DecodedTransaction, signer?: string): Risk
       label: "Unrecognized programs",
       level: "medium",
       value: `${unknown.length}`,
-      explanation: `Calls ${unknown.map((u) => shortAddr(u)).join(", ")}, which ${unknown.length === 1 ? "is" : "are"} not in the Solana OS program registry. That is not proof of danger, but we cannot describe what ${unknown.length === 1 ? "it does" : "they do"}.`,
+      explanation: `Calls ${unknown.map((u) => shortAddr(u)).join(", ")}, which ${unknown.length === 1 ? "is" : "are"} not in the STRATA program registry. That is not proof of danger, but we cannot describe what ${unknown.length === 1 ? "it does" : "they do"}.`,
     });
   } else if (tx.instructions.length) {
     out.push({
       id: "known-programs",
       label: "Only recognized programs",
       level: "low",
-      explanation: `Every program called is in the Solana OS registry (${[...new Set(tx.instructions.map((i) => i.programName))].join(", ")}). Recognized programs can still be used in harmful ways; review the actions above.`,
+      explanation: `Every program called is in the STRATA registry (${[...new Set(tx.instructions.map((i) => i.programName))].join(", ")}). Recognized programs can still be used in harmful ways; review the actions above.`,
     });
   }
   if (tx.hasUnresolvedAccounts) {

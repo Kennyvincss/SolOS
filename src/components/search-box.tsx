@@ -53,7 +53,7 @@ export function SearchBox({ initial = "", size = "lg", autoFocus, className }: {
         type="button"
         onClick={() => q.trim() && router.push(`/ai?q=${encodeURIComponent(q.trim())}`)}
         className="mr-1 hidden h-10 items-center gap-1.5 rounded-full px-3 text-[13px] text-muted transition-colors hover:bg-surface-2 hover:text-fg sm:flex"
-        title="Ask Solana AI"
+        title="Ask STRATA AI"
       >
         <Sparkles size={15} className="text-sol-green" /> Ask AI
       </button>

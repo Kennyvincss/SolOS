@@ -96,7 +96,7 @@ export default function ExtensionsPage() {
   const [input, setInput] = useState("");
   const [query, setQuery] = useState(DEFAULT_QUERY);
 
-  // Links like /extensions?q=phantom&install=1 (used by Solana AI) open a search
+  // Links like /extensions?q=phantom&install=1 (used by STRATA AI) open a search
   // and offer to install the best match; ?id=<store id> installs that extension.
   const [autoInstall, setAutoInstall] = useState<{ q?: string; id?: string } | null>(null);
   useEffect(() => {
@@ -150,10 +150,10 @@ export default function ExtensionsPage() {
         title="Extensions"
         subtitle={
           shell === "mobile"
-            ? "Phones can't run browser extensions. In the Solana OS app, sites connect to your Phantom or Solflare app instead: pick it in any site's “Connect wallet” list."
+            ? "Phones can't run browser extensions. In the STRATA app, sites connect to your Phantom or Solflare app instead: pick it in any site's “Connect wallet” list."
             : shell === "desktop"
               ? "Every Solana wallet and extension from the Chrome Web Store. Install one and it appears next to the address bar and works on every site, just like in Chrome."
-              : "Solana wallets and browser extensions. Get the Solana OS desktop app to search the whole Chrome Web Store and install any extension with one click."
+              : "Solana wallets and browser extensions. Get the STRATA desktop app to search the whole Chrome Web Store and install any extension with one click."
         }
       />
 
@@ -183,13 +183,13 @@ export default function ExtensionsPage() {
 
       {shell === "web" && (
         <a href={RELEASES_URL} target="_blank" rel="noopener noreferrer" className="btn btn-soft btn-sm mb-6">
-          <Download size={14} /> Get Solana OS for desktop
+          <Download size={14} /> Get STRATA for desktop
         </a>
       )}
       {desktop.error && <p className="mb-4 rounded-xl border border-line px-3 py-2 text-[13px] text-down">{desktop.error}</p>}
 
       {desktop.available && desktop.installedList.length > 0 && (
-        <Section id="installed" title="Installed" subtitle="Extensions in your Solana OS browser. Pinned ones show next to the address bar; unpinned ones keep working and are in the puzzle-piece Extensions menu.">
+        <Section id="installed" title="Installed" subtitle="Extensions in your STRATA browser. Pinned ones show next to the address bar; unpinned ones keep working and are in the puzzle-piece Extensions menu.">
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {desktop.installedList.map((x) => {
               const busy = desktop.busy === x.id;

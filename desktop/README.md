@@ -1,14 +1,14 @@
-# Solana OS Desktop
+# STRATA
 
 A desktop browser for the Solana ecosystem, built on Chromium (Electron).
 
 - **Real wallet extensions.** Install Phantom, Solflare or Backpack from the
   **Wallets** button, or any extension from the Chrome Web Store ("Add to
   Chrome" works). Wallet popups, approvals and toolbar icons work as in Chrome.
-- **Solana OS built in.** The home tab is Solana OS; the address bar searches
-  Solana OS when you type something that isn't a URL (tokens, wallets,
+- **STRATA built in.** The home tab is STRATA; the address bar searches
+  STRATA when you type something that isn't a URL (tokens, wallets,
   transactions, questions).
-- **Site safety badge.** Every site is checked against the Solana OS Security
+- **Site safety badge.** Every site is checked against the STRATA Security
   Center (known-app registry, lookalike domains, bait keywords) and flagged in
   the address bar.
 - **Chrome-style window.** Tabs sit in the title bar, and everything else is in
@@ -16,7 +16,7 @@ A desktop browser for the Solana ecosystem, built on Chromium (Electron).
   The usual shortcuts work: Ctrl+T/W/N/L/R/D, Ctrl+Tab, Ctrl+1–9, Alt+←/→,
   Ctrl+±/0, F5, F11, F12. On macOS the menu bar at the top of the screen has
   the same items.
-- **Every extension, from inside the app.** The Extensions page in Solana OS
+- **Every extension, from inside the app.** The Extensions page in STRATA
   lists every Solana extension on the Chrome Web Store (live, with icons and
   ratings) and has a search box for any other extension. Install is one click
   (confirmed in a dialog) and happens right in the app.
@@ -34,12 +34,12 @@ A desktop browser for the Solana ecosystem, built on Chromium (Electron).
   never leave the computer.
 - **Bookmarks and history.** Star any page (Ctrl/⌘+D). Bookmarks and history
   are in the menu bar.
-- **Sync.** Sign in to Solana OS in any tab and your bookmarks and browser
+- **Sync.** Sign in to STRATA in any tab and your bookmarks and browser
   settings sync to your account (File → Sync). History and passwords stay on
   the device.
 - **Automatic updates.** Installed copies check GitHub Releases for new
   versions, download them in the background and offer to restart
-  (Solana OS → Check for Updates… on Mac, File → Check for Updates… elsewhere).
+  (STRATA → Check for Updates… on Mac, File → Check for Updates… elsewhere).
 
 ## Get the installers
 
@@ -124,4 +124,4 @@ session (`persist:solanaos`), so wallet data survives restarts.
 
 GPL-3.0. See [LICENSE](LICENSE). This applies to the desktop app in this
 folder because it uses electron-chrome-extensions under its GPL-3.0 option.
-The Solana OS website in the rest of the repository is not affected.
+The STRATA website in the rest of the repository is not affected.

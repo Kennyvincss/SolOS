@@ -350,7 +350,7 @@ export interface SearchIntent {
   href?: string;
   entity?: string;
   category?: string;
-  /** Question to hand to Solana AI. */
+  /** Question to hand to STRATA AI. */
   aiPrompt?: string;
 }
 

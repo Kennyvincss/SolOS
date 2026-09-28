@@ -48,7 +48,7 @@ export function AlertModal({ address, open, onClose }: { address: string; open: 
           );
         })}
       </div>
-      <p className="mt-3 text-[12px] text-muted">Alerts are checked while Solana OS is open. Setting an alert also follows the wallet.</p>
+      <p className="mt-3 text-[12px] text-muted">Alerts are checked while STRATA is open. Setting an alert also follows the wallet.</p>
       <button
         className="btn btn-primary mt-4 w-full"
         onClick={() => {

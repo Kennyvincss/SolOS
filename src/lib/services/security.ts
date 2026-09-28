@@ -151,7 +151,7 @@ export async function addressRisk(address: string): Promise<RiskReport> {
   }
   if (acct.executable) {
     const known = KNOWN_PROGRAMS[address];
-    ind.push({ id: "type", label: "Account type", level: known ? "low" : "medium", value: "Program", explanation: known ? `This is ${known.name}, a program in the Solana OS registry.` : "This is an executable program that is not in the Solana OS registry." });
+    ind.push({ id: "type", label: "Account type", level: known ? "low" : "medium", value: "Program", explanation: known ? `This is ${known.name}, a program in the STRATA registry.` : "This is an executable program that is not in the STRATA registry." });
     const parsed = !Array.isArray(acct.data) ? acct.data.parsed : undefined;
     const programData = parsed?.info?.programData as string | undefined;
     if (programData) {
@@ -201,7 +201,7 @@ export function domainRisk(input: string): RiskReport {
     const known = KNOWN_DOMAINS.find((d) => host === d || host.endsWith(`.${d}`));
     if (url.protocol !== "https:") ind.push({ id: "https", label: "Connection", level: "high", value: "Not HTTPS", explanation: "The site does not use HTTPS, so traffic can be intercepted or altered." });
     if (known) {
-      ind.push({ id: "registry", label: "App registry", level: "low", value: known, explanation: `${host} belongs to an app in the Solana OS registry. Always check the address bar for exact spelling.` });
+      ind.push({ id: "registry", label: "App registry", level: "low", value: known, explanation: `${host} belongs to an app in the STRATA registry. Always check the address bar for exact spelling.` });
     } else {
       const base = host.split(".").slice(-2).join(".");
       const close = KNOWN_DOMAINS.map((d) => ({ d, dist: levenshtein(base, d) })).filter((x) => x.dist > 0 && x.dist <= 2).sort((a, b) => a.dist - b.dist)[0];
@@ -215,12 +215,12 @@ export function domainRisk(input: string): RiskReport {
       } else if (brand) {
         ind.push({ id: "brand", label: "Uses a known brand name", level: "high", value: brand, explanation: `The domain contains the name of ${brand} but is not its official domain.` });
       } else {
-        ind.push({ id: "registry", label: "App registry", level: "medium", value: "Not listed", explanation: "This domain is not in the Solana OS app registry. That does not make it malicious, but be careful before connecting your wallet or signing." });
+        ind.push({ id: "registry", label: "App registry", level: "medium", value: "Not listed", explanation: "This domain is not in the STRATA app registry. That does not make it malicious, but be careful before connecting your wallet or signing." });
       }
       if (/(claim|airdrop|reward|bonus|free|giveaway|drop)/i.test(host)) {
         ind.push({ id: "bait", label: "Bait keywords", level: "high", explanation: "Domains promising airdrops, claims or rewards are the most common wallet-drainer pattern." });
       }
     }
   }
-  return { subject: input, subjectType: "domain", indicators: ind, counts: counts(ind), methodology: "Registry match, typo-squatting distance and bait-keyword checks. Offline, rule based.", meta: { provider: "Solana OS registry", mode: "live", fetchedAt: now() } };
+  return { subject: input, subjectType: "domain", indicators: ind, counts: counts(ind), methodology: "Registry match, typo-squatting distance and bait-keyword checks. Offline, rule based.", meta: { provider: "STRATA registry", mode: "live", fetchedAt: now() } };
 }

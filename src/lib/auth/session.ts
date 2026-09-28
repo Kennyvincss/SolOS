@@ -5,7 +5,7 @@ import { config } from "../config";
 
 /**
  * Stateless sessions: an HMAC-SHA256 signed token in an httpOnly cookie.
- * No database is required, which keeps Solana OS deployable to Vercel
+ * No database is required, which keeps STRATA deployable to Vercel
  * serverless functions as-is. Set AUTH_SECRET in production.
  */
 

@@ -1,7 +1,7 @@
 /**
  * Real browser extensions for Solana, installed from the Chrome Web Store.
  *
- * In the Solana OS desktop app they install with one click and run exactly as
+ * In the STRATA desktop app they install with one click and run exactly as
  * in Chrome (toolbar icon, popups, approvals). In other browsers the links go
  * to the Chrome Web Store. The desktop app double-checks that the store's name
  * for each ID matches before keeping an install.

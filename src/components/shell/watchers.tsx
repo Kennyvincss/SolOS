@@ -7,7 +7,7 @@ import { apiGet } from "@/lib/client/fetch";
 import { fmtUsd } from "@/lib/format";
 
 /**
- * Client-side alert engine. While Solana OS is open it polls followed
+ * Client-side alert engine. While STRATA is open it polls followed
  * wallets and price alerts and turns matches into notifications. For alerts
  * while the app is closed, connect a webhook provider (e.g. Helius webhooks)
  * on the server — the rule format is the same.

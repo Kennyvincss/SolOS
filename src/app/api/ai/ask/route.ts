@@ -4,7 +4,7 @@ import { fail, ok } from "@/lib/api";
 
 export const maxDuration = 120;
 
-/** Non-streaming Solana AI for extensions and widgets. */
+/** Non-streaming STRATA AI for extensions and widgets. */
 export async function POST(req: Request) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local";
   if (rateLimited(`ai:${ip}`)) return fail("Too many requests", 429);

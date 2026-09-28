@@ -44,7 +44,7 @@ export async function POST(req: Request) {
         for await (const ev of chat(messages.slice(-20), ctx, req.signal)) send(ev);
       } catch (err) {
         console.error("[ai]", err);
-        send({ type: "error", message: "Solana AI is temporarily unavailable. Please try again in a moment." });
+        send({ type: "error", message: "STRATA AI is temporarily unavailable. Please try again in a moment." });
         send({ type: "done" });
       } finally {
         controller.close();

@@ -214,7 +214,7 @@ export function RiskList({ report }: { report: RiskReport }) {
         ))}
       </div>
       <p className="mt-3 text-[12px] leading-relaxed text-faint">
-        <span className="font-medium text-muted">Methodology:</span> {report.methodology} Solana OS never labels anything as simply “safe”.
+        <span className="font-medium text-muted">Methodology:</span> {report.methodology} STRATA never labels anything as simply “safe”.
       </p>
     </div>
   );

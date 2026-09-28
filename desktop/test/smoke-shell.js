@@ -1,11 +1,11 @@
 // Smoke test for the browser chrome: real mouse clicks on tab close buttons,
-// keyboard shortcuts, the ⋮ menu, and the Solana OS extensions bridge.
+// keyboard shortcuts, the ⋮ menu, and the STRATA extensions bridge.
 // Run: xvfb-run -a npx electron test/smoke-shell.js
 const http = require("node:http");
 const path = require("node:path");
 const fs = require("node:fs");
 
-// Two local sites: the "Solana OS" home (gets the bridge) and another site (must not).
+// Two local sites: the "STRATA" home (gets the bridge) and another site (must not).
 const page = (title) => `<!doctype html><title>${title}</title><body style="background:#111;color:#eee">${title}</body>`;
 const home = http.createServer((_q, r) => r.end(page("Home"))).listen(0);
 const other = http.createServer((_q, r) => r.end(page("Other"))).listen(0);

@@ -7,9 +7,9 @@
 
 const { contextBridge, ipcRenderer } = require("electron");
 
-/* ------------------------------------------------------------ Solana OS bridge */
+/* ------------------------------------------------------------ STRATA bridge */
 
-// On the Solana OS site only, let its Extensions page list and install browser
+// On the STRATA site only, let its Extensions page list and install browser
 // extensions (each install is confirmed in a native dialog; the main process
 // re-checks the origin from the frame itself).
 try {

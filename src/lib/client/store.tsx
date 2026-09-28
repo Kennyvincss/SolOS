@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useSyncExternalStore, type ReactNode } from "react";
 
 /**
- * User state for Solana OS: watchlist, followed wallets, alerts, installed
+ * User state for STRATA: watchlist, followed wallets, alerts, installed
  * extensions, favorites, notifications, preferences and profile.
  *
  * Persisted per user (or "guest") through a `StorageAdapter`. The default

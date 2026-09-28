@@ -20,7 +20,7 @@ export function originOf(url: string): string | null {
 
 /**
  * Address-bar input -> URL. URLs and bare domains open directly; anything else
- * (including Solana addresses and questions) goes to Solana OS search.
+ * (including Solana addresses and questions) goes to STRATA search.
  */
 export function normalizeInput(input: string, base: string): string {
   const t = String(input || "").trim();
@@ -32,7 +32,7 @@ export function normalizeInput(input: string, base: string): string {
   return `${base}/search?q=${encodeURIComponent(t)}`;
 }
 
-/** What the address bar shows for a URL: the Solana OS home is shown as empty. */
+/** What the address bar shows for a URL: the STRATA home is shown as empty. */
 export function displayUrl(url: string, base: string): string {
   if (url === base || url === `${base}/`) return "";
   return url;
@@ -45,7 +45,7 @@ export interface Risk {
   detail?: string;
 }
 
-/** Summarise a Solana OS security report (/api/security) into one badge. */
+/** Summarise a STRATA security report (/api/security) into one badge. */
 export function riskFromReport(report: unknown): Risk | null {
   const ind = Array.isArray((report as { indicators?: unknown })?.indicators) ? ((report as { indicators: Record<string, string>[] }).indicators) : [];
   if (!ind.length) return null;

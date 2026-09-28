@@ -8,7 +8,7 @@ export function buildSignInMessage(opts: { domain: string; address: string; nonc
     `${opts.domain} wants you to sign in with your Solana account:`,
     opts.address,
     "",
-    "Sign in to Solana OS. This request will not trigger a blockchain transaction or cost any fees.",
+    "Sign in to STRATA. This request will not trigger a blockchain transaction or cost any fees.",
     "",
     `URI: https://${opts.domain}`,
     "Version: 1",

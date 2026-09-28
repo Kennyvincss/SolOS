@@ -2,7 +2,7 @@
   "name": "solana-os",
   "version": "0.1.0",
   "private": true,
-  "description": "Solana OS — everything Solana, one place.",
+  "description": "STRATA — the browser for the onchain world.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

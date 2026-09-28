@@ -46,7 +46,7 @@ describe("deeplink protocol", () => {
     const conn = decryptPayload<{ public_key: string; session: string }>(cb.params.data, cb.params.nonce, shared);
     expect(conn.public_key).toBe(bs58.encode(wallet.user.publicKey));
 
-    const message = new TextEncoder().encode("Sign in to Solana OS");
+    const message = new TextEncoder().encode("Sign in to STRATA");
     const req = requestUrl({ wallet: "phantom", method: "signMessage", dappPublicKey: dapp.publicKey, shared, payload: { message: bs58.encode(message), session: conn.session, display: "utf8" }, redirect: redirectLink("solanaos", "phantom", "signMessage", "r2") });
     const opened = wallet.openRequest(req);
     expect(opened.method).toBe("signMessage");

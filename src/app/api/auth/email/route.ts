@@ -26,8 +26,8 @@ export async function POST(req: Request) {
         body: JSON.stringify({
           from: config.emailFrom,
           to: email,
-          subject: "Your Solana OS sign-in link",
-          text: `Sign in to Solana OS:\n\n${link}\n\nThis link expires in 15 minutes. If you didn't request it, ignore this email.`,
+          subject: "Your STRATA sign-in link",
+          text: `Sign in to STRATA:\n\n${link}\n\nThis link expires in 15 minutes. If you didn't request it, ignore this email.`,
         }),
       });
       if (!res.ok) return fail("Could not send the email. Please try again.", 502);

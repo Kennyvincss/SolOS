@@ -48,7 +48,7 @@ function PostCard({ p }: { p: Post }) {
       </div>
       <p className="mt-2 whitespace-pre-wrap text-[14.5px] leading-relaxed">{p.text}</p>
       <div className="flex items-center gap-4">
-        <Actions id={`post:${p.id}`} title="Solana OS post" href="/feed" />
+        <Actions id={`post:${p.id}`} title="STRATA post" href="/feed" />
         <button onClick={() => setOpen((v) => !v)} className="mt-2 flex items-center gap-1 text-[12.5px] text-faint hover:text-fg">
           <MessageCircle size={14} /> {p.comments.length || ""} Comment
         </button>

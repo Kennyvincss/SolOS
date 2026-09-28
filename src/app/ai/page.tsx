@@ -141,7 +141,7 @@ function Chat() {
           <ChevronLeft size={20} />
         </Link>
         <Sparkles size={17} className="text-sol-green" />
-        <span className="text-[15px] font-semibold">Solana AI</span>
+        <span className="text-[15px] font-semibold">STRATA AI</span>
         <div className="flex-1" />
         {!empty && (
           <button
@@ -175,7 +175,7 @@ function Chat() {
               <div className="mt-6 flex items-start gap-2 text-left text-[12px] leading-relaxed text-faint">
                 <Info size={13} className="mt-0.5 shrink-0" />
                 <span>
-                  Solana AI shares information, not financial advice. Always double-check before you trade.
+                  STRATA AI shares information, not financial advice. Always double-check before you trade.
                 </span>
               </div>
             </div>
@@ -225,7 +225,7 @@ function Chat() {
               rows={1}
               placeholder={session.address ? "Ask about tokens, wallets, your portfolio…" : "Ask about tokens, wallets, apps, transactions…"}
               className="max-h-[180px] w-full resize-none bg-transparent text-[15px] leading-6 outline-none placeholder:text-faint"
-              aria-label="Message Solana AI"
+              aria-label="Message STRATA AI"
             />
           </div>
           {busy ? (

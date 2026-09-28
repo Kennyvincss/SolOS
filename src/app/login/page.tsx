@@ -108,7 +108,6 @@ function Login() {
         </InfoNote>
       )}
       {err && <div className="mt-3"><ErrorState message={err} /></div>}
-      {caps && !caps.google && <p className="mt-4 text-[11.5px] text-faint">Google sign-in is available once GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are configured.</p>}
     </Card>
   );
 }
@@ -119,7 +118,7 @@ export default function LoginPage() {
       <div className="w-full max-w-[400px]">
         <div className="mb-6 flex flex-col items-center text-center">
           <LogoMark size={40} />
-          <h1 className="mt-4 text-[24px] font-semibold tracking-[-0.02em]">Sign in to Solana OS</h1>
+          <h1 className="mt-4 text-[24px] font-semibold tracking-[-0.02em]">Sign in to STRATA</h1>
           <p className="mt-1 text-[13.5px] text-muted">Keep your watchlist, follows and extensions with your account. Browsing never requires signing in.</p>
         </div>
         <Suspense>

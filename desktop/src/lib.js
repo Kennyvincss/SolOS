@@ -1,7 +1,7 @@
 // Pure helpers shared by the main process and tests.
 // SPDX-License-Identifier: GPL-3.0-only
 
-/** The Solana OS web app shown in the home tab. Override with SOLANA_OS_URL. */
+/** The STRATA web app shown in the home tab. Override with SOLANA_OS_URL. */
 const SOLANA_OS_URL = (process.env.SOLANA_OS_URL || "https://solos-rho.vercel.app").replace(/\/+$/, "");
 
 /** Wallet extensions offered for one-click install (Chrome Web Store IDs). */
@@ -22,7 +22,7 @@ function hostOf(url) {
 
 /**
  * Address-bar input -> URL. URLs and bare domains open directly; anything else
- * (including Solana addresses and questions) goes to Solana OS search.
+ * (including Solana addresses and questions) goes to STRATA search.
  */
 function normalizeInput(input, base = SOLANA_OS_URL) {
   const t = String(input || "").trim();
@@ -34,7 +34,7 @@ function normalizeInput(input, base = SOLANA_OS_URL) {
   return `${base}/search?q=${encodeURIComponent(t)}`;
 }
 
-/** Summarise a Solana OS security report (/api/security) into one toolbar badge. */
+/** Summarise a STRATA security report (/api/security) into one toolbar badge. */
 function riskFromReport(report) {
   const ind = Array.isArray(report?.indicators) ? report.indicators : [];
   if (!ind.length) return null;

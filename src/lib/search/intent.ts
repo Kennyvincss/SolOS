@@ -5,7 +5,7 @@ import { extractSolanaId } from "../solana/address";
 /**
  * Natural-language intent detection for the universal search and command bar.
  * Rules are ordered from most to least specific. Anything phrased as a
- * question that doesn't map to a page is routed to Solana AI.
+ * question that doesn't map to a page is routed to STRATA AI.
  */
 
 const CATEGORY_ALIASES: Record<string, AppCategory> = {
@@ -64,7 +64,7 @@ export function detectIntent(raw: string): SearchIntent {
   if (exactCat) return { type: "category", label: `${exactCat} apps`, href: `/apps?category=${encodeURIComponent(exactCat)}`, category: exactCat };
 
   const questionLike = /\?$/.test(q) || /^(what|why|how|who|when|where|which|is|are|can|should|does|do|explain|tell me|help)\b/.test(lower) || q.split(/\s+/).length >= 6;
-  if (questionLike) return { type: "question", label: "Ask Solana AI", href: `/ai?q=${encodeURIComponent(q)}`, aiPrompt: q };
+  if (questionLike) return { type: "question", label: "Ask STRATA AI", href: `/ai?q=${encodeURIComponent(q)}`, aiPrompt: q };
 
   return { type: "lookup", label: "Results" };
 }

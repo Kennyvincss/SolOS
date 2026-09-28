@@ -271,7 +271,7 @@ export function PortfolioView({ address, own }: { address: string; own?: boolean
           {act.data && act.data.data.length > 0 && <p className="mt-2 text-[11.5px] text-faint">Most recent {fmtNum(act.data.data.length)} transactions. Swaps, transfers, deposits and withdrawals are decoded from on-chain balance changes.</p>}
         </Card>
       </Section>
-      <InfoNote className="mt-6">Only public on-chain data is shown. Solana OS never reveals anything that isn&apos;t already visible on the blockchain.</InfoNote>
+      <InfoNote className="mt-6">Only public on-chain data is shown. STRATA never reveals anything that isn&apos;t already visible on the blockchain.</InfoNote>
     </div>
   );
 }

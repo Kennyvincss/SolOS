@@ -1,24 +1,42 @@
+/* eslint-disable @next/next/no-img-element */
+
+/**
+ * The STRATA logo: three glass layers. On dark backgrounds the mark stands on
+ * its own; on light backgrounds it sits on its dark tile (like the app icon).
+ */
 export function LogoMark({ size = 26 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden>
-      <defs>
-        <linearGradient id="sos-g" x1="0" y1="32" x2="32" y2="0" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#9945ff" />
-          <stop offset="1" stopColor="#14f195" />
-        </linearGradient>
-      </defs>
-      <rect x="1" y="1" width="30" height="30" rx="9" fill="url(#sos-g)" />
-      <rect x="1.75" y="1.75" width="28.5" height="28.5" rx="8.25" fill="#07080a" />
-      <path d="M9 11.5h11.5l2.5-2.5H11.5zM9 17.25h14l-2.5 2.5H9zM11.5 23H23l-2.5 2.5H9z" fill="url(#sos-g)" transform="translate(0 -1.5)" />
-    </svg>
+    <span className="relative inline-block shrink-0" style={{ width: size, height: size }} aria-hidden>
+      <img src="/brand/mark-96.png" alt="" width={size} height={size} className="hidden h-full w-full object-contain dark:block" />
+      <img src="/brand/tile-64.png" alt="" width={size} height={size} className="block h-full w-full rounded-[22%] object-contain dark:hidden" />
+    </span>
+  );
+}
+
+/** The STRATA wordmark, drawn in the current text color. */
+export function WordmarkText({ height = 11, className }: { height?: number; className?: string }) {
+  return (
+    <span
+      role="img"
+      aria-label="STRATA"
+      className={className}
+      style={{
+        display: "inline-block",
+        height,
+        width: Math.round((height * 656) / 98),
+        backgroundColor: "currentColor",
+        WebkitMask: "url(/brand/wordmark.png) center / contain no-repeat",
+        mask: "url(/brand/wordmark.png) center / contain no-repeat",
+      }}
+    />
   );
 }
 
 export function Wordmark() {
   return (
     <span className="flex items-center gap-2.5">
-      <LogoMark />
-      <span className="text-[13px] font-semibold tracking-[0.16em]">SOLANA OS</span>
+      <LogoMark size={28} />
+      <WordmarkText height={12} />
     </span>
   );
 }

@@ -1,6 +1,6 @@
 name: Mobile app
 
-# Builds the Solana OS phone app (mobile/).
+# Builds the STRATA phone app (mobile/).
 #
 # - "Run workflow" (Actions tab): builds an Android APK you can download from
 #   the run page and install on a phone.
@@ -118,7 +118,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            gh release create "$RELEASE_TAG" --target "$GITHUB_SHA" --title "Solana OS for Android $APP_VERSION" \
+            gh release create "$RELEASE_TAG" --target "$GITHUB_SHA" --title "STRATA for Android $APP_VERSION" \
               --notes "Download the .apk on your Android phone and open it to install. You may need to allow installs from your browser." --latest=false
           fi
           gh release upload "$RELEASE_TAG" dist/*.apk --clobber

@@ -4,23 +4,24 @@
 
 /* ------------------------------------------------------------------ tokens */
 :root {
-  --bg: #07080a;
-  --bg-elev: #0c0d10;
-  --surface: #111317;
-  --surface-2: #171a1f;
-  --surface-3: #1e2228;
+  --bg: #07070b;
+  --bg-elev: #0c0c11;
+  --surface: #111116;
+  --surface-2: #17171e;
+  --surface-3: #1f1f27;
   --border: rgba(255, 255, 255, 0.07);
   --border-strong: rgba(255, 255, 255, 0.13);
   --text: #f3f4f6;
   --muted: #9ba1ab;
   --faint: #666c76;
-  --green: #14f195;
-  --purple: #9945ff;
-  --teal: #19d3c5;
+  /* STRATA accent (the logo's glass violet); "up" stays green for gains. */
+  --green: #9b9cff;
+  --purple: #7f6bff;
+  --teal: #6fb7ff;
   --up: #2fd98a;
   --down: #ff5c6c;
   --warn: #f5b841;
-  --ring: rgba(20, 241, 149, 0.35);
+  --ring: rgba(155, 156, 255, 0.4);
   /* Categorical chart slots (validated palette, dark steps) */
   --series-1: #3987e5;
   --series-2: #d95926;
@@ -28,8 +29,8 @@
   --series-4: #c98500;
   --series-5: #d55181;
   --series-other: #5f646c;
-  --glow: radial-gradient(60% 50% at 50% 0%, rgba(153, 69, 255, 0.14), transparent 70%),
-    radial-gradient(40% 40% at 80% 10%, rgba(20, 241, 149, 0.08), transparent 70%);
+  --glow: radial-gradient(60% 50% at 50% 0%, rgba(127, 107, 255, 0.10), transparent 70%),
+    radial-gradient(40% 40% at 80% 10%, rgba(111, 183, 255, 0.05), transparent 70%);
   color-scheme: dark;
 }
 
@@ -44,21 +45,21 @@
   --text: #0b0c0f;
   --muted: #5a606a;
   --faint: #8a9099;
-  --green: #0aa56a;
-  --purple: #7b2fe0;
-  --teal: #0e9c93;
+  --green: #5b54e8;
+  --purple: #6a4ff0;
+  --teal: #2f7fe0;
   --up: #0a9f61;
   --down: #e0364a;
   --warn: #b7791f;
-  --ring: rgba(10, 165, 106, 0.35);
+  --ring: rgba(91, 84, 232, 0.35);
   --series-1: #2a78d6;
   --series-2: #eb6834;
   --series-3: #1baf7a;
   --series-4: #eda100;
   --series-5: #e87ba4;
   --series-other: #a3a7ad;
-  --glow: radial-gradient(60% 50% at 50% 0%, rgba(123, 47, 224, 0.08), transparent 70%),
-    radial-gradient(40% 40% at 80% 10%, rgba(10, 165, 106, 0.06), transparent 70%);
+  --glow: radial-gradient(60% 50% at 50% 0%, rgba(106, 79, 240, 0.06), transparent 70%),
+    radial-gradient(40% 40% at 80% 10%, rgba(47, 127, 224, 0.04), transparent 70%);
   color-scheme: light;
 }
 

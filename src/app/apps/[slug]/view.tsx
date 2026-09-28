@@ -119,7 +119,7 @@ export function AppDetail({ slug }: { slug: string }) {
               </a>
             )}
             <button onClick={() => toggleAddedApp(slug)} className={cn("btn", added ? "btn-soft" : "btn-ghost")}>
-              {added ? <Check size={15} /> : <Plus size={15} />} {added ? "Added to Solana OS" : "Add to Solana OS"}
+              {added ? <Check size={15} /> : <Plus size={15} />} {added ? "Added to STRATA" : "Add to STRATA"}
             </button>
             <button onClick={() => toggleFavorite(slug)} className={cn("btn btn-ghost", fav && "text-down")} aria-pressed={fav}>
               <Heart size={15} className={fav ? "fill-current" : ""} /> {fav ? "Favorited" : "Favorite"}

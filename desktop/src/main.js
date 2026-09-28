@@ -1,4 +1,4 @@
-// Solana OS Desktop — a Chromium browser for the Solana ecosystem.
+// STRATA — a Chromium browser for the Solana ecosystem.
 // SPDX-License-Identifier: GPL-3.0-only
 //
 // Wallet extensions (Phantom, Solflare, Backpack, ...) are installed from the
@@ -16,6 +16,10 @@ const { initUpdater, checkForUpdatesInteractive } = require("./updater");
 const { searchWebStore, prefetch: prefetchWebStore } = require("./webstore-search");
 
 const PARTITION = "persist:solanaos";
+
+// STRATA was called "Solana OS". Keep using the same data folder so installed
+// extensions (wallets), bookmarks, history and settings carry over.
+app.setPath("userData", path.join(app.getPath("appData"), "Solana OS"));
 const TOOLBAR_HEIGHT = 88;
 const DESKTOP_UA_TOKEN = "SolanaOSDesktop/" + app.getVersion();
 
@@ -25,13 +29,13 @@ const windows = new Set();
 
 /* ------------------------------------------------------------ site safety */
 
-// Every site's domain is checked with the Solana OS Security Center
+// Every site's domain is checked with the STRATA Security Center
 // (registry match, lookalike domains, bait keywords). Cached per host.
 const riskCache = new Map();
 async function checkSite(url) {
   const host = hostOf(url);
   if (!host) return null;
-  if (host === hostOf(SOLANA_OS_URL)) return { level: "low", label: "Solana OS" };
+  if (host === hostOf(SOLANA_OS_URL)) return { level: "low", label: "STRATA" };
   if (riskCache.has(host)) return riskCache.get(host);
   try {
     const res = await net.fetch(`${SOLANA_OS_URL}/api/security?q=${encodeURIComponent(url)}`);
@@ -54,8 +58,9 @@ class BrowserShell {
       height: 880,
       minWidth: 720,
       minHeight: 480,
-      title: "Solana OS",
-      backgroundColor: "#07080a",
+      title: "STRATA",
+      icon: path.join(__dirname, "ui", "app-icon.png"),
+      backgroundColor: "#07070b",
       // Tabs live in the title bar, like Chrome. macOS keeps its traffic lights;
       // Windows/Linux draw the window buttons over the right end of the tab strip.
       titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "hidden",
@@ -214,7 +219,7 @@ class BrowserShell {
     });
     this.win.webContents.send("shell:state", { tabs, activeId: this.activeId, home: SOLANA_OS_URL, platform: process.platform, hiddenExtensions: hiddenExtensions() });
     const active = this.activeTab;
-    this.win.setTitle(active ? `${active.view.webContents.getTitle() || "Solana OS"} — Solana OS` : "Solana OS");
+    this.win.setTitle(active ? `${active.view.webContents.getTitle() || "STRATA"} — STRATA` : "STRATA");
   }
 
   contextMenu(wc, params) {
@@ -385,7 +390,7 @@ function chromeMenu(s) {
     },
     { label: "Check for updates…", click: () => checkForUpdatesInteractive() },
     { label: "Developer tools", ...acc("F12"), click: () => wc?.toggleDevTools() },
-    { label: "About Solana OS", click: () => s.newTab(SOLANA_OS_URL) },
+    { label: "About STRATA", click: () => s.newTab(SOLANA_OS_URL) },
     { type: "separator" },
     { label: "Exit", click: () => app.quit() },
   ]);
@@ -457,8 +462,8 @@ function registerIpc() {
   });
 
 
-  /* Solana OS site -> browser extensions (one-click install from the Extensions page).
-     Only the Solana OS home site, in a top-level frame of our tabs, may call these;
+  /* STRATA site -> browser extensions (one-click install from the Extensions page).
+     Only the STRATA home site, in a top-level frame of our tabs, may call these;
      every install is confirmed in a native dialog. */
   const HOME_ORIGIN = new URL(SOLANA_OS_URL).origin;
   const fromHome = (e) => {
@@ -608,8 +613,8 @@ function openPasswords() {
   passwordsWindow = new BrowserWindow({
     width: 720,
     height: 640,
-    title: "Passwords — Solana OS",
-    backgroundColor: "#07080a",
+    title: "Passwords — STRATA",
+    backgroundColor: "#07070b",
     autoHideMenuBar: true,
     webPreferences: { preload: path.join(__dirname, "preload-passwords.js"), contextIsolation: true, sandbox: true },
   });
@@ -637,7 +642,7 @@ async function removeExtension(s, id, name) {
     defaultId: 0,
     cancelId: 0,
     message: `Remove ${name}?`,
-    detail: "If this is a wallet, make sure you have its recovery phrase saved. Removing the extension deletes its data from Solana OS Desktop.",
+    detail: "If this is a wallet, make sure you have its recovery phrase saved. Removing the extension deletes its data from STRATA.",
   });
   if (response !== 1) return false;
   await uninstallExtension(id, { session: browserSession });
@@ -774,7 +779,7 @@ function registerPanelIpc() {
       { label: pinned ? "Unpin" : "Pin", click: () => (setExtensionHidden(ext.id, pinned), refresh()) },
       { label: "Options", enabled: Boolean(optionsPage), click: () => (closeExtensionsPanel(), s.newTab(`chrome-extension://${ext.id}/${String(optionsPage).replace(/^\//, "")}`)) },
       {
-        label: "Remove from Solana OS…",
+        label: "Remove from STRATA…",
         click: async () => {
           p.holdOpen = true;
           await removeExtension(s, ext.id, ext.name).catch(() => false);
@@ -868,7 +873,7 @@ function buildMenu() {
   };
   const sync = library.getSyncState();
   const syncLabel =
-    sync.status === "ok" ? `Synced ${new Date(sync.at).toLocaleTimeString()}` : sync.status === "signed-out" ? "Sign in to Solana OS to sync" : sync.status === "unavailable" ? "Sync not set up on server" : sync.status === "error" ? "Sync failed — retry" : "Sync now";
+    sync.status === "ok" ? `Synced ${new Date(sync.at).toLocaleTimeString()}` : sync.status === "signed-out" ? "Sign in to STRATA to sync" : sync.status === "unavailable" ? "Sync not set up on server" : sync.status === "error" ? "Sync failed — retry" : "Sync now";
   const updatesItem = { label: "Check for Updates…", click: () => checkForUpdatesInteractive() };
   const template = [
     ...(process.platform === "darwin"
@@ -933,14 +938,14 @@ function buildMenu() {
       ],
     },
     { role: "windowMenu" },
-    { role: "help", submenu: [{ label: "About Solana OS", click: () => shell.openExternal(SOLANA_OS_URL) }] },
+    { role: "help", submenu: [{ label: "About STRATA", click: () => shell.openExternal(SOLANA_OS_URL) }] },
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
 /* ------------------------------------------------------------ startup */
 
-app.setName("Solana OS");
+app.setName("STRATA");
 
 // Google sign-in runs in the system browser (Google blocks it inside embedded
 // browsers) and comes back as solanaos-desktop://auth?token=... .
@@ -983,7 +988,7 @@ app.whenReady().then(async () => {
   browserSession = session.fromPartition(PARTITION);
 
   // Present as Chrome (without the Electron token) so sites and the Chrome Web
-  // Store treat this like a regular Chromium browser, plus a Solana OS marker.
+  // Store treat this like a regular Chromium browser, plus a STRATA marker.
   const ua = browserSession.getUserAgent().replace(/\s(Electron|solana-os-desktop|Solana\s?OS)\/\S+/gi, "");
   browserSession.setUserAgent(`${ua} ${DESKTOP_UA_TOKEN}`);
 
@@ -1073,7 +1078,7 @@ app.whenReady().then(async () => {
       if (own.length) add({ type: "separator" });
       add({ label: "Options", enabled: Boolean(optionsPage), click: () => optionsPage && s?.newTab(`chrome-extension://${ext.id}/${String(optionsPage).replace(/^\//, "")}`) });
       add({ label: "Unpin", click: () => setExtensionHidden(ext.id, true) });
-      add({ label: "Remove from Solana OS…", click: () => removeExtension(s, ext.id, ext.name) });
+      add({ label: "Remove from STRATA…", click: () => removeExtension(s, ext.id, ext.name) });
       add({ type: "separator" });
       add({ label: "Manage extensions", click: () => s?.newTab(`${SOLANA_OS_URL}/extensions#installed`) });
       const a = details?.anchorRect ?? { x: 0, y: 0, height: 0 };
@@ -1098,7 +1103,7 @@ app.whenReady().then(async () => {
     menuTimer = setTimeout(buildMenu, 500);
   });
 
-  // Sync bookmarks and settings with the Solana OS account signed in inside the
+  // Sync bookmarks and settings with the STRATA account signed in inside the
   // browser (the request carries that session's cookies).
   library.configureSync((method, body) =>
     browserSession.fetch(`${SOLANA_OS_URL}/api/sync/desktop`, {

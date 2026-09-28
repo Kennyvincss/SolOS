@@ -135,7 +135,7 @@ export default function PaymentsPage() {
           ))}
         </div>
       </Section>
-      <InfoNote className="mt-6">Sending payments directly from Solana OS will use your connected wallet to sign; Solana OS never holds funds. Until then, “Open in wallet” hands the request to your wallet app.</InfoNote>
+      <InfoNote className="mt-6">Sending payments directly from STRATA will use your connected wallet to sign; STRATA never holds funds. Until then, “Open in wallet” hands the request to your wallet app.</InfoNote>
     </Page>
   );
 }

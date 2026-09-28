@@ -17,7 +17,7 @@ export function useUpdateCheck() {
         if (!res.ok) return;
         const next = newerMobileRelease(await res.json(), APP_VERSION);
         if (!next) return;
-        Alert.alert("Update available", `Solana OS ${next.version} is available (you have ${APP_VERSION}).`, [
+        Alert.alert("Update available", `STRATA ${next.version} is available (you have ${APP_VERSION}).`, [
           { text: "Later", style: "cancel" },
           { text: "Download", onPress: () => Linking.openURL(next.apk ?? next.page) },
         ]);

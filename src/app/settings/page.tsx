@@ -82,7 +82,7 @@ export default function SettingsPage() {
             </Row>
           ))}
         </Card>
-        <p className="mt-2 text-[12px] text-faint">Alerts arrive while Solana OS is open.</p>
+        <p className="mt-2 text-[12px] text-faint">Alerts arrive while STRATA is open.</p>
       </Section>
 
       <Section title="Privacy">
@@ -97,10 +97,10 @@ export default function SettingsPage() {
 
       <Section title="Local data">
         <Card className="px-5">
-          <Row label="Reset Solana OS on this device" hint="Clears watchlist, follows, alerts, extensions and notifications">
+          <Row label="Reset STRATA on this device" hint="Clears watchlist, follows, alerts, extensions and notifications">
             <button
               onClick={() => {
-                if (confirm("Reset all Solana OS data on this device?")) set(() => ({ ...DEFAULT_STATE, profile: { ...DEFAULT_STATE.profile, joinedAt: Date.now() } }));
+                if (confirm("Reset all STRATA data on this device?")) set(() => ({ ...DEFAULT_STATE, profile: { ...DEFAULT_STATE.profile, joinedAt: Date.now() } }));
               }}
               className="btn btn-ghost btn-sm text-down"
             >

@@ -1,6 +1,6 @@
 /**
  * Server-side configuration. Everything is optional: with no environment at
- * all Solana OS still runs, using public endpoints and falling back to
+ * all STRATA still runs, using public endpoints and falling back to
  * clearly-labelled demo data when an upstream is unreachable.
  */
 export const PUBLIC_RPC = "https://api.mainnet-beta.solana.com";
@@ -49,7 +49,7 @@ export const config = {
       return { name: name.trim(), url: (url ?? name).trim() };
     }),
   groqKey: env("GROQ_API_KEY"),
-  /** Optional. When unset, Solana AI picks a tool-capable model from the ones your Groq key can use. */
+  /** Optional. When unset, STRATA AI picks a tool-capable model from the ones your Groq key can use. */
   groqModel: env("GROQ_MODEL"),
   groqApiUrl: env("GROQ_API_URL") ?? "https://api.groq.com/openai/v1",
   authSecret: env("AUTH_SECRET"),
@@ -57,7 +57,7 @@ export const config = {
   googleClientId: env("GOOGLE_CLIENT_ID"),
   googleClientSecret: env("GOOGLE_CLIENT_SECRET"),
   resendApiKey: env("RESEND_API_KEY"),
-  emailFrom: env("EMAIL_FROM") ?? "Solana OS <login@example.com>",
+  emailFrom: env("EMAIL_FROM") ?? "STRATA <login@example.com>",
   isProd: process.env.NODE_ENV === "production",
 };
 

@@ -125,7 +125,7 @@ app.whenReady().then(() => {
       fs.writeFileSync(process.env.SMOKE_OUT || "smoke-ext.png", img.toPNG());
       result.ok = result.contentScript === "injected" && result.toolbarActions > 0 && result.desktopUA === true && result.popup.visible && result.popupInsideWindow && /^chrome-extension:\/\/[a-p]{32}\/popup\.html\?approve=1$/.test(result.approvalWindow || "") &&
         /chromiumapp\.org\/x$/.test(result.apis?.page?.identity) && /chromiumapp\.org\/cb$/.test(result.apis?.worker?.identity || "") && result.apis.worker.sidePanel === true && result.apis.worker.browserIsChrome === true && result.apis.page.browserIsChrome === true &&
-        Array.isArray(result.contextMenu) && result.contextMenu.includes("Unpin") && result.contextMenu.includes("Remove from Solana OS…") && result.hiddenAfterClick === true &&
+        Array.isArray(result.contextMenu) && result.contextMenu.includes("Unpin") && result.contextMenu.includes("Remove from STRATA…") && result.hiddenAfterClick === true &&
         result.panel?.rows?.includes("Fake Wallet (test)") && result.panel.pinnedBefore === false && result.panel.pinnedAfter === true && result.panel.toolbarShowsAfterPin === true && result.panel.popupFromPanel === true && result.panel.closedAfterOpen === true && result.panel.inside === true;
     } catch (e) {
       result.error = String(e && e.stack || e);

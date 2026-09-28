@@ -64,7 +64,7 @@ export default function DiscoverPage() {
         <Section id="smart-wallets" title="🐋 Smart wallet activity" subtitle="Moves from wallets you follow">
           <Card className="p-4 sm:p-5">
             <FollowingFeed limit={8} />
-            <p className="mt-3 text-[11.5px] leading-relaxed text-faint">Solana OS doesn&apos;t label wallets as “smart money” without verifiable criteria. Follow public wallets you trust (funds, builders, well-known traders) to build your own list.</p>
+            <p className="mt-3 text-[11.5px] leading-relaxed text-faint">STRATA doesn&apos;t label wallets as “smart money” without verifiable criteria. Follow public wallets you trust (funds, builders, well-known traders) to build your own list.</p>
           </Card>
         </Section>
         <Section id="new" title="🚀 New" subtitle="Newly launched tokens (high risk)">

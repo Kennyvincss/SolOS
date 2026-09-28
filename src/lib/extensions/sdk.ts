@@ -1,7 +1,7 @@
 /**
- * Solana OS Extension SDK — v0.1
+ * STRATA Extension SDK — v0.1
  *
- * Extensions are sandboxed widgets that talk to Solana OS only through the
+ * Extensions are sandboxed widgets that talk to STRATA only through the
  * `ExtensionHost` API. Every host capability is gated by a permission that
  * the extension declares in its manifest and the user grants on install.
  *
@@ -14,14 +14,14 @@
 import { z } from "zod";
 
 export const PERMISSIONS = {
-  search: "Search the Solana OS index",
+  search: "Search the STRATA index",
   "wallet:read": "See your connected wallet address and balances",
   "tokens:read": "Read token prices and metadata",
   "portfolio:read": "Read your portfolio",
   "prefs:read": "Read its own settings",
   "prefs:write": "Save its own settings",
   notifications: "Send you notifications",
-  ai: "Ask Solana AI questions",
+  ai: "Ask STRATA AI questions",
   "programs:read": "Read on-chain accounts",
   "network:read": "Read Solana network status",
   "news:read": "Read news headlines",

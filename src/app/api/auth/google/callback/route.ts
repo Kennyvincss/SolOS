@@ -35,7 +35,7 @@ export async function GET(req: Request) {
     if (!info.sub) return back("Could not read your Google profile.");
     const user = {
       uid: userIdFor("google", info.sub),
-      name: info.name ?? info.email?.split("@")[0] ?? "Solana OS user",
+      name: info.name ?? info.email?.split("@")[0] ?? "STRATA user",
       provider: "google" as const,
       email: info.email_verified ? info.email : undefined,
       avatar: info.picture,

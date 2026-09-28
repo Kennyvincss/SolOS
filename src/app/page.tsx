@@ -1,5 +1,6 @@
 "use client";
 
+import { LogoMark, WordmarkText } from "@/components/shell/logo";
 import Link from "next/link";
 import { ArrowRight, Bell, Compass, Globe, LayoutGrid, PieChart, Puzzle, ReceiptText, ShieldCheck, Sparkles, Wallet, Search as SearchIcon, Target } from "lucide-react";
 import { SearchBox, SuggestionChips } from "@/components/search-box";
@@ -20,7 +21,7 @@ function greeting() {
 const PILLARS = [
   { icon: SearchIcon, title: "Search the ecosystem", body: "Tokens, wallets, transactions, apps and news from one box.", href: "/search" },
   { icon: LayoutGrid, title: "Discover apps", body: "A curated store of Solana applications with live metrics.", href: "/apps" },
-  { icon: Sparkles, title: "Talk to Solana AI", body: "Answers grounded in live on-chain and market data, with sources.", href: "/ai" },
+  { icon: Sparkles, title: "Talk to STRATA AI", body: "Answers grounded in live on-chain and market data, with sources.", href: "/ai" },
   { icon: Wallet, title: "Connect your wallet", body: "Portfolio, activity and alerts. Browsing never requires one.", href: "/portfolio" },
   { icon: ReceiptText, title: "Understand transactions", body: "Any signature, explained in plain English.", href: "/tx" },
   { icon: ShieldCheck, title: "Stay safe", body: "Transparent risk indicators before you sign or buy.", href: "/security" },
@@ -217,15 +218,16 @@ function Landing() {
     <div className="glow-bg">
       <Page className="pt-10 sm:pt-20">
         <section className="animate-fade-up mx-auto flex max-w-3xl flex-col items-center text-center">
-          <span className="mb-5 inline-flex items-center gap-2 rounded-full border border-line bg-surface/70 px-3 py-1 text-[12px] text-muted">
-            <span className="h-1.5 w-1.5 rounded-full bg-sol-green" /> The front door to the Solana ecosystem
+          <LogoMark size={64} />
+          <span className="mb-5 mt-6 inline-flex items-center gap-2 rounded-full border border-line bg-surface/70 px-3 py-1 text-[12px] text-muted">
+            <WordmarkText height={9} /> <span className="text-faint">·</span> Browser, wallet and AI in one
           </span>
           <h1 className="text-gradient text-[40px] font-semibold leading-[1.04] tracking-[-0.035em] sm:text-[64px]">
-            Everything Solana.
+            The browser for
             <br />
-            One place.
+            the onchain world.
           </h1>
-          <p className="mt-4 max-w-xl text-[16px] leading-relaxed text-muted sm:text-[18px]">Search, discover, use and understand the entire Solana ecosystem.</p>
+          <p className="mt-4 max-w-xl text-[16px] leading-relaxed text-muted sm:text-[18px]">Search any token, wallet or app, research with AI, and use every onchain app with your wallet built in.</p>
           <div className="mt-8 w-full">
             <SearchBox autoFocus />
           </div>
@@ -264,7 +266,7 @@ function Landing() {
           <p className="mt-2 max-w-lg text-[14px] text-muted">Explore without an account. Connect a wallet only when you want your own portfolio, alerts or transactions.</p>
           <div className="mt-5 flex flex-wrap justify-center gap-2">
             <Link href="/ai" className="btn btn-primary">
-              <Sparkles size={15} /> Ask Solana AI
+              <Sparkles size={15} /> Ask STRATA AI
             </Link>
             <Link href="/login" className="btn btn-ghost">
               Sign in

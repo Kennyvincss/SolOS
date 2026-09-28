@@ -18,7 +18,7 @@ export interface AiAction {
   label: string;
 }
 
-/** What the app tells Solana AI about the user's session (all optional, all public-data). */
+/** What the app tells STRATA AI about the user's session (all optional, all public-data). */
 export interface UserContext {
   page?: string;
   app?: "web" | "desktop" | "mobile";

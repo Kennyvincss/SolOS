@@ -75,7 +75,7 @@ export default function TxPage({ params }: { params: Promise<{ signature: string
             )}
             <div className="mt-5 flex flex-wrap gap-2">
               <Link href={`/ai?q=${encodeURIComponent(`Explain transaction ${signature}`)}`} className="btn btn-primary btn-sm">
-                <Sparkles size={14} /> Explain with Solana AI
+                <Sparkles size={14} /> Explain with STRATA AI
               </Link>
             </div>
           </Card>
@@ -120,7 +120,7 @@ export default function TxPage({ params }: { params: Promise<{ signature: string
                       {p.name}
                     </Link>
                   ) : (
-                    <Link key={p.id} href={`/wallets/${p.id}`} className={cn("rounded-full border border-line px-2.5 py-1 text-[12px]", p.known ? "text-muted" : "text-warn")} title={p.known ? undefined : "Not in the Solana OS program registry"}>
+                    <Link key={p.id} href={`/wallets/${p.id}`} className={cn("rounded-full border border-line px-2.5 py-1 text-[12px]", p.known ? "text-muted" : "text-warn")} title={p.known ? undefined : "Not in the STRATA program registry"}>
                       {p.name}
                     </Link>
                   ),

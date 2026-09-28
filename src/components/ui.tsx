@@ -148,7 +148,7 @@ export function DataBadge({ meta, className }: { meta?: DataMeta | null; classNa
         className,
       )}
     >
-      {demo ? <FlaskConical size={11} /> : <span className="h-1.5 w-1.5 rounded-full bg-sol-green" />}
+      {demo ? <FlaskConical size={11} /> : <span className="h-1.5 w-1.5 rounded-full bg-up" />}
       {demo ? "Sample data" : "Live"}
     </span>
   );

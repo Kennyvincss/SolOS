@@ -17,7 +17,7 @@ import type { SearchHit, SearchResponse } from "@/lib/types";
 
 const AI_INTENTS = new Set(["question", "trending_tokens", "whales", "today", "compare", "yield", "new_apps", "portfolio"]);
 
-/** Streams a short Solana AI answer at the top of the results page. */
+/** Streams a short STRATA AI answer at the top of the results page. */
 function InlineAnswer({ question }: { question: string }) {
   const session = useSession();
   const aiContext = useAiContext();
@@ -38,7 +38,7 @@ function InlineAnswer({ question }: { question: string }) {
     <Card className="mb-6 overflow-hidden p-4 sm:p-5">
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2 text-[13px] font-medium">
-          <Sparkles size={15} className="text-sol-green" /> Solana AI
+          <Sparkles size={15} className="text-sol-green" /> STRATA AI
         </div>
         <Link href={`/ai?q=${encodeURIComponent(question)}`} className="flex items-center gap-1 text-[12.5px] text-muted hover:text-fg">
           Continue in chat <ArrowRight size={12} />
@@ -154,10 +154,10 @@ function Results() {
             <Card>
               <EmptyState
                 title={`No results for “${q}”`}
-                body="Try a token symbol, an app name, a wallet address or a transaction signature — or ask Solana AI."
+                body="Try a token symbol, an app name, a wallet address or a transaction signature — or ask STRATA AI."
                 action={
                   <Link href={`/ai?q=${encodeURIComponent(q)}`} className="btn btn-primary btn-sm">
-                    <Sparkles size={14} /> Ask Solana AI
+                    <Sparkles size={14} /> Ask STRATA AI
                   </Link>
                 }
               />

@@ -173,7 +173,7 @@ function SecurityInner() {
         </div>
       </Section>
       <InfoNote className="mt-6">
-        Explaining a confirmed transaction instead? Use the <Link href="/tx" className="underline">Transaction Explainer</Link>. Solana OS will never ask for your seed phrase. Anyone who does is trying to steal your funds.
+        Explaining a confirmed transaction instead? Use the <Link href="/tx" className="underline">Transaction Explainer</Link>. STRATA will never ask for your seed phrase. Anyone who does is trying to steal your funds.
       </InfoNote>
     </Page>
   );

@@ -8,7 +8,7 @@ import { fmtPct, fmtUsd, shortAddr } from "../format";
 import { APP_CATEGORIES } from "../types";
 
 /**
- * Offline Solana AI: used when no language model is configured
+ * Offline STRATA AI: used when no language model is configured
  * (GROQ_API_KEY unset). It maps the question to the same data tools and
  * writes a templated answer. It's honest about being template-based.
  */
@@ -135,7 +135,7 @@ function write(tool: ToolName, out: ToolOutput): string {
       return r.alreadyInstalled ? `**${r.name}** is already installed.` : `${r.note ?? ""} [Open ${r.name} on the Extensions page](${out.action?.href ?? "/extensions"}).`;
     case "search_solana": {
       const groups = (r.groups as { type: string; results: { title: string; link: string; detail?: string }[] }[]) ?? [];
-      if (!groups.length) return "I couldn't find anything matching that on Solana OS.";
+      if (!groups.length) return "I couldn't find anything matching that on STRATA.";
       return groups.slice(0, 4).map((g) => `**${g.type}**\n${g.results.slice(0, 4).map((x) => `- [${x.title}](${x.link})${x.detail ? ` — ${x.detail}` : ""}`).join("\n")}`).join("\n\n");
     }
   }
@@ -175,7 +175,7 @@ export async function* offlineChat(history: ChatTurn[], ctx: ToolContext, reason
   }
   const note =
     reason === "busy"
-      ? "> Solana AI is busy, so here's a quick answer from the data. Ask again in a minute for a fuller one."
+      ? "> STRATA AI is busy, so here's a quick answer from the data. Ask again in a minute for a fuller one."
       : "";
   const text = parts.join("\n\n") + (note ? "\n\n" + note : "");
   // Stream in small chunks so the UI behaves the same as with a model.

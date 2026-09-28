@@ -44,7 +44,7 @@ const riskCache = new Map<string, Risk | null>();
 async function checkRisk(url: string): Promise<Risk | null> {
   const host = hostOf(url);
   if (!host) return null;
-  if (host === hostOf(SOLANA_OS_URL)) return { level: "low", label: "Solana OS" };
+  if (host === hostOf(SOLANA_OS_URL)) return { level: "low", label: "STRATA" };
   if (riskCache.has(host)) return riskCache.get(host) ?? null;
   try {
     const res = await fetch(`${SOLANA_OS_URL}/api/security?q=${encodeURIComponent(url)}`);
@@ -58,7 +58,7 @@ async function checkRisk(url: string): Promise<Risk | null> {
 
 export function Browser() {
   const insets = useSafeAreaInsets();
-  const [tabs, setTabs] = useState<Tab[]>(() => [newTab(SOLANA_OS_URL, "Solana OS")]);
+  const [tabs, setTabs] = useState<Tab[]>(() => [newTab(SOLANA_OS_URL, "STRATA")]);
   const [activeId, setActiveId] = useState(() => tabs[0].id);
   const [lib, setLib] = useState<Library>(EMPTY_LIBRARY);
   const [address, setAddress] = useState("");
@@ -167,7 +167,7 @@ export function Browser() {
       sources.current.delete(id);
       const rest = tabsRef.current.filter((t) => t.id !== id);
       if (!rest.length) {
-        const t = newTab(SOLANA_OS_URL, "Solana OS");
+        const t = newTab(SOLANA_OS_URL, "STRATA");
         setTabs([t]);
         setActiveId(t.id);
         return;
@@ -267,7 +267,7 @@ export function Browser() {
     const { url, title } = e.nativeEvent;
     patchTab(tabId, { loading: false, progress: 1 });
     updateLib((l) => addHistory(l, url, title));
-    // Signing in happens on the Solana OS site; sync soon after visiting it.
+    // Signing in happens on the STRATA site; sync soon after visiting it.
     if (url.startsWith(SOLANA_OS_ORIGIN) && Date.now() - lastSync.current > 60 * 1000) scheduleSync(2000);
   };
 
@@ -336,7 +336,7 @@ export function Browser() {
       <View style={s.topBar}>
         <Pressable
           hitSlop={8}
-          onPress={() => Alert.alert(risk?.label ?? "Site safety", risk?.detail ?? "No safety information for this page yet. Solana OS checks sites against its app registry and known scam patterns.")}
+          onPress={() => Alert.alert(risk?.label ?? "Site safety", risk?.detail ?? "No safety information for this page yet. STRATA checks sites against its app registry and known scam patterns.")}
           accessibilityLabel="Site safety"
         >
           <Ionicons name={risk?.level === "high" ? "warning" : "shield-checkmark"} size={18} color={badgeColor} />
@@ -409,7 +409,7 @@ export function Browser() {
       <View style={[s.toolbar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
         <ToolButton icon="chevron-back" label="Back" disabled={!active.canGoBack} onPress={() => views.current.get(active.id)?.goBack()} />
         <ToolButton icon="chevron-forward" label="Forward" disabled={!active.canGoForward} onPress={() => views.current.get(active.id)?.goForward()} />
-        <ToolButton icon="home-outline" label="Solana OS" onPress={() => navigate(SOLANA_OS_URL)} />
+        <ToolButton icon="home-outline" label="STRATA" onPress={() => navigate(SOLANA_OS_URL)} />
         <Pressable style={s.tool} onPress={() => setSheet("tabs")} accessibilityLabel={`${tabs.length} tabs`}>
           <View style={s.tabCount}>
             <Text style={s.tabCountText}>{tabs.length}</Text>
@@ -418,7 +418,7 @@ export function Browser() {
         <ToolButton icon="ellipsis-horizontal" label="Menu" onPress={() => setSheet("menu")} />
       </View>
 
-      <MenuSheet visible={sheet === "menu"} onClose={() => setSheet(null)} title={active.title || hostOf(active.url) || "Solana OS"} items={menuItems} />
+      <MenuSheet visible={sheet === "menu"} onClose={() => setSheet(null)} title={active.title || hostOf(active.url) || "STRATA"} items={menuItems} />
       <TabsSheet
         visible={sheet === "tabs"}
         onClose={() => setSheet(null)}
@@ -445,15 +445,15 @@ export function Browser() {
 function syncHint(s: SyncStatus): string {
   switch (s.status) {
     case "ok":
-      return "Bookmarks synced with your Solana OS account";
+      return "Bookmarks synced with your STRATA account";
     case "signed-out":
-      return "Sign in to Solana OS to sync bookmarks";
+      return "Sign in to STRATA to sync bookmarks";
     case "unavailable":
       return s.error ?? "Sync unavailable";
     case "error":
       return s.error ?? "Sync failed";
     default:
-      return "Bookmarks sync with your Solana OS account";
+      return "Bookmarks sync with your STRATA account";
   }
 }
 

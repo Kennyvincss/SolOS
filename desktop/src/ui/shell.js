@@ -1,4 +1,4 @@
-// Toolbar UI for Solana OS Desktop. Talks to the main process via window.sos.
+// Toolbar UI for STRATA. Talks to the main process via window.sos.
 // SPDX-License-Identifier: GPL-3.0-only
 "use strict";
 

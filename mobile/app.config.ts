@@ -2,14 +2,14 @@ import type { ExpoConfig } from "expo/config";
 import pkg from "./package.json";
 
 // APP_VERSION: set by CI from the release tag (mobile-vX.Y.Z).
-// SOLANA_OS_URL: the Solana OS site shown on the home tab.
+// SOLANA_OS_URL: the STRATA site shown on the home tab.
 // APP_DISTRIBUTION: "github" (APK from GitHub Releases; the app checks there
 // for updates) or "store" (App Store / Google Play handle updates).
 const version = process.env.APP_VERSION || pkg.version;
 const [major, minor, patch] = version.split(".").map((n: string) => parseInt(n, 10) || 0);
 
 const config: ExpoConfig = {
-  name: "Solana OS",
+  name: "STRATA",
   slug: "solana-os",
   version,
   scheme: "solanaos",
@@ -36,7 +36,7 @@ const config: ExpoConfig = {
       monochromeImage: "./assets/android-icon-monochrome.png",
     },
     predictiveBackGestureEnabled: false,
-    // Open shared web links in Solana OS ("Open with" / share sheet).
+    // Open shared web links in STRATA ("Open with" / share sheet).
     intentFilters: [
       {
         action: "VIEW",

@@ -1,9 +1,9 @@
-# Solana OS for phones
+# STRATA for phones
 
-The Solana OS browser for Android and iPhone, built with Expo (React Native).
+The STRATA browser for Android and iPhone, built with Expo (React Native).
 
-- **Solana OS home.** The home tab is Solana OS. The address bar opens
-  websites or searches Solana OS (tokens, wallets, transactions, questions).
+- **STRATA home.** The home tab is STRATA. The address bar opens
+  websites or searches STRATA (tokens, wallets, transactions, questions).
 - **Connect your wallet app to any site.** Phones can't run browser
   extensions, so the app connects sites to your wallet *app* instead:
   - **Phantom and Solflare** show up in every site's "Connect wallet" list.
@@ -15,9 +15,9 @@ The Solana OS browser for Android and iPhone, built with Expo (React Native).
     Vault and others.
   - Sites that don't use the standard wallet list can be opened inside a
     wallet's own browser: **menu → Open in Phantom / Solflare**.
-- **Site safety badge** from the Solana OS Security Center.
+- **Site safety badge** from the STRATA Security Center.
 - **Tabs, bookmarks, history.** Bookmarks sync with the desktop app when you
-  sign in to Solana OS (same account sync).
+  sign in to STRATA (same account sync).
 - **Solana Pay and wallet links** (`solana:`, `solana-wallet:`) open in your
   wallet app.
 - **Passwords:** the phone's own password manager (iCloud Keychain, Google
@@ -92,7 +92,7 @@ Expo Go. `SOLANA_OS_URL` changes the home site (default
 | `src/wallet/injected.ts` | Registers Phantom/Solflare as Wallet Standard wallets inside each page |
 | `src/wallet/bridge.ts` | Sends page requests to the wallet app ([deeplink protocol](https://docs.phantom.com/phantom-deeplinks)) and returns the result |
 | `src/wallet/protocol.ts` | Encryption and URLs for that protocol |
-| `src/components/SyncView.tsx` | Bookmark sync with your Solana OS account |
+| `src/components/SyncView.tsx` | Bookmark sync with your STRATA account |
 | `src/lib/` | Address bar, link decisions, bookmarks and history (unit-tested) |
 
 Wallet requests only come from the page itself (not embedded frames), carry

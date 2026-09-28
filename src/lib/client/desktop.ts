@@ -2,12 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 
-/** True inside the Solana OS desktop app (it adds "SolanaOSDesktop/x.y.z" to its user agent). */
+/** True inside the STRATA desktop app (it adds "SolanaOSDesktop/x.y.z" to its user agent). */
 export function isDesktopApp(): boolean {
   return typeof navigator !== "undefined" && /\bSolanaOSDesktop\//.test(navigator.userAgent);
 }
 
-/** True inside the Solana OS phone app (it adds "SolanaOSMobile/x.y.z" to its user agent). */
+/** True inside the STRATA phone app (it adds "SolanaOSMobile/x.y.z" to its user agent). */
 export function isMobileApp(): boolean {
   return typeof navigator !== "undefined" && /\bSolanaOSMobile\//.test(navigator.userAgent);
 }
@@ -26,7 +26,7 @@ export function useAppShell(): "web" | "desktop" | "mobile" {
   return shell;
 }
 
-/** Bridge the desktop app exposes to the Solana OS site (see desktop/src/preload-tab.js). */
+/** Bridge the desktop app exposes to the STRATA site (see desktop/src/preload-tab.js). */
 interface DesktopBridge {
   extensions(): Promise<InstalledExtension[] | null>;
   setExtensionHidden?(id: string, hidden: boolean): Promise<boolean>;

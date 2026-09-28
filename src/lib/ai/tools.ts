@@ -15,10 +15,10 @@ import { renderHeadline } from "../solana/explain";
 import { scoreDoc } from "../search/fuzzy";
 
 /**
- * Tools Solana AI can call. Each tool returns:
+ * Tools STRATA AI can call. Each tool returns:
  *  - `result`: compact JSON for the model
  *  - `card`:   structured data the chat UI renders as a rich card
- *  - `sources`: links to the underlying Solana OS objects, with provenance
+ *  - `sources`: links to the underlying STRATA objects, with provenance
  */
 
 export interface AiSource {
@@ -80,25 +80,25 @@ export const TOOL_SCHEMAS = {
 export type ToolName = keyof typeof TOOL_SCHEMAS;
 
 export const TOOL_DEFS: { name: ToolName; description: string; input_schema: Record<string, unknown> }[] = [
-  { name: "search_solana", description: "Unified Solana OS search across tokens, apps, protocols, news and extensions. Use for anything you need to locate.", input_schema: { type: "object", properties: { query: { type: "string" } }, required: ["query"] } },
+  { name: "search_solana", description: "Unified STRATA search across tokens, apps, protocols, news and extensions. Use for anything you need to locate.", input_schema: { type: "object", properties: { query: { type: "string" } }, required: ["query"] } },
   { name: "get_token", description: "Live market data for one token: price, market cap, volume, liquidity, holders, 1h/24h/7d change, verification and audit flags. Accepts a mint address or a symbol like SOL or JUP.", input_schema: { type: "object", properties: { token: { type: "string", description: "Mint address or symbol" } }, required: ["token"] } },
   { name: "get_token_list", description: "Lists of tokens: trending (attention), top_traded (volume), new (recently launched), gainers or losers (24h, liquid tokens only).", input_schema: { type: "object", properties: { list: { type: "string", enum: [...TOKEN_LISTS] }, limit: { type: "integer", minimum: 1, maximum: 20 } }, required: ["list"] } },
   { name: "get_wallet_portfolio", description: "Current holdings and USD value of a Solana wallet from on-chain balances. Use address \"me\" for the user's connected wallet.", input_schema: { type: "object", properties: { address: { type: "string" } }, required: ["address"] } },
   { name: "get_wallet_activity", description: "Recent transactions of a wallet, each explained in plain English. Use address \"me\" for the connected wallet.", input_schema: { type: "object", properties: { address: { type: "string" } }, required: ["address"] } },
   { name: "explain_transaction", description: "Decode a transaction signature into plain English: who did what, tokens moved, programs, fees and status.", input_schema: { type: "object", properties: { signature: { type: "string" } }, required: ["signature"] } },
   { name: "check_security", description: "Transparent risk indicators for a token mint, wallet, program or website domain. Never returns a blanket 'safe' verdict.", input_schema: { type: "object", properties: { target: { type: "string", description: "Mint/wallet/program address, or a domain/URL" } }, required: ["target"] } },
-  { name: "find_apps", description: "Find Solana applications from the Solana OS App Store by category and/or keyword.", input_schema: { type: "object", properties: { category: { type: "string", enum: [...APP_CATEGORIES] }, query: { type: "string" } } } },
+  { name: "find_apps", description: "Find Solana applications from the STRATA App Store by category and/or keyword.", input_schema: { type: "object", properties: { category: { type: "string", enum: [...APP_CATEGORIES] }, query: { type: "string" } } } },
   { name: "get_news", description: "Latest Solana ecosystem headlines with their sources, optionally filtered by a topic keyword.", input_schema: { type: "object", properties: { topic: { type: "string" } } } },
   { name: "get_defi_yields", description: "Solana DeFi yield opportunities (APY, TVL, project) from DefiLlama. Filter by asset symbol (e.g. USDC, SOL) or category (Lending, Liquid staking, Liquidity providing, Perpetuals, Restaking, Stablecoins, Yield).", input_schema: { type: "object", properties: { asset: { type: "string" }, category: { type: "string" } } } },
   { name: "get_protocols", description: "Solana DeFi protocols with TVL and 1d/7d change from DefiLlama. Pass names to compare specific protocols, or omit for the top list.", input_schema: { type: "object", properties: { names: { type: "array", items: { type: "string" } } } } },
-  { name: "open_page", description: "Take the user to a page in Solana OS (it opens after your answer). Use for requests like 'open/show/take me to …'. path is an internal path such as /extensions, /wallets/<address>, /tokens/<mint>, /apps/<slug>, /portfolio, /security?q=<target>, /tx/<signature>.", input_schema: { type: "object", properties: { path: { type: "string" }, label: { type: "string", description: "Short name of the destination, e.g. 'Phantom on the Extensions page'" } }, required: ["path"] } },
-  { name: "install_extension", description: "Help the user install a browser extension (wallets like Phantom, Solflare, Backpack, or any Chrome Web Store extension) in the Solana OS desktop app: opens the Extensions page on it and starts the install, which the user confirms.", input_schema: { type: "object", properties: { name: { type: "string", description: "Extension name, e.g. Phantom" } }, required: ["name"] } },
+  { name: "open_page", description: "Take the user to a page in STRATA (it opens after your answer). Use for requests like 'open/show/take me to …'. path is an internal path such as /extensions, /wallets/<address>, /tokens/<mint>, /apps/<slug>, /portfolio, /security?q=<target>, /tx/<signature>.", input_schema: { type: "object", properties: { path: { type: "string" }, label: { type: "string", description: "Short name of the destination, e.g. 'Phantom on the Extensions page'" } }, required: ["path"] } },
+  { name: "install_extension", description: "Help the user install a browser extension (wallets like Phantom, Solflare, Backpack, or any Chrome Web Store extension) in the STRATA desktop app: opens the Extensions page on it and starts the install, which the user confirms.", input_schema: { type: "object", properties: { name: { type: "string", description: "Extension name, e.g. Phantom" } }, required: ["name"] } },
   { name: "identify_address", description: "Find out what a pasted address or ID is before using it: a wallet, a token (mint / contract address / CA), a token account, a program, or a transaction signature. Call this first whenever the user pastes an address without saying what it is.", input_schema: { type: "object", properties: { address: { type: "string" } }, required: ["address"] } },
   { name: "get_network_status", description: "Solana network status: current slot, epoch progress, throughput (TPS) and priority fee percentiles.", input_schema: { type: "object", properties: {} } },
 ];
 
 export const TOOL_LABELS: Record<ToolName, string> = {
-  search_solana: "Searching Solana OS",
+  search_solana: "Searching STRATA",
   get_token: "Fetching token data",
   get_token_list: "Loading token list",
   get_wallet_portfolio: "Reading wallet balances",
@@ -155,7 +155,7 @@ export async function runTool(name: ToolName, rawInput: unknown, ctx: ToolContex
   switch (name) {
     case "open_page": {
       const href = safeInternalPath(String(input.path));
-      if (!href) throw new Error("That isn't a Solana OS page.");
+      if (!href) throw new Error("That isn't a STRATA page.");
       const label = String(input.label ?? href);
       return { result: { opening: href, note: "The page opens when your answer finishes; tell the user." }, action: { type: "navigate", href, label }, sources: [] };
     }
@@ -169,7 +169,7 @@ export async function runTool(name: ToolName, rawInput: unknown, ctx: ToolContex
       return {
         result: inDesktop
           ? { name, opening: href, note: `The Extensions page opens on ${name} and the app asks the user to confirm the install.` }
-          : { name, opening: href, note: "Browser extensions install in the Solana OS desktop app. In a normal browser the page links to the Chrome Web Store; on phones, wallets connect through the wallet's own app instead." },
+          : { name, opening: href, note: "Browser extensions install in the STRATA desktop app. In a normal browser the page links to the Chrome Web Store; on phones, wallets connect through the wallet's own app instead." },
         action: { type: "navigate", href, label: `Install ${name}` },
         sources: [],
       };
@@ -191,7 +191,7 @@ export async function runTool(name: ToolName, rawInput: unknown, ctx: ToolContex
       const r = await search(String(input.query), { limitPerGroup: 4 });
       return {
         result: { intent: r.intent.label, groups: r.groups.map((g) => ({ type: g.label, results: g.hits.map((h) => ({ title: h.title, detail: h.subtitle, link: h.href })) })) },
-        sources: r.groups.flatMap((g) => g.hits.slice(0, 2)).slice(0, 6).map((h) => ({ label: h.title, href: h.href, provider: "Solana OS search", mode: (h.meta?.mode as DataMeta["mode"]) ?? "live" })),
+        sources: r.groups.flatMap((g) => g.hits.slice(0, 2)).slice(0, 6).map((h) => ({ label: h.title, href: h.href, provider: "STRATA search", mode: (h.meta?.mode as DataMeta["mode"]) ?? "live" })),
       };
     }
     case "get_token": {
@@ -287,7 +287,7 @@ export async function runTool(name: ToolName, rawInput: unknown, ctx: ToolContex
       let list = cat ? appsByCategory(cat) : APPS;
       if (q) list = list.map((a) => ({ a, s: scoreDoc(q, a.name, [a.tagline, a.description, a.category], a.keywords) })).filter((x) => x.s > 0.3).sort((x, y) => y.s - x.s).map((x) => x.a);
       const top = list.slice(0, 10);
-      const meta: DataMeta = { provider: "Solana OS App Store", mode: "live", fetchedAt: new Date().toISOString() };
+      const meta: DataMeta = { provider: "STRATA App Store", mode: "live", fetchedAt: new Date().toISOString() };
       return {
         result: { apps: top.map((a) => ({ name: a.name, category: a.category, tagline: a.tagline, website: a.website, token: a.token?.symbol, link: `/apps/${a.slug}` })) },
         card: { kind: "apps", data: top },

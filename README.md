@@ -1,15 +1,15 @@
-# Solana OS
+# STRATA
 
-**Everything Solana. One place.**
+**The browser for the onchain world.**
 
-Solana OS is a gateway to the Solana ecosystem: universal search, an app store,
-Solana AI, wallet and portfolio, token and transaction explorers, a security
+STRATA is a gateway to the Solana ecosystem: universal search, an app store,
+STRATA AI, wallet and portfolio, token and transaction explorers, a security
 center, DeFi/RWA/payments hubs, news, a social feed,
 extensions and a developer platform, all in one fast, dark-first interface.
 
 ## Desktop app
 
-`desktop/` contains **Solana OS Desktop**, a Chromium browser with Solana OS as
+`desktop/` contains **STRATA**, a Chromium browser with STRATA as
 its home and real Chrome wallet extensions (Phantom, Solflare, Backpack), plus
 a password manager, bookmarks, account sync and automatic updates. See
 [desktop/README.md](desktop/README.md). Installers for macOS, Windows and Linux
@@ -18,8 +18,8 @@ licensed GPL-3.0.
 
 ## Phone app
 
-`mobile/` contains **Solana OS for Android and iPhone** (Expo / React Native):
-the same browser with Solana OS as its home, connecting sites to your Phantom
+`mobile/` contains **STRATA for Android and iPhone** (Expo / React Native):
+the same browser with STRATA as its home, connecting sites to your Phantom
 or Solflare app (and to any wallet through Mobile Wallet Adapter on Android),
 with bookmarks that sync with the desktop app. The "Mobile app" GitHub Actions
 workflow builds an Android APK; iPhone builds go through Expo EAS and need an
@@ -31,12 +31,12 @@ Apple Developer account. See [mobile/README.md](mobile/README.md).
    automatically; no Root Directory setting is needed.
 2. Add environment variables (see `.env.example`). The only one required in
    production is `AUTH_SECRET` (`openssl rand -base64 32`). Recommended:
-   `SOLANA_RPC_URL` (a private RPC) and `GROQ_API_KEY` (Solana AI, free at console.groq.com).
+   `SOLANA_RPC_URL` (a private RPC) and `GROQ_API_KEY` (STRATA AI, free at console.groq.com).
 3. Deploy.
 
 The server is stateless: sessions are signed cookies, caches live in memory
 per instance, and nothing is written to disk. That's why it runs on Vercel's
-serverless functions unchanged. Solana AI streams from a route with
+serverless functions unchanged. STRATA AI streams from a route with
 `maxDuration = 120`.
 
 ## Run locally
@@ -63,7 +63,7 @@ demo data is displayed.
 | Price charts | GeckoTerminal OHLCV |
 | Protocol TVL, DEX volume, yields | DefiLlama |
 | News | RSS/Atom feeds (`NEWS_FEEDS`) |
-| Solana AI | Groq (`GROQ_API_KEY`; model auto-selected, or pinned with `GROQ_MODEL`) with tool calls into the services above |
+| STRATA AI | Groq (`GROQ_API_KEY`; model auto-selected, or pinned with `GROQ_MODEL`) with tool calls into the services above |
 
 With `DATA_MODE=auto` (default), an unreachable provider falls back to a
 **demo dataset that is labelled as demo everywhere it appears**. Wallet
@@ -87,7 +87,7 @@ src/
     services/          Business logic composed from providers (tokens, wallets, transactions, security, ecosystem)
     solana/            Address helpers, program registry, transaction explainer, pre-sign decoder
     search/            Fuzzy scoring, natural-language intent detection, unified search engine
-    ai/                Solana AI tools, Groq streaming tool-call loop, no-key offline mode
+    ai/                STRATA AI tools, Groq streaming tool-call loop, no-key offline mode
     auth/              Signed-cookie sessions, Sign-In With Solana, origin helper
     extensions/        Extension SDK (manifest schema, permissioned host) + catalog
     catalog/           Curated app registry and page index
@@ -101,8 +101,8 @@ src/
   plus federated live sources (tokens, news, markets, protocols), each with a
   small time budget. `detectIntent` routes addresses, signatures and
   natural-language questions ("what are whales buying?") to the right view or
-  to Solana AI.
-- **Solana AI:** runs on Groq's OpenAI-compatible API with a streaming
+  to STRATA AI.
+- **STRATA AI:** runs on Groq's OpenAI-compatible API with a streaming
   tool-call loop over 13 tools. Tool results are streamed to the client as
   rich cards with source links; the system prompt requires separating
   verified data, analysis and uncertainty, and forbids financial advice.
@@ -131,7 +131,7 @@ src/
 ## Roadmap
 
 - **Phase 1–3 (in this build):** landing and personalized home, universal
-  search, token/wallet/transaction search, App Store, Solana AI, wallet
+  search, token/wallet/transaction search, App Store, STRATA AI, wallet
   connection, portfolio, extensions, discover, wallet following and alerts,
   notifications, security center, news, DeFi, RWA,
   payments (Solana Pay requests), social feed, developer platform.

@@ -1,7 +1,7 @@
 // Account sync for bookmarks and settings.
 //
-// Runs the sync requests from inside a hidden WebView on the Solana OS
-// origin, so they carry the login cookie of the Solana OS account signed in
+// Runs the sync requests from inside a hidden WebView on the STRATA
+// origin, so they carry the login cookie of the STRATA account signed in
 // in the browser tabs (web views share one cookie store). Uses the same
 // account scope as the desktop app, so bookmarks follow you between devices.
 
@@ -59,8 +59,8 @@ export const SyncView = forwardRef<SyncHandle>(function SyncView(_props, ref) {
       async run(merge) {
         const get = await request("GET");
         if (get.status === 401) return { status: "signed-out", at: null, error: null };
-        if (get.status === 501) return { status: "unavailable", at: null, error: "Sync isn't set up on the Solana OS server yet." };
-        if (get.status !== 200) return { status: "error", at: null, error: get.status ? `Sync failed (${get.status})` : "Couldn't reach Solana OS" };
+        if (get.status === 501) return { status: "unavailable", at: null, error: "Sync isn't set up on the STRATA server yet." };
+        if (get.status !== 200) return { status: "error", at: null, error: get.status ? `Sync failed (${get.status})` : "Couldn't reach STRATA" };
         const upload = merge((get.body as { data?: unknown } | null)?.data ?? null);
         const put = await request("PUT", upload);
         if (put.status !== 200) return { status: "error", at: null, error: `Sync failed (${put.status})` };

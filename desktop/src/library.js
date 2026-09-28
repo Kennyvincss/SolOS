@@ -1,7 +1,7 @@
 // Bookmarks, history and account sync.
 // SPDX-License-Identifier: GPL-3.0-only
 //
-// Stored locally in the user-data folder. When you're signed in to Solana OS
+// Stored locally in the user-data folder. When you're signed in to STRATA
 // (in any tab), bookmarks and settings sync to your account through
 // ${SOLANA_OS_URL}/api/sync/desktop, so they follow you to other computers.
 // History and passwords stay on this device.
@@ -142,7 +142,7 @@ async function syncNow() {
   try {
     const res = await syncFn("GET");
     if (res.status === 401) return (syncState = { status: "signed-out", at: null, error: null });
-    if (res.status === 501) return (syncState = { status: "unavailable", at: null, error: "Sync isn't set up on the Solana OS server yet." });
+    if (res.status === 501) return (syncState = { status: "unavailable", at: null, error: "Sync isn't set up on the STRATA server yet." });
     if (!res.ok) throw new Error(`Sync failed (${res.status})`);
     const remote = (await res.json()).data ?? {};
     d.bookmarks = mergeBookmarks(d.bookmarks, remote.bookmarks ?? {});

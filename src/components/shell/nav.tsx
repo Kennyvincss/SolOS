@@ -92,10 +92,10 @@ export function Sidebar() {
 export function TopBar() {
   const path = usePathname();
   const unread = useStore((s) => s.notifications.filter((n) => !n.read).length);
-  if (path.startsWith("/ai")) return null; // Solana AI has its own full-screen header
+  if (path.startsWith("/ai")) return null; // STRATA AI has its own full-screen header
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-line bg-bg/80 px-4 backdrop-blur-xl md:hidden">
-      <Link href="/" aria-label="Solana OS home">
+      <Link href="/" aria-label="STRATA home">
         <LogoMark size={26} />
       </Link>
       <button onClick={openCommandBar} className="flex h-9 flex-1 items-center gap-2 rounded-full border border-line bg-surface px-3 text-[13px] text-faint">

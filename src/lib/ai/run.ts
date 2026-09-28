@@ -10,13 +10,13 @@ export function friendlyError(err: unknown): string {
   // Details (status, model, key problems) go to the server log only.
   if (err instanceof GroqError) {
     console.error("[solana-ai] Groq error:", err.status, err.message);
-    if (err.status === 429) return "Solana AI is busy right now. Please try again in a minute.";
+    if (err.status === 429) return "STRATA AI is busy right now. Please try again in a minute.";
     if (err.status === 413) return "That question is too long. Try a shorter one.";
   }
-  return "Solana AI is temporarily unavailable. Please try again in a moment.";
+  return "STRATA AI is temporarily unavailable. Please try again in a moment.";
 }
 
-/** Solana AI entry point: Groq when GROQ_API_KEY is set, otherwise the no-key offline mode. */
+/** STRATA AI entry point: Groq when GROQ_API_KEY is set, otherwise the no-key offline mode. */
 export async function* chat(history: ChatTurn[], ctx: ToolContext, signal?: AbortSignal): AsyncGenerator<AiEvent> {
   if (!config.groqKey) {
     yield* offlineChat(history, ctx);

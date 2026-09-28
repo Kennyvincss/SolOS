@@ -33,7 +33,7 @@ function PriceAlertModal({ t, open, onClose }: { t: Token; open: boolean; onClos
       <div className="space-y-3">
         <Segmented value={dir} onChange={setDir} options={["above", "below"]} />
         <input className="input" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Price in USD" />
-        <p className="text-[12px] text-muted">Current price {fmtUsd(t.priceUsd)}. Alerts are checked while Solana OS is open.</p>
+        <p className="text-[12px] text-muted">Current price {fmtUsd(t.priceUsd)}. Alerts are checked while STRATA is open.</p>
         <button
           className="btn btn-primary w-full"
           disabled={!Number(price)}
@@ -199,7 +199,7 @@ export default function TokenPage({ params }: { params: Promise<{ id: string }> 
       <Section>
         <AskAIPanel
           label="Why is this moving?"
-          description="Solana AI summarises the token's market data and related news. Analysis, not advice."
+          description="STRATA AI summarises the token's market data and related news. Analysis, not advice."
           prompt={`Why is ${t.symbol} (mint ${t.mint}) moving? Use the token data and recent news. Clearly separate verified data from your analysis, and say what is uncertain. Keep it under 150 words.`}
         />
       </Section>

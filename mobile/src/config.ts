@@ -1,6 +1,6 @@
 import Constants from "expo-constants";
 
-/** The Solana OS web app shown on the home tab. Set SOLANA_OS_URL when building to point elsewhere. */
+/** The STRATA web app shown on the home tab. Set SOLANA_OS_URL when building to point elsewhere. */
 export const SOLANA_OS_URL = String(Constants.expoConfig?.extra?.solanaOsUrl ?? "https://solos-rho.vercel.app").replace(/\/+$/, "");
 export const SOLANA_OS_ORIGIN = new URL(SOLANA_OS_URL).origin;
 export const APP_VERSION = Constants.expoConfig?.version ?? "0.0.0";

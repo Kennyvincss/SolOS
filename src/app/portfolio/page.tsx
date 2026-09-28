@@ -28,7 +28,7 @@ export default function PortfolioPage() {
           <EmptyState
             icon={<PieChart size={20} />}
             title="Connect a wallet to see your portfolio"
-            body="Solana OS reads your public balances. It never asks for your seed phrase. You can also watch any public address or try the demo wallet."
+            body="STRATA reads your public balances. It never asks for your seed phrase. You can also watch any public address or try the demo wallet."
             action={
               <button onClick={() => s.setWalletModal(true)} className="btn btn-primary">
                 <Wallet size={15} /> Connect wallet

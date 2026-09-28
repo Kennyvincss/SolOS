@@ -21,7 +21,7 @@ li { display: flex; align-items: center; gap: 4px; padding: 0 8px 0 0; }
 li:hover { background: var(--hover); }
 .open { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 8px 0 16px; text-align: left; }
 .open img, .open .ph { width: 20px; height: 20px; flex: none; border-radius: 4px; }
-.open .ph { background: linear-gradient(135deg, #9945ff, #14f195); opacity: 0.8; }
+.open .ph { background: linear-gradient(135deg, #7f6bff, #6fb7ff); opacity: 0.8; }
 .open span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pin.on { color: var(--pin); }
 .pin.on svg { fill: currentColor; }

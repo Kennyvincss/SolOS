@@ -90,7 +90,7 @@ function BrowserInner() {
         <div className="flex-1 overflow-y-auto">
           <div className="mx-auto max-w-3xl px-4 py-10">
             <h1 className="text-[26px] font-semibold tracking-[-0.02em]">Solana Browser</h1>
-            <p className="mt-1 text-[14px] text-muted">Open Solana apps inside Solana OS, with a security check on every site and a pre-sign explanation for transactions.</p>
+            <p className="mt-1 text-[14px] text-muted">Open Solana apps inside STRATA, with a security check on every site and a pre-sign explanation for transactions.</p>
             <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
               {QUICK.map((slug) => {
                 const a = APPS.find((x) => x.slug === slug)!;
@@ -152,7 +152,7 @@ function BrowserInner() {
               </Link>
             )}
             <div className="mt-5 text-[13px] font-semibold">Wallet</div>
-            <p className="mt-1 text-[12.5px] text-muted">{s.wallet ? `${s.wallet.name} (${shortAddr(s.wallet.address)}) is connected to Solana OS. The app will ask your wallet to connect separately.` : "Connect your wallet inside the app. Solana OS never sees your keys."}</p>
+            <p className="mt-1 text-[12.5px] text-muted">{s.wallet ? `${s.wallet.name} (${shortAddr(s.wallet.address)}) is connected to STRATA. The app will ask your wallet to connect separately.` : "Connect your wallet inside the app. STRATA never sees your keys."}</p>
             <div className="mt-5 text-[13px] font-semibold">Before you sign</div>
             <p className="mt-1 text-[12.5px] text-muted">Your wallet shows the transaction before you approve. To see it explained (programs, assets, amounts, permissions, risks) paste it into the pre-sign check.</p>
             <Link href="/security" className="btn btn-soft btn-sm mt-2 w-full">

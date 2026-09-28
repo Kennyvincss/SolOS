@@ -29,7 +29,7 @@ test("address bar: URLs and domains open directly", () => {
   assert.equal(normalizeInput("", base), base);
 });
 
-test("address bar: everything else searches Solana OS", () => {
+test("address bar: everything else searches STRATA", () => {
   assert.equal(normalizeInput("what is trending", base), `${base}/search?q=what%20is%20trending`);
   assert.equal(normalizeInput("JUP", base), `${base}/search?q=JUP`);
   const addr = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";

@@ -9,15 +9,16 @@ import { WalletModal } from "@/components/shell/wallet-modal";
 import { ThemeSync, Watchers } from "@/components/shell/watchers";
 
 export const metadata: Metadata = {
-  title: { default: "Solana OS — Everything Solana. One place.", template: "%s · Solana OS" },
-  description: "Search, discover, use and understand the entire Solana ecosystem. Apps, tokens, wallets, transactions, DeFi and Solana AI in one place.",
-  applicationName: "Solana OS",
-  icons: { icon: "/icon.svg" },
-  openGraph: { title: "Solana OS", description: "Everything Solana. One place.", type: "website" },
+  title: { default: "STRATA — The browser for the onchain world.", template: "%s · STRATA" },
+  description: "Search, discover, use and understand the entire Solana ecosystem. Apps, tokens, wallets, transactions, DeFi and STRATA AI in one place.",
+  applicationName: "STRATA",
+  icons: { icon: [{ url: "/favicon.ico", sizes: "any" }, { url: "/brand/icon-192.png", type: "image/png", sizes: "192x192" }], apple: "/apple-touch-icon.png" },
+  manifest: "/manifest.webmanifest",
+  openGraph: { title: "STRATA", description: "The browser for the onchain world.", type: "website" },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#07080a",
+  themeColor: "#07070b",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",

@@ -1,13 +1,13 @@
 :root {
-  --bg: #07080a;
+  --bg: #07070b;
   --bar: #0d0f12;
   --tab: #15181d;
   --tab-active: #1f2329;
   --border: rgba(255, 255, 255, 0.08);
   --text: #f3f4f6;
   --muted: #9ba1ab;
-  --green: #14f195;
-  --purple: #9945ff;
+  --green: #9b9cff;
+  --purple: #7f6bff;
   --warn: #f5b841;
   --down: #ff5c6c;
   color-scheme: dark;
@@ -35,7 +35,7 @@ button { font: inherit; color: inherit; cursor: default; }
 .icon:hover:not(:disabled) { background: rgba(255, 255, 255, 0.08); color: var(--text); }
 .icon:disabled { opacity: 0.35; }
 svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-svg.logo { width: 20px; height: 20px; stroke: none; fill: var(--green); }
+img.logo { width: 20px; height: 20px; object-fit: contain; }
 #new-tab { width: 28px; height: 28px; margin-bottom: 2px; }
 #address-form { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; height: 34px; margin: 0 6px; padding: 0 12px; border-radius: 999px; background: #0b0d10; border: 1px solid var(--border); }
 #address-form:focus-within { border-color: rgba(20, 241, 149, 0.45); }

@@ -47,7 +47,7 @@ function Store() {
       </div>
 
       {mine.length > 0 && cat === "All" && !q && (
-        <Section title="In your Solana OS" subtitle="Apps you added or favorited">
+        <Section title="In your STRATA" subtitle="Apps you added or favorited">
           <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 pb-1">
             {mine.map((a) => (
               <div key={a.slug} className="w-[280px] shrink-0">

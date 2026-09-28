@@ -5,7 +5,7 @@ import type { AiEvent, ChatTurn, UserContext } from "@/lib/ai/protocol";
 import { useStore } from "./store";
 import { useAppShell, useDesktopExtensions } from "./desktop";
 
-/** What Solana AI is told about this session: page, app, followed wallets, watchlist, extensions. */
+/** What STRATA AI is told about this session: page, app, followed wallets, watchlist, extensions. */
 export function useAiContext(): UserContext {
   const page = usePathname();
   const app = useAppShell();
@@ -23,7 +23,7 @@ export function useAiContext(): UserContext {
   };
 }
 
-/** Stream Solana AI events (NDJSON) from /api/ai/chat. */
+/** Stream STRATA AI events (NDJSON) from /api/ai/chat. */
 export async function streamChat(messages: ChatTurn[], wallet: string | null, onEvent: (e: AiEvent) => void, signal?: AbortSignal, context?: UserContext) {
   const res = await fetch("/api/ai/chat", {
     method: "POST",
@@ -33,7 +33,7 @@ export async function streamChat(messages: ChatTurn[], wallet: string | null, on
   });
   if (!res.ok || !res.body) {
     const body = await res.json().catch(() => ({}));
-    onEvent({ type: "error", message: (body as { error?: string }).error ?? `Solana AI is unavailable (${res.status})` });
+    onEvent({ type: "error", message: (body as { error?: string }).error ?? `STRATA AI is unavailable (${res.status})` });
     onEvent({ type: "done" });
     return;
   }

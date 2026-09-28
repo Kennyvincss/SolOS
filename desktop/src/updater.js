@@ -48,7 +48,7 @@ function initUpdater() {
       buttons: ["Restart now", "Later"],
       defaultId: 0,
       cancelId: 1,
-      message: `Solana OS ${info.version} is ready`,
+      message: `STRATA ${info.version} is ready`,
       detail: "Restart to finish updating. Otherwise it installs the next time you quit.",
     });
     if (response === 0) updater.quitAndInstall();
@@ -74,9 +74,9 @@ async function checkForUpdatesInteractive() {
     const result = await updater.checkForUpdates();
     const latest = result?.updateInfo?.version;
     if (!latest || latest === app.getVersion()) {
-      await dialog.showMessageBox({ type: "info", message: "You're up to date", detail: `Solana OS ${app.getVersion()} is the latest version.` });
+      await dialog.showMessageBox({ type: "info", message: "You're up to date", detail: `STRATA ${app.getVersion()} is the latest version.` });
     } else if (state.status !== "ready") {
-      await dialog.showMessageBox({ type: "info", message: `Downloading Solana OS ${latest}…`, detail: "You'll be asked to restart when it's ready." });
+      await dialog.showMessageBox({ type: "info", message: `Downloading STRATA ${latest}…`, detail: "You'll be asked to restart when it's ready." });
     }
   } catch (err) {
     const { response } = await dialog.showMessageBox({
