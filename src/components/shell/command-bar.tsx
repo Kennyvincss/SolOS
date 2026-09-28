@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, Clock, Globe, CornerDownLeft, Search, ShieldCheck, Sparkles, Wallet, ReceiptText, Coins } from "lucide-react";
 import { PAGES } from "@/lib/catalog/pages";
 import { APPS, appLogo } from "@/lib/catalog/apps";
-import { EXTENSIONS } from "@/lib/extensions/catalog";
+import { BROWSER_EXTENSIONS } from "@/lib/extensions/browser";
 import { scoreDoc } from "@/lib/search/fuzzy";
 import { detectIntent } from "@/lib/search/intent";
 import { asWebUrl, goHref } from "@/lib/web-url";
@@ -113,10 +113,10 @@ export function CommandBar() {
       .sort((x, y) => y.s - x.s)
       .slice(0, 4)
       .forEach(({ a }) => out.push({ id: `a:${a.slug}`, group: "Apps", title: a.name, subtitle: a.tagline, href: `/apps/${a.slug}`, icon: <Monogram name={a.name} color={a.color} src={appLogo(a.slug)} size={22} /> }));
-    EXTENSIONS.map((e) => ({ e, s: scoreDoc(t, e.name, [e.description]) }))
+    BROWSER_EXTENSIONS.map((e) => ({ e, s: scoreDoc(t, e.name, [e.description]) }))
       .filter((x) => x.s > 0.55)
       .slice(0, 2)
-      .forEach(({ e }) => out.push({ id: `e:${e.id}`, group: "Extensions", title: e.name, subtitle: e.description, href: `/extensions/${e.id}`, icon: <Icon name={e.icon} size={16} /> }));
+      .forEach(({ e }) => out.push({ id: `e:${e.id}`, group: "Extensions", title: e.name, subtitle: e.description, href: "/extensions", icon: <Icon name="Puzzle" size={16} /> }));
     PAGES.map((p) => ({ p, s: scoreDoc(t, p.title, [p.description], p.keywords) }))
       .filter((x) => x.s > 0.55)
       .slice(0, 3)

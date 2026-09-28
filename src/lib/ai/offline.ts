@@ -1,5 +1,6 @@
 import "server-only";
 import type { AiEvent, ChatTurn } from "./protocol";
+import { classifyAddress } from "../services/account";
 import { runTool, TOOL_LABELS, type ToolContext, type ToolName, type ToolOutput } from "./tools";
 import { detectIntent } from "../search/intent";
 import { extractSolanaId } from "../solana/address";
@@ -14,13 +15,17 @@ import { APP_CATEGORIES } from "../types";
 
 type Plan = { tool: ToolName; input: Record<string, unknown> }[];
 
-function plan(q: string, ctx: ToolContext): Plan {
+async function plan(q: string, ctx: ToolContext): Promise<Plan> {
   const lower = q.toLowerCase();
   const id = extractSolanaId(q);
   const intent = detectIntent(q);
   if (id?.type === "signature") return [{ tool: "explain_transaction", input: { signature: id.value } }];
   if (id?.type === "address") {
     if (intent.type === "security") return [{ tool: "check_security", input: { target: id.value } }];
+    // Token contract addresses and programs aren't wallets.
+    const kind = await classifyAddress(id.value).catch(() => null);
+    if (kind?.type === "mint") return [{ tool: "get_token", input: { token: id.value } }];
+    if (kind?.type === "program" || kind?.type === "other") return [{ tool: "check_security", input: { target: id.value } }];
     return [
       { tool: "get_wallet_portfolio", input: { address: id.value } },
       { tool: "get_wallet_activity", input: { address: id.value } },
@@ -107,6 +112,8 @@ function write(tool: ToolName, out: ToolOutput): string {
       const p = (r.protocols as { name: string; category: string; tvlUsdOnSolana?: number; change7d?: number }[]) ?? [];
       return `**Protocol comparison** (${r.dataMode === "demo" ? "demo placeholders" : "DefiLlama"}):\n\n| Protocol | Category | TVL on Solana | 7d |\n|---|---|---|---|\n${p.map((x) => `| ${x.name} | ${x.category} | ${fmtUsd(x.tvlUsdOnSolana, { compact: true })} | ${fmtPct(x.change7d)} |`).join("\n")}${demo}`;
     }
+    case "identify_address":
+      return `That address is a **${r.kind}**. [Open it](${r.link}).`;
     case "get_network_status":
       return `**Network**: slot ${Number(r.slot).toLocaleString()}, epoch ${r.epoch} (${Math.round(Number(r.epochProgress) * 100)}% complete)${r.tps ? `, ~${Math.round(Number(r.tps)).toLocaleString()} TPS` : ""}.`;
     case "search_solana": {
@@ -120,7 +127,7 @@ function write(tool: ToolName, out: ToolOutput): string {
 export async function* offlineChat(history: ChatTurn[], ctx: ToolContext): AsyncGenerator<AiEvent> {
   yield { type: "meta", engine: "offline" };
   const q = [...history].reverse().find((m) => m.role === "user")?.content ?? "";
-  const steps = plan(q, ctx);
+  const steps = await plan(q, ctx);
   const intent = detectIntent(q);
 
   if (!steps.length) {

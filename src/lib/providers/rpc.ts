@@ -1,4 +1,4 @@
-import { config } from "../config";
+import { PUBLIC_RPC, config } from "../config";
 import { fetchJson, UpstreamError } from "./http";
 import { TOKEN_2022_PROGRAM, TOKEN_PROGRAM } from "../solana/constants";
 
@@ -9,13 +9,38 @@ import { TOKEN_2022_PROGRAM, TOKEN_PROGRAM } from "../solana/constants";
 
 let rpcId = 0;
 
-export async function rpc<T>(method: string, params: unknown[] = [], timeoutMs = 10000): Promise<T> {
-  const res = await fetchJson<{ result?: T; error?: { code: number; message: string } }>(config.rpcUrl, {
+/** When the configured RPC rejects our key, use the public endpoint for a while. */
+let customRejectedUntil = 0;
+const REJECTED_STATUSES = new Set([401, 402, 403]);
+
+async function call<T>(url: string, method: string, params: unknown[], timeoutMs: number): Promise<T> {
+  const res = await fetchJson<{ result?: T; error?: { code: number; message: string } }>(url, {
     body: { jsonrpc: "2.0", id: ++rpcId, method, params },
     timeoutMs,
   });
   if (res.error) throw new UpstreamError(`RPC ${method}: ${res.error.message}`, res.error.code);
   return res.result as T;
+}
+
+export async function rpc<T>(method: string, params: unknown[] = [], timeoutMs = 10000): Promise<T> {
+  const custom = config.rpcUrl !== PUBLIC_RPC;
+  if (!custom || Date.now() < customRejectedUntil) return call<T>(PUBLIC_RPC, method, params, timeoutMs);
+  try {
+    return await call<T>(config.rpcUrl, method, params, timeoutMs);
+  } catch (e) {
+    // An invalid, expired or out-of-credit API key shouldn't take wallets offline.
+    if (e instanceof UpstreamError && e.status !== undefined && REJECTED_STATUSES.has(e.status)) {
+      customRejectedUntil = Date.now() + 5 * 60 * 1000;
+      console.warn(`[solana-os] SOLANA_RPC_URL rejected the request (HTTP ${e.status}); using the public Solana RPC for now. Check the RPC API key.`);
+      return call<T>(PUBLIC_RPC, method, params, timeoutMs);
+    }
+    throw e;
+  }
+}
+
+/** True while the configured RPC is being skipped because it rejected our key. */
+export function customRpcRejected(): boolean {
+  return Date.now() < customRejectedUntil;
 }
 
 export interface ParsedTokenAccount {

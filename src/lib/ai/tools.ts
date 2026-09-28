@@ -10,6 +10,7 @@ import { explainSignature } from "../services/transactions";
 import { addressRisk, domainRisk } from "../services/security";
 import { news, protocols, yields, networkStatus } from "../services/ecosystem";
 import { isAddress, isSignature } from "../solana/address";
+import { classifyAddress, type AccountClass } from "../services/account";
 import { renderHeadline } from "../solana/explain";
 import { scoreDoc } from "../search/fuzzy";
 
@@ -69,6 +70,7 @@ export const TOOL_SCHEMAS = {
   get_defi_yields: z.object({ asset: z.string().max(20).optional(), category: z.string().max(40).optional() }),
   get_protocols: z.object({ names: z.array(z.string().max(60)).max(6).optional() }),
   get_network_status: z.object({}),
+  identify_address: z.object({ address: z.string().min(20).max(100) }),
 } as const;
 
 export type ToolName = keyof typeof TOOL_SCHEMAS;
@@ -85,6 +87,7 @@ export const TOOL_DEFS: { name: ToolName; description: string; input_schema: Rec
   { name: "get_news", description: "Latest Solana ecosystem headlines with their sources, optionally filtered by a topic keyword.", input_schema: { type: "object", properties: { topic: { type: "string" } } } },
   { name: "get_defi_yields", description: "Solana DeFi yield opportunities (APY, TVL, project) from DefiLlama. Filter by asset symbol (e.g. USDC, SOL) or category (Lending, Liquid staking, Liquidity providing, Perpetuals, Restaking, Stablecoins, Yield).", input_schema: { type: "object", properties: { asset: { type: "string" }, category: { type: "string" } } } },
   { name: "get_protocols", description: "Solana DeFi protocols with TVL and 1d/7d change from DefiLlama. Pass names to compare specific protocols, or omit for the top list.", input_schema: { type: "object", properties: { names: { type: "array", items: { type: "string" } } } } },
+  { name: "identify_address", description: "Find out what a pasted address or ID is before using it: a wallet, a token (mint / contract address / CA), a token account, a program, or a transaction signature. Call this first whenever the user pastes an address without saying what it is.", input_schema: { type: "object", properties: { address: { type: "string" } }, required: ["address"] } },
   { name: "get_network_status", description: "Solana network status: current slot, epoch progress, throughput (TPS) and priority fee percentiles.", input_schema: { type: "object", properties: {} } },
 ];
 
@@ -101,7 +104,22 @@ export const TOOL_LABELS: Record<ToolName, string> = {
   get_defi_yields: "Loading DeFi yields",
   get_protocols: "Loading protocol data",
   get_network_status: "Checking network status",
+  identify_address: "Identifying address",
 };
+
+const KIND_LABEL: Record<AccountClass["type"], string> = {
+  wallet: "wallet",
+  mint: "token (mint / contract address)",
+  token_account: "token account (holds one token for a wallet)",
+  program: "program (smart contract)",
+  other: "program-owned account",
+  missing: "unused address (no on-chain account yet; usually an empty wallet)",
+};
+
+/** Look up what an address is; never fails the calling tool if the lookup itself fails. */
+async function kindOf(address: string): Promise<AccountClass | null> {
+  return classifyAddress(address).catch(() => null);
+}
 
 function resolveAddress(a: string, ctx: ToolContext): string {
   if (/^(me|my|mine|self|connected)$/i.test(a.trim())) {
@@ -118,6 +136,19 @@ export async function runTool(name: ToolName, rawInput: unknown, ctx: ToolContex
   const input = parsed.data as Record<string, unknown>;
 
   switch (name) {
+    case "identify_address": {
+      const a = String(input.address).trim();
+      if (isSignature(a) && !isAddress(a)) return { result: { kind: "transaction signature", next: "explain_transaction", link: `/tx/${a}` }, sources: [] };
+      if (!isAddress(a)) return { result: { kind: "not a Solana address or signature" }, sources: [] };
+      const c = await classifyAddress(a);
+      const next = { wallet: "get_wallet_portfolio", missing: "get_wallet_portfolio", mint: "get_token", token_account: "get_wallet_portfolio (for the owning wallet)", program: "check_security", other: "check_security" }[c.type];
+      const link = c.type === "mint" ? `/tokens/${a}` : c.type === "program" ? `/security?q=${a}` : `/wallets/${c.type === "token_account" && c.wallet ? c.wallet : a}`;
+      const meta: DataMeta = { provider: "Solana RPC", mode: "live", fetchedAt: new Date().toISOString() };
+      return {
+        result: { address: a, kind: KIND_LABEL[c.type], programName: c.name, ownerProgram: c.ownerName ?? c.owner, owningWallet: c.wallet, tokenMint: c.mint, next, link },
+        sources: [src(c.type === "mint" ? "Token" : c.type === "program" ? "Program" : "Wallet", link, meta)],
+      };
+    }
     case "search_solana": {
       const r = await search(String(input.query), { limitPerGroup: 4 });
       return {
@@ -164,6 +195,11 @@ export async function runTool(name: ToolName, rawInput: unknown, ctx: ToolContex
     }
     case "get_wallet_portfolio": {
       const address = resolveAddress(String(input.address), ctx);
+      // People paste token contract addresses too: answer with the token instead.
+      const kind = await kindOf(address);
+      if (kind?.type === "mint") return runTool("get_token", { token: address }, ctx);
+      if (kind?.type === "program") return runTool("check_security", { target: address }, ctx);
+      if (kind?.type === "token_account" && kind.wallet) return runTool("get_wallet_portfolio", { address: kind.wallet }, ctx);
       const r = await getPortfolio(address);
       const p = r.data;
       return {
@@ -178,6 +214,8 @@ export async function runTool(name: ToolName, rawInput: unknown, ctx: ToolContex
     }
     case "get_wallet_activity": {
       const address = resolveAddress(String(input.address), ctx);
+      const kind = await kindOf(address);
+      if (kind?.type === "mint") return runTool("get_token", { token: address }, ctx);
       const r = await getActivity(address, 12, ctx.wallet ?? undefined);
       return {
         result: { dataMode: r.meta.mode, address, activity: r.data.map((a) => ({ time: a.blockTime ? new Date(a.blockTime * 1000).toISOString() : undefined, kind: a.kind, summary: a.summary, status: a.status, link: `/tx/${a.signature}` })) },

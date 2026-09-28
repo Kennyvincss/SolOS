@@ -20,7 +20,7 @@ export default function WalletsPage() {
 
   return (
     <Page>
-      <PageHeader title="Wallets" subtitle="Explore any public Solana wallet, follow the ones you care about and get alerts on their moves." />
+      <PageHeader title="Explore Wallets" subtitle="Look up any public Solana wallet, follow the ones you care about and get alerts on their moves." />
       <form
         onSubmit={(e) => {
           e.preventDefault();

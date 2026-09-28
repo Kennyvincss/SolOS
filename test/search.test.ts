@@ -3,8 +3,7 @@ import { levenshtein, scoreDoc } from "@/lib/search/fuzzy";
 import { detectIntent } from "@/lib/search/intent";
 import { parseFeed, categorizeNews } from "@/lib/providers/news";
 import { buildSignInMessage, parseSignInMessage, verifyEd25519 } from "@/lib/auth/siws";
-import { manifestSchema, createHost, PermissionError } from "@/lib/extensions/sdk";
-import { EXTENSIONS } from "@/lib/extensions/catalog";
+import { manifestSchema, createHost, PermissionError, type ExtensionManifest } from "@/lib/extensions/sdk";
 import { APPS } from "@/lib/catalog/apps";
 import crypto from "node:crypto";
 import bs58 from "bs58";
@@ -72,11 +71,9 @@ describe("Sign-In With Solana", () => {
 });
 
 describe("extension SDK", () => {
-  it("built-in manifests are valid", () => {
-    for (const m of EXTENSIONS) expect(manifestSchema.safeParse(m).success, m.id).toBe(true);
-  });
   it("enforces declared permissions", async () => {
-    const m = EXTENSIONS.find((e) => e.id === "solanaos.network-monitor")!;
+    const m: ExtensionManifest = { id: "example.network-monitor", name: "Network Monitor", version: "1.0.0", author: "Example", description: "Live network status.", category: "Network", icon: "Activity", color: "#a3e635", permissions: ["network:read"], widget: { size: "sm" } };
+    expect(manifestSchema.safeParse(m).success).toBe(true);
     const host = createHost(m, {
       fetchJson: async () => ({ ok: true }),
       getConnectedWallet: () => null,

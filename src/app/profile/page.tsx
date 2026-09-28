@@ -7,14 +7,12 @@ import { Address, Badge, Card, Monogram, Page, PageHeader, Section, Toggle } fro
 import { useActions, useStore, type UserState } from "@/lib/client/store";
 import { useSession } from "@/lib/client/session";
 import { APPS } from "@/lib/catalog/apps";
-import { getExtension } from "@/lib/extensions/catalog";
 
 const VIS: { key: keyof UserState["profile"]["visibility"]; label: string }[] = [
   { key: "wallet", label: "Connected wallet" },
   { key: "favorites", label: "Favorite apps" },
   { key: "followed", label: "Followed wallets" },
   { key: "watchlist", label: "Watchlist" },
-  { key: "extensions", label: "Installed extensions" },
   { key: "activity", label: "Public on-chain activity" },
 ];
 
@@ -45,7 +43,6 @@ export default function ProfilePage() {
             <div className="mt-4 flex flex-wrap gap-2 text-[12px]">
               <Badge>{st.followed.length} followed wallets</Badge>
               <Badge>{st.watchlist.length} on watchlist</Badge>
-              <Badge>{st.installed.length} extensions</Badge>
             </div>
           </Card>
           {p.visibility.favorites && (
@@ -59,20 +56,6 @@ export default function ProfilePage() {
               ) : (
                 <p className="text-[13px] text-muted">No favorites yet. Tap ♥ on any app.</p>
               )}
-            </Section>
-          )}
-          {p.visibility.extensions && (
-            <Section title="Installed extensions">
-              <div className="flex flex-wrap gap-2">
-                {st.installed.map((i) => {
-                  const e = getExtension(i.id);
-                  return e ? (
-                    <Link key={i.id} href={`/extensions/${i.id}`} className="chip">
-                      {e.name}
-                    </Link>
-                  ) : null;
-                })}
-              </div>
             </Section>
           )}
           {p.visibility.followed && (

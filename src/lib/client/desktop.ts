@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /** True inside the Solana OS desktop app (it adds "SolanaOSDesktop/x.y.z" to its user agent). */
 export function isDesktopApp(): boolean {
@@ -31,6 +31,17 @@ interface DesktopBridge {
   extensions(): Promise<{ id: string; name: string; version: string }[] | null>;
   installExtension(id: string, name: string): Promise<{ ok: boolean; cancelled?: boolean; error?: string; name?: string }>;
   removeExtension(id: string): Promise<boolean>;
+  searchExtensions?(query: string): Promise<{ ok: boolean; error?: string; results: StoreExtension[] } | null>;
+}
+
+/** One Chrome Web Store search result, read by the desktop app. */
+export interface StoreExtension {
+  id: string;
+  name: string;
+  icon: string;
+  description: string;
+  rating: number | null;
+  users: string | null;
 }
 
 function bridge(): DesktopBridge | null {
@@ -67,8 +78,35 @@ export function useDesktopExtensions() {
       refresh();
     }
   };
+  const [results, setResults] = useState<StoreExtension[] | null>(null);
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const searchSeq = useRef(0);
+  const search = async (query: string) => {
+    const b = bridge();
+    if (!b?.searchExtensions) return;
+    const seq = ++searchSeq.current;
+    setSearching(true);
+    setSearchError(null);
+    try {
+      const r = await b.searchExtensions(query);
+      if (seq !== searchSeq.current) return;
+      setResults(r?.results ?? []);
+      if (r && !r.ok) setSearchError(r.error ?? "Search failed");
+      else if (r && !r.results.length) setSearchError(null);
+    } catch {
+      if (seq === searchSeq.current) setSearchError("Search failed");
+    } finally {
+      if (seq === searchSeq.current) setSearching(false);
+    }
+  };
   return {
     available: installed !== null,
+    canSearch: Boolean(installed !== null && bridge()?.searchExtensions),
+    results,
+    searching,
+    searchError,
+    search,
     installed: installed ?? new Set<string>(),
     busy,
     error,

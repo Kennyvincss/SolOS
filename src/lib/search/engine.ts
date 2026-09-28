@@ -2,7 +2,7 @@ import "server-only";
 import type { DataMeta, SearchHit, SearchKind, SearchResponse } from "../types";
 import { APPS } from "../catalog/apps";
 import { PAGES } from "../catalog/pages";
-import { EXTENSIONS } from "../extensions/catalog";
+import { BROWSER_EXTENSIONS } from "../extensions/browser";
 import { scoreDoc, normalize } from "./fuzzy";
 import { detectIntent } from "./intent";
 import { searchTokens } from "../services/tokens";
@@ -57,9 +57,9 @@ function staticHits(q: string): SearchHit[] {
     const s = scoreDoc(q, p.title, [p.description], p.keywords);
     if (s > 0.5) hits.push({ kind: "page", id: p.href, title: p.title, subtitle: p.description, href: p.href, score: s * 0.9, icon: p.icon });
   }
-  for (const e of EXTENSIONS) {
-    const s = scoreDoc(q, e.name, [e.description, e.category]);
-    if (s > 0.45) hits.push({ kind: "extension", id: e.id, title: e.name, subtitle: e.description, href: `/extensions/${e.id}`, color: e.color, score: s * 0.9, icon: e.icon });
+  for (const e of BROWSER_EXTENSIONS) {
+    const s = scoreDoc(q, e.name, [e.description, e.kind, "extension"]);
+    if (s > 0.45) hits.push({ kind: "extension", id: e.id, title: e.name, subtitle: e.description, href: "/extensions", color: e.color, score: s * 0.85, icon: "Puzzle" });
   }
   return hits;
 }

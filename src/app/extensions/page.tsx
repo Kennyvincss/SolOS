@@ -1,165 +1,186 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
-import { ArrowRight, Check, Code2, Download, ExternalLink, Loader2, PanelsTopLeft, Search, Trash2 } from "lucide-react";
-import { Badge, Card, Monogram, Page, PageHeader, Section, Tabs } from "@/components/ui";
-import { InstallControls } from "@/components/extensions/install-button";
-import { EXTENSIONS } from "@/lib/extensions/catalog";
-import { EXTENSION_CATEGORIES } from "@/lib/extensions/sdk";
-import { BROWSER_EXTENSIONS, CHROME_WEB_STORE_SOLANA_SEARCH, chromeWebStoreUrl } from "@/lib/extensions/browser";
-import { useAppShell, useDesktopExtensions } from "@/lib/client/desktop";
-import { useStore } from "@/lib/client/store";
+import { useEffect, useState } from "react";
+import { Check, Download, ExternalLink, Loader2, Search, Star, Trash2, Users, X } from "lucide-react";
+import { Badge, Card, Monogram, Page, PageHeader, Section } from "@/components/ui";
+import { BROWSER_EXTENSIONS, chromeWebStoreUrl } from "@/lib/extensions/browser";
+import { useAppShell, useDesktopExtensions, type StoreExtension } from "@/lib/client/desktop";
 import { appLogo } from "@/lib/catalog/apps";
 
-const RELEASES_URL = "https://github.com/Kennyvincss/SolOS/releases";
+const RELEASES_URL = "https://github.com/Kennyvincss/SolOS/releases/latest";
+const DEFAULT_QUERY = "solana";
 
-function BrowserExtensions() {
-  const shell = useAppShell();
-  const desktop = useDesktopExtensions();
+type Desktop = ReturnType<typeof useDesktopExtensions>;
 
-  const intro =
-    shell === "desktop"
-      ? "Real Chrome extensions. Install one and it appears next to the address bar and works on every site, exactly like in Chrome."
-      : shell === "mobile"
-        ? "Phones can't run browser extensions. In the Solana OS app, sites connect to your Phantom or Solflare app instead: pick it in any site's “Connect wallet” list."
-        : "Real Chrome extensions. Add them to Chrome, Brave or Edge from the Chrome Web Store, or get the Solana OS desktop app to install them here with one click.";
+interface CardData {
+  id: string;
+  name: string;
+  description: string;
+  icon?: string;
+  color?: string;
+  badge?: string;
+  rating?: number | null;
+  users?: string | null;
+}
 
+function ExtensionCard({ x, desktop, shell }: { x: CardData; desktop: Desktop; shell: "web" | "desktop" | "mobile" }) {
+  const installed = desktop.installed.has(x.id);
+  const busy = desktop.busy === x.id;
   return (
-    <Section
-      id="browser"
-      title="Browser extensions"
-      subtitle={intro}
-      action={
-        shell === "mobile" ? undefined : (
-          <a href={CHROME_WEB_STORE_SOLANA_SEARCH} target={shell === "desktop" ? undefined : "_blank"} rel="noopener noreferrer" className="btn btn-ghost btn-sm">
-            <Search size={14} /> Find more Solana extensions
+    <Card className="flex flex-col gap-3 p-4">
+      <div className="flex items-start gap-3">
+        <Monogram name={x.name} color={x.color ?? "#9945ff"} size={44} src={x.icon} />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="truncate text-[15px] font-semibold">{x.name}</span>
+            {x.badge && <Badge>{x.badge}</Badge>}
+          </div>
+          <div className="flex items-center gap-3 text-[12px] text-faint">
+            {x.rating ? (
+              <span className="flex items-center gap-1">
+                <Star size={11} className="fill-warn text-warn" /> {x.rating.toFixed(1)}
+              </span>
+            ) : null}
+            {x.users ? (
+              <span className="flex items-center gap-1">
+                <Users size={11} /> {x.users}
+              </span>
+            ) : null}
+            {!x.rating && !x.users && <span>Chrome Web Store</span>}
+          </div>
+        </div>
+      </div>
+      <p className="line-clamp-2 flex-1 text-[13px] leading-relaxed text-muted">{x.description || " "}</p>
+      <div className="flex items-center justify-end gap-2">
+        {desktop.available ? (
+          installed ? (
+            <>
+              <span className="mr-auto flex items-center gap-1 text-[12.5px] text-sol-green">
+                <Check size={14} /> Installed
+              </span>
+              <button onClick={() => desktop.remove(x.id)} disabled={busy} className="btn btn-ghost btn-sm" aria-label={`Remove ${x.name}`}>
+                {busy ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />} Remove
+              </button>
+            </>
+          ) : (
+            <button onClick={() => desktop.install(x.id, x.name)} disabled={busy} className="btn btn-primary btn-sm">
+              {busy ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} {busy ? "Installing…" : "Install"}
+            </button>
+          )
+        ) : shell === "mobile" ? null : (
+          <a href={chromeWebStoreUrl(x.id)} target="_blank" rel="noopener noreferrer" className="btn btn-soft btn-sm">
+            Chrome Web Store <ExternalLink size={12} />
           </a>
-        )
-      }
-    >
-      {shell === "web" && (
-        <a href={RELEASES_URL} target="_blank" rel="noopener noreferrer" className="btn btn-soft btn-sm mb-4">
-          <Download size={14} /> Get Solana OS for desktop
-        </a>
-      )}
-      {desktop.error && <p className="mb-3 rounded-xl border border-line px-3 py-2 text-[13px] text-down">{desktop.error}</p>}
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {BROWSER_EXTENSIONS.map((x) => {
-          const installed = desktop.installed.has(x.id);
-          const busy = desktop.busy === x.id;
-          return (
-            <Card key={x.id} className="flex flex-col gap-3 p-4">
-              <div className="flex items-start gap-3">
-                <Monogram name={x.name} color={x.color} size={44} src={x.app ? appLogo(x.app) : undefined} />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="truncate text-[15px] font-semibold">{x.name}</span>
-                    <Badge>{x.kind}</Badge>
-                  </div>
-                  <div className="text-[12px] text-faint">Chrome Web Store</div>
-                </div>
-              </div>
-              <p className="line-clamp-2 flex-1 text-[13px] leading-relaxed text-muted">{x.description}</p>
-              <div className="flex items-center justify-end gap-2">
-                {desktop.available ? (
-                  installed ? (
-                    <>
-                      <span className="mr-auto flex items-center gap-1 text-[12.5px] text-sol-green">
-                        <Check size={14} /> Installed
-                      </span>
-                      <button onClick={() => desktop.remove(x.id)} disabled={busy} className="btn btn-ghost btn-sm" aria-label={`Remove ${x.name}`}>
-                        {busy ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />} Remove
-                      </button>
-                    </>
-                  ) : (
-                    <button onClick={() => desktop.install(x.id, x.name)} disabled={busy} className="btn btn-primary btn-sm">
-                      {busy ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} {busy ? "Installing…" : "Install"}
-                    </button>
-                  )
-                ) : shell === "mobile" ? null : (
-                  <a href={chromeWebStoreUrl(x.id)} target="_blank" rel="noopener noreferrer" className="btn btn-soft btn-sm">
-                    Chrome Web Store <ExternalLink size={12} />
-                  </a>
-                )}
-              </div>
-            </Card>
-          );
-        })}
+        )}
       </div>
-    </Section>
+    </Card>
   );
 }
 
-function SolanaOSTools() {
-  const [cat, setCat] = useState<string>("All");
-  const installed = useStore((s) => s.installed);
-  const list = EXTENSIONS.filter((e) => cat === "All" || e.category === cat);
-  const enabled = installed.filter((i) => i.enabled).length;
-  return (
-    <Section
-      id="tools"
-      title="Solana OS tools"
-      subtitle="Built-in tools that run inside Solana OS on any device. Install one and it shows up as a live panel in your Workspace."
-      action={
-        <Link href="/workspace" className="btn btn-soft btn-sm">
-          <PanelsTopLeft size={14} /> Open Workspace ({enabled}) <ArrowRight size={13} />
-        </Link>
-      }
-    >
-      <Tabs value={cat} onChange={setCat} options={[{ value: "All", label: "All" }, ...EXTENSION_CATEGORIES.map((c) => ({ value: c, label: c }))]} className="mb-4" />
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {list.map((e) => (
-          <Link key={e.id} href={`/extensions/${e.id}`} className="card card-hover flex flex-col gap-3 p-4">
-            <div className="flex items-start gap-3">
-              <Monogram name={e.name} color={e.color} size={44} />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="truncate text-[15px] font-semibold">{e.name}</span>
-                  {e.verified && <Badge tone="green">Verified</Badge>}
-                </div>
-                <div className="text-[12px] text-faint">
-                  {e.author} · {e.category}
-                </div>
-              </div>
-            </div>
-            <p className="line-clamp-2 flex-1 text-[13px] leading-relaxed text-muted">{e.description}</p>
-            {e.requires && <p className="text-[11.5px] text-warn">Needs: {e.requires}</p>}
-            <div className="flex items-center justify-between">
-              <span className="text-[11.5px] text-faint">{e.permissions.length} permissions</span>
-              <InstallControls ext={e} compact />
-            </div>
-          </Link>
-        ))}
-      </div>
-    </Section>
-  );
-}
+const featured: CardData[] = BROWSER_EXTENSIONS.map((x) => ({
+  id: x.id,
+  name: x.name,
+  description: x.description,
+  color: x.color,
+  badge: x.kind,
+  icon: x.app ? appLogo(x.app) : `/api/extensions/${x.id}/icon`,
+}));
+
+const fromStore = (r: StoreExtension): CardData => ({ id: r.id, name: r.name, description: r.description, icon: r.icon || `/api/extensions/${r.id}/icon`, rating: r.rating, users: r.users });
 
 export default function ExtensionsPage() {
-  const submissions = useStore((s) => s.submissions.filter((x) => x.type === "extension"));
+  const shell = useAppShell();
+  const desktop = useDesktopExtensions();
+  const [input, setInput] = useState("");
+  const [query, setQuery] = useState(DEFAULT_QUERY);
+
+  // In the desktop app, list every Solana extension from the Chrome Web Store (and search any).
+  const { canSearch, search } = desktop;
+  useEffect(() => {
+    if (canSearch) search(query);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canSearch, query]);
+
+  const featuredIds = new Set(featured.map((f) => f.id));
+  const storeResults = (desktop.results ?? []).map(fromStore);
+  // Use the store's own icon for featured wallets when the search returned it.
+  const storeIcon = new Map(storeResults.filter((r) => r.icon && !r.icon.startsWith("/api/")).map((r) => [r.id, r.icon]));
+  const featuredShown = featured.map((f) => (storeIcon.has(f.id) ? { ...f, icon: storeIcon.get(f.id) } : f));
+  const isDefault = query === DEFAULT_QUERY;
+  // The default view shows featured wallets first, then the rest of the store's Solana extensions.
+  const listed = isDefault ? storeResults.filter((r) => !featuredIds.has(r.id)) : storeResults;
+
   return (
     <Page wide>
       <PageHeader
         title="Extensions"
-        subtitle="Wallets and tools for Solana: real browser extensions for the Solana OS desktop browser, and Solana OS tools that live in your Workspace."
-        actions={
-          <Link href="/developers#extensions" className="btn btn-soft btn-sm">
-            <Code2 size={14} /> Build an extension
-          </Link>
+        subtitle={
+          shell === "mobile"
+            ? "Phones can't run browser extensions. In the Solana OS app, sites connect to your Phantom or Solflare app instead: pick it in any site's “Connect wallet” list."
+            : shell === "desktop"
+              ? "Every Solana wallet and extension from the Chrome Web Store. Install one and it appears next to the address bar and works on every site, just like in Chrome."
+              : "Solana wallets and browser extensions. Get the Solana OS desktop app to search the whole Chrome Web Store and install any extension with one click."
         }
       />
-      <BrowserExtensions />
-      <SolanaOSTools />
-      {submissions.length > 0 && (
-        <Section title="Your submissions" subtitle="Pending review">
-          <Card className="divide-y divide-line p-2">
-            {submissions.map((s) => (
-              <div key={s.id} className="flex items-center justify-between px-3 py-2.5 text-[13.5px]">
-                {s.name} <Badge tone="warn">Pending review</Badge>
-              </div>
+
+      {shell !== "mobile" && (
+        <form
+          className="mb-6 flex max-w-2xl items-center gap-2 rounded-2xl border border-line bg-surface px-4 py-2.5 focus-within:border-sol-green/50"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const q = input.trim();
+            if (!q) return setQuery(DEFAULT_QUERY);
+            if (desktop.canSearch) setQuery(q);
+            else window.open(`https://chromewebstore.google.com/search/${encodeURIComponent(q)}`, "_blank", "noopener");
+          }}
+        >
+          <Search size={17} className="text-muted" />
+          <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Search all extensions (e.g. wallet, trading, Jupiter, sniper, NFT)" className="min-w-0 flex-1 bg-transparent text-[14.5px] outline-none placeholder:text-faint" aria-label="Search extensions" />
+          {input && (
+            <button type="button" onClick={() => (setInput(""), setQuery(DEFAULT_QUERY))} className="text-muted hover:text-text" aria-label="Clear search">
+              <X size={16} />
+            </button>
+          )}
+          <button type="submit" className="btn btn-primary btn-sm">
+            Search
+          </button>
+        </form>
+      )}
+
+      {shell === "web" && (
+        <a href={RELEASES_URL} target="_blank" rel="noopener noreferrer" className="btn btn-soft btn-sm mb-6">
+          <Download size={14} /> Get Solana OS for desktop
+        </a>
+      )}
+      {desktop.error && <p className="mb-4 rounded-xl border border-line px-3 py-2 text-[13px] text-down">{desktop.error}</p>}
+
+      {isDefault && (
+        <Section title="Popular Solana wallets">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {featuredShown.map((x) => (
+              <ExtensionCard key={x.id} x={x} desktop={desktop} shell={shell} />
             ))}
-          </Card>
+          </div>
+        </Section>
+      )}
+
+      {desktop.canSearch && (
+        <Section title={isDefault ? "All Solana extensions" : `Results for “${query}”`} subtitle="Live from the Chrome Web Store">
+          {desktop.searching && !desktop.results ? (
+            <p className="flex items-center gap-2 text-[13.5px] text-muted">
+              <Loader2 size={15} className="animate-spin" /> Searching the Chrome Web Store…
+            </p>
+          ) : listed.length ? (
+            <div className={desktop.searching ? "opacity-60" : ""}>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {listed.map((x) => (
+                  <ExtensionCard key={x.id} x={x} desktop={desktop} shell={shell} />
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="text-[13.5px] text-muted">{desktop.searchError ?? (desktop.searching ? "Searching…" : "No extensions found. Try another search.")}</p>
+          )}
         </Section>
       )}
     </Page>
