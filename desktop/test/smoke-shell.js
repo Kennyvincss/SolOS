@@ -62,8 +62,9 @@ app.whenReady().then(async () => {
 
   // Ctrl+W from inside the page closes the tab (then the window, if it was the last).
   await key(shell, "T", ["control"]);
-  const pageWc = win.contentView.children.at(-1)?.webContents;
   await wait(800);
+  const pageWc = require("../src/window").shellFor(win.webContents)?.activeTab?.view.webContents;
+  if (!pageWc) return fail("no active tab");
   await key(pageWc, "W", ["control"]);
   results.afterCtrlWInPage = await tabCount(shell);
 
@@ -78,7 +79,7 @@ app.whenReady().then(async () => {
   results.menu = menuLabels;
 
   // Bridge: present on the home site, absent elsewhere; bad IDs refused.
-  const tab = win.contentView.children.at(-1).webContents;
+  const tab = require("../src/window").shellFor(win.webContents).activeTab.view.webContents;
   await tab.loadURL(process.env.SOLANA_OS_URL);
   results.bridgeOnHome = await tab.executeJavaScript("typeof window.solanaOSDesktop");
   results.extensionsList = await tab.executeJavaScript("window.solanaOSDesktop.extensions()");
@@ -87,7 +88,9 @@ app.whenReady().then(async () => {
   await tab.loadURL(OTHER);
   results.bridgeOnOther = await tab.executeJavaScript("typeof window.solanaOSDesktop");
 
-  fs.writeFileSync(process.env.SMOKE_OUT || path.join(__dirname, "..", "smoke-shell.png"), (await shell.capturePage()).toPNG());
+  try {
+    fs.writeFileSync(process.env.SMOKE_OUT || path.join(__dirname, "..", "smoke-shell.png"), (await shell.capturePage()).toPNG());
+  } catch {}
 
   const ok =
     results.afterCtrlT === 3 &&

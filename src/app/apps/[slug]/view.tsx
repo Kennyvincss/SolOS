@@ -12,6 +12,7 @@ import { useSession } from "@/lib/client/session";
 import { useAppShell } from "@/lib/client/desktop";
 import type { AppMetrics, DataMeta } from "@/lib/types";
 import { fmtUsd, timeAgo } from "@/lib/format";
+import { BookmarkButton } from "@/components/library";
 
 function Reviews({ slug }: { slug: string }) {
   const reviews = useStore((s) => s.reviews[slug] ?? []);
@@ -124,6 +125,7 @@ export function AppDetail({ slug }: { slug: string }) {
             <button onClick={() => toggleFavorite(slug)} className={cn("btn btn-ghost", fav && "text-down")} aria-pressed={fav}>
               <Heart size={15} className={fav ? "fill-current" : ""} /> {fav ? "Favorited" : "Favorite"}
             </button>
+            <BookmarkButton title={app.name} className="h-10" />
             <button onClick={() => share(app.name)} className="btn btn-ghost" aria-label="Share">
               <Share2 size={15} /> Share
             </button>

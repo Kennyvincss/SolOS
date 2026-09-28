@@ -1,15 +1,17 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowUp, ChevronLeft, Info, Plus, Sparkles, Square } from "lucide-react";
 import { AssistantBubble, reduceEvent, type AssistantMsg } from "@/components/ai/message";
+import { ChatPanel, desktopPanelBridge, type PageContext } from "@/components/ai/chat-panel";
 import { streamChat, useAiContext } from "@/lib/client/ai";
 import type { AiAction } from "@/lib/ai/protocol";
 import { useSession } from "@/lib/client/session";
 import type { ChatTurn } from "@/lib/ai/protocol";
 import { cn } from "@/components/ui";
+import { useLibrary } from "@/lib/client/library";
 
 type Msg = { role: "user"; text: string } | AssistantMsg;
 
@@ -32,6 +34,7 @@ function Chat() {
   const router = useRouter();
   const session = useSession();
   const aiContext = useAiContext();
+  const library = useLibrary();
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -70,6 +73,7 @@ function Chat() {
       const assistant: AssistantMsg = { role: "assistant", text: "", tools: [], cards: [], sources: [], done: false };
       setMsgs((m) => [...m, { role: "user", text: q }, assistant]);
       setBusy(true);
+      library.record("ai", q).catch(() => {});
       const ctrl = new AbortController();
       abortRef.current = ctrl;
       let navigate: AiAction | null = null;
@@ -111,7 +115,7 @@ function Chat() {
       const go = navigate as AiAction | null;
       if (go && !ctrl.signal.aborted) setTimeout(() => router.push(go.href), 1200);
     },
-    [busy, msgs, session.address, aiContext, router],
+    [busy, msgs, session.address, aiContext, router, library],
   );
 
   // ?q= starts a conversation (from search, command bar, other pages).
@@ -243,10 +247,48 @@ function Chat() {
   );
 }
 
+/** The STRATA AI side panel inside the desktop browser (/ai?panel=1). */
+function DesktopPanel() {
+  const bridge = useMemo(() => desktopPanelBridge(), []);
+  const getContext = useCallback(async () => (bridge ? ((await bridge.pageContext()) as PageContext | null) : null), [bridge]);
+  const subscribe = useCallback(
+    (onPage: () => void, onPrompt: (p: string) => void) => {
+      if (!bridge) return () => {};
+      const a = bridge.onPageChanged(() => onPage());
+      const b = bridge.onPanelPrompt((p) => onPrompt(p.prompt));
+      return () => {
+        a();
+        b();
+      };
+    },
+    [bridge],
+  );
+  return (
+    <div className="h-[100dvh]">
+      <ChatPanel
+        variant="panel"
+        getContext={getContext}
+        subscribe={subscribe}
+        openLink={(url) => {
+          if (!bridge) return false;
+          bridge.panel("openUrl", url);
+          return true;
+        }}
+        onClose={bridge ? () => bridge.panel("close") : undefined}
+      />
+    </div>
+  );
+}
+
+function AIRoute() {
+  const params = useSearchParams();
+  return params.get("panel") === "1" ? <DesktopPanel /> : <Chat />;
+}
+
 export default function AIPage() {
   return (
     <Suspense>
-      <Chat />
+      <AIRoute />
     </Suspense>
   );
 }

@@ -12,8 +12,9 @@ import { cn } from "../ui";
 import { Wordmark, LogoMark } from "./logo";
 import { shortAddr } from "@/lib/format";
 import { openCommandBar } from "./command-bar";
+import { openAiPanel } from "../ai/side-panel";
 
-const SIDEBAR = ["/", "/search", "/discover", "/apps", "/extensions", "/ai", "/tokens", "/wallets", "/defi", "/rwa", "/payments", "/news", "/security", "/portfolio", "/notifications", "/settings"];
+const SIDEBAR = ["/", "/search", "/discover", "/apps", "/extensions", "/ai", "/tokens", "/wallets", "/defi", "/rwa", "/payments", "/news", "/security", "/portfolio", "/bookmarks", "/history", "/notifications", "/settings"];
 const LABEL: Record<string, string> = { "/ai": "AI" };
 
 function isActive(path: string, href: string) {
@@ -62,6 +63,13 @@ export function Sidebar() {
           <Command size={10} />K
         </kbd>
       </button>
+      <button onClick={() => openAiPanel()} className="mx-3 mb-2 flex items-center gap-2 rounded-xl border border-[color-mix(in_srgb,var(--green)_30%,var(--border))] bg-[color-mix(in_srgb,var(--green)_8%,transparent)] px-3 py-2 text-[13px] text-fg transition-colors hover:bg-[color-mix(in_srgb,var(--green)_14%,transparent)]">
+        <Sparkles size={14} className="text-sol-green" />
+        <span className="flex-1 text-left">Ask STRATA AI</span>
+        <kbd className="flex items-center gap-0.5 rounded-md border border-line px-1.5 text-[10.5px] text-faint">
+          <Command size={10} />J
+        </kbd>
+      </button>
       <nav className="no-scrollbar flex-1 overflow-y-auto px-3 py-1">
         {items.map((p) => {
           const active = isActive(path, p.href);
@@ -100,6 +108,9 @@ export function TopBar() {
       </Link>
       <button onClick={openCommandBar} className="flex h-9 flex-1 items-center gap-2 rounded-full border border-line bg-surface px-3 text-[13px] text-faint">
         <Search size={14} /> Search Solana…
+      </button>
+      <button onClick={() => openAiPanel()} className="grid h-9 w-9 place-items-center rounded-full text-sol-green" aria-label="Ask STRATA AI">
+        <Sparkles size={18} />
       </button>
       <Link href="/notifications" className="relative grid h-9 w-9 place-items-center rounded-full text-muted" aria-label="Notifications">
         <Bell size={18} />

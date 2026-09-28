@@ -7,6 +7,7 @@ import type { ActivityItem, AppEntry, AppMetrics, NewsItem, Portfolio, RiskRepor
 import { fmtNum, fmtUsd, shortAddr, timeAgo } from "@/lib/format";
 import { Badge, Change, Monogram, RISK_STYLE, RiskPill, cn } from "./ui";
 import { Donut, Meter } from "./charts";
+import { ReadLaterIcon } from "./library";
 
 /* ------------------------------------------------------------------ tokens */
 
@@ -168,16 +169,19 @@ export function ActivityList({ items, empty = "No recent transactions." }: { ite
 
 export function NewsRow({ n, compact }: { n: NewsItem; compact?: boolean }) {
   return (
-    <a href={n.url} target="_blank" rel="noopener noreferrer" className="group block rounded-xl py-3 transition-colors sm:px-2 sm:hover:bg-surface-2/50">
-      <div className="flex items-center gap-2 text-[11.5px] text-faint">
-        <span className="font-medium text-muted">{n.source}</span>
-        <span>·</span>
-        <span>{timeAgo(n.publishedAt)}</span>
-        <ExternalLink size={11} className="opacity-0 transition-opacity group-hover:opacity-100" />
-      </div>
-      <div className={cn("mt-1 font-medium leading-snug group-hover:text-fg", compact ? "line-clamp-2 text-[13.5px]" : "text-[15px]")}>{n.title}</div>
-      {!compact && n.summary && <div className="mt-1 line-clamp-2 text-[13px] leading-relaxed text-muted">{n.summary}</div>}
-    </a>
+    <div className="group relative">
+      <a href={n.url} target="_blank" rel="noopener noreferrer" className="block rounded-xl py-3 pr-9 transition-colors sm:px-2 sm:pr-10 sm:hover:bg-surface-2/50">
+        <div className="flex items-center gap-2 text-[11.5px] text-faint">
+          <span className="font-medium text-muted">{n.source}</span>
+          <span>·</span>
+          <span>{timeAgo(n.publishedAt)}</span>
+          <ExternalLink size={11} className="opacity-0 transition-opacity group-hover:opacity-100" />
+        </div>
+        <div className={cn("mt-1 font-medium leading-snug group-hover:text-fg", compact ? "line-clamp-2 text-[13.5px]" : "text-[15px]")}>{n.title}</div>
+        {!compact && n.summary && <div className="mt-1 line-clamp-2 text-[13px] leading-relaxed text-muted">{n.summary}</div>}
+      </a>
+      <ReadLaterIcon url={n.url} title={n.title} className="absolute right-1 top-3 opacity-0 group-hover:opacity-100 focus:opacity-100" />
+    </div>
   );
 }
 

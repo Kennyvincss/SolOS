@@ -368,3 +368,12 @@ body {
 .no-scrollbar {
   scrollbar-width: none;
 }
+
+/* The website's STRATA AI panel pushes the page aside on wide screens instead of covering it. */
+@media (min-width: 1280px) {
+  html.ai-panel-open main,
+  html.ai-panel-open body > div > header {
+    margin-right: 420px;
+    transition: margin-right 0.2s ease-out;
+  }
+}

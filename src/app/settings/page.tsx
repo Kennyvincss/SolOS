@@ -6,6 +6,7 @@ import { Card, Page, PageHeader, Section, Segmented, Toggle } from "@/components
 import { useActions, useStore, type NotificationCategory, DEFAULT_STATE } from "@/lib/client/store";
 import { useSession } from "@/lib/client/session";
 import { shortAddr } from "@/lib/format";
+import { DevicesSection } from "@/components/devices-section";
 
 const NOTIF: { key: NotificationCategory; label: string; hint: string }[] = [
   { key: "wallet", label: "Wallet activity", hint: "Followed wallets and large transactions" },
@@ -83,6 +84,10 @@ export default function SettingsPage() {
           ))}
         </Card>
         <p className="mt-2 text-[12px] text-faint">Alerts arrive while STRATA is open.</p>
+      </Section>
+
+      <Section title="Your devices" id="devices" subtitle="Send tabs between STRATA on your computer, laptop and phone: right-click a tab and choose “Send to your devices”.">
+        <DevicesSection />
       </Section>
 
       <Section title="Privacy">

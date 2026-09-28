@@ -13,6 +13,7 @@ import { useSession } from "@/lib/client/session";
 import { useStore } from "@/lib/client/store";
 import type { RiskReport } from "@/lib/types";
 import { shortAddr } from "@/lib/format";
+import { BookmarkButton } from "@/components/library";
 
 type AccountType = { type: "wallet" | "mint" | "program" | "other" | "missing"; name?: string; ownerName?: string; owner?: string; demo?: boolean };
 
@@ -51,6 +52,7 @@ export default function WalletPage({ params }: { params: Promise<{ address: stri
               <button onClick={() => setAlertOpen(true)} className="btn btn-ghost btn-sm">
                 <BellRing size={14} /> Set alert
               </button>
+              <BookmarkButton title={`Wallet ${shortAddr(address)}`} />
               <button onClick={() => share(`Wallet ${shortAddr(address)}`)} className="btn btn-ghost btn-sm" aria-label="Share">
                 <Share2 size={14} />
               </button>

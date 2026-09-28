@@ -9,6 +9,7 @@ import { useApi } from "@/lib/client/fetch";
 import { useActions, useStore } from "@/lib/client/store";
 import type { AppMetrics, DataMeta, NewsItem, Sourced, Token } from "@/lib/types";
 import { fmtUsd } from "@/lib/format";
+import { BookmarkButton } from "@/components/library";
 
 export function ProjectView({ slug }: { slug: string }) {
   const app = getApp(slug)!;
@@ -37,6 +38,7 @@ export function ProjectView({ slug }: { slug: string }) {
           <button onClick={() => toggleFollowEntity(`project:${slug}`)} className={cn("btn btn-sm", following ? "btn-soft" : "btn-primary")}>
             <Rss size={14} /> {following ? "Following" : "Follow"}
           </button>
+          <BookmarkButton title={app.name} />
           <Link href={`/apps/${slug}`} className="btn btn-ghost btn-sm">
             App page
           </Link>

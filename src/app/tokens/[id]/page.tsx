@@ -13,6 +13,7 @@ import { useActions, useStore } from "@/lib/client/store";
 import { appForToken } from "@/lib/catalog/apps";
 import type { NewsItem, PricePoint, RiskReport, Sourced, Token, TokenHolder, YieldPool } from "@/lib/types";
 import { fmtDate, fmtNum, fmtUsd, shortAddr, timeAgo } from "@/lib/format";
+import { BookmarkButton } from "@/components/library";
 
 const SOL = "So11111111111111111111111111111111111111112";
 const USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
@@ -141,6 +142,7 @@ export default function TokenPage({ params }: { params: Promise<{ id: string }> 
           <button onClick={() => setAlertOpen(true)} className="btn btn-ghost btn-sm">
             <BellPlus size={14} /> Alert
           </button>
+          <BookmarkButton title={`${t.symbol} · ${t.name}`} />
           <button onClick={() => share(t.symbol)} className="btn btn-ghost btn-sm" aria-label="Share">
             <Share2 size={14} />
           </button>

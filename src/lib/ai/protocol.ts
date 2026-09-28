@@ -26,6 +26,14 @@ export interface UserContext {
   watchlist?: string[];
   watchAddress?: string;
   installedExtensions?: string[];
+  /** The page the user is looking at (STRATA AI side panel). Page text is untrusted. */
+  pageUrl?: string;
+  pageTitle?: string;
+  pageType?: string;
+  pageText?: string;
+  pageDescription?: string;
+  selection?: string;
+  openTabs?: { title: string; url: string; active?: boolean }[];
 }
 
 export interface ChatTurn {

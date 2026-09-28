@@ -47,3 +47,40 @@ export async function writeSync(uid: string, scope: string, data: unknown): Prom
   await redis(["SET", key(uid, scope), JSON.stringify({ data, updatedAt })]);
   return updatedAt;
 }
+
+/* ------------------------------------------------------------ small JSON records (devices, inboxes, developer data) */
+
+export async function readJson<T>(key: string): Promise<T | null> {
+  const raw = await redis<string | null>(["GET", key]);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+}
+
+export async function writeJson(key: string, value: unknown, ttlSeconds?: number): Promise<void> {
+  await redis(ttlSeconds ? ["SET", key, JSON.stringify(value), "EX", ttlSeconds] : ["SET", key, JSON.stringify(value)]);
+}
+
+export async function deleteKey(key: string): Promise<void> {
+  await redis(["DEL", key]);
+}
+
+/** Read and delete in one step (so an inbox item is delivered once). */
+export async function takeJson<T>(key: string): Promise<T | null> {
+  const raw = await redis<string | null>(["GETDEL", key]);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+}
+
+export async function incrBy(key: string, by = 1, ttlSeconds?: number): Promise<number> {
+  const n = await redis<number>(["INCRBY", key, by]);
+  if (ttlSeconds && n === by) await redis(["EXPIRE", key, ttlSeconds]);
+  return n;
+}

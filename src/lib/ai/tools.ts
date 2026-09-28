@@ -120,7 +120,7 @@ function safeInternalPath(path: string): string | null {
   const p = path.trim();
   if (!p.startsWith("/") || p.startsWith("//") || /[\s<>"'\\]/.test(p)) return null;
   const root = "/" + (p.split(/[/?#]/)[1] ?? "");
-  const allowed = new Set(["/", "/search", "/discover", "/apps", "/extensions", "/ai", "/tokens", "/wallets", "/tx", "/defi", "/rwa", "/payments", "/news", "/security", "/portfolio", "/feed", "/notifications", "/profile", "/settings", "/login", "/go"]);
+  const allowed = new Set(["/", "/search", "/discover", "/apps", "/extensions", "/ai", "/tokens", "/wallets", "/tx", "/defi", "/rwa", "/payments", "/news", "/security", "/portfolio", "/feed", "/notifications", "/profile", "/settings", "/login", "/go", "/bookmarks", "/history", "/reading-list", "/developers", "/open"]);
   return allowed.has(root) ? p : null;
 }
 

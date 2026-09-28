@@ -14,6 +14,7 @@ import { streamChat, useAiContext } from "@/lib/client/ai";
 import { useSession } from "@/lib/client/session";
 import { useStore } from "@/lib/client/store";
 import type { SearchHit, SearchResponse } from "@/lib/types";
+import { inDesktopApp, useLibrary } from "@/lib/client/library";
 
 const AI_INTENTS = new Set(["question", "trending_tokens", "whales", "today", "compare", "yield", "new_apps", "portfolio"]);
 
@@ -85,6 +86,11 @@ function HitRow({ h }: { h: SearchHit }) {
 function Results() {
   const params = useSearchParams();
   const q = params.get("q") ?? "";
+  const library = useLibrary();
+  useEffect(() => {
+    // The desktop address bar records its own searches.
+    if (q.trim() && !inDesktopApp()) library.record("search", q.trim(), window.location.href).catch(() => {});
+  }, [q, library]);
   const router = useRouter();
   // A web address typed into search goes to the site (after a safety check).
   useEffect(() => {

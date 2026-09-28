@@ -6,6 +6,7 @@ import { detectIntent } from "../search/intent";
 import { extractSolanaId } from "../solana/address";
 import { fmtPct, fmtUsd, shortAddr } from "../format";
 import { APP_CATEGORIES } from "../types";
+import { idsInUrl } from "../library/classify";
 
 /**
  * Offline STRATA AI: used when no language model is configured
@@ -17,7 +18,10 @@ type Plan = { tool: ToolName; input: Record<string, unknown> }[];
 
 async function plan(q: string, ctx: ToolContext): Promise<Plan> {
   const lower = q.toLowerCase();
-  const id = extractSolanaId(q);
+  // "this token / wallet / transaction / page": use the page the user is viewing.
+  const aboutPage = /\b(this|that|the page|current page|here)\b/i.test(q) && ctx.user?.pageUrl;
+  const pageIds = aboutPage ? idsInUrl(ctx.user!.pageUrl!) : {};
+  const id = extractSolanaId(q) ?? (pageIds.signature ? { type: "signature" as const, value: pageIds.signature } : pageIds.address ? { type: "address" as const, value: pageIds.address } : null);
   const intent = detectIntent(q);
   if (id?.type === "signature") return [{ tool: "explain_transaction", input: { signature: id.value } }];
   if (id?.type === "address") {
@@ -144,6 +148,15 @@ function write(tool: ToolName, out: ToolOutput): string {
 export async function* offlineChat(history: ChatTurn[], ctx: ToolContext, reason: "no-key" | "busy" = "no-key"): AsyncGenerator<AiEvent> {
   yield { type: "meta", engine: "offline" };
   const q = [...history].reverse().find((m) => m.role === "user")?.content ?? "";
+  // Summaries need the language model; without it, show what the page says.
+  const u = ctx.user;
+  if (/\b(summari[sz]e|tl;?dr|what does this page)\b/i.test(q) && u?.pageText && !idsInUrl(u.pageUrl ?? "").signature) {
+    const excerpt = u.pageText.replace(/\s+\n/g, "\n").split("\n").map((l) => l.trim()).filter((l) => l.length > 40).slice(0, 6);
+    const text = `**${u.pageTitle || "This page"}**\n\n${u.pageDescription ? `${u.pageDescription}\n\n` : ""}${excerpt.map((l) => `- ${l.slice(0, 220)}`).join("\n")}${reason === "busy" ? "\n\n> STRATA AI is busy, so this is the page's own text. Ask again in a minute for a real summary." : ""}`;
+    for (let i = 0; i < text.length; i += 24) yield { type: "text", delta: text.slice(i, i + 24) };
+    yield { type: "done" };
+    return;
+  }
   const steps = await plan(q, ctx);
   const intent = detectIntent(q);
 

@@ -7,6 +7,10 @@ import { MobileNav, Sidebar, TopBar } from "@/components/shell/nav";
 import { CommandBar } from "@/components/shell/command-bar";
 import { WalletModal } from "@/components/shell/wallet-modal";
 import { ThemeSync, Watchers } from "@/components/shell/watchers";
+import { AiSidePanel } from "@/components/ai/side-panel";
+import { HistoryRecorder } from "@/components/shell/history-recorder";
+import { DeviceSync } from "@/components/shell/device-sync";
+import { Suspense } from "react";
 
 export const metadata: Metadata = {
   title: { default: "STRATA — The browser for the onchain world.", template: "%s · STRATA" },
@@ -43,6 +47,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <main className="min-h-[calc(100dvh-3.5rem)] md:min-h-dvh">{children}</main>
           </div>
           <MobileNav />
+          <AiSidePanel />
+          <DeviceSync />
+          <Suspense>
+            <HistoryRecorder />
+          </Suspense>
           <CommandBar />
           <WalletModal />
         </SessionProvider>

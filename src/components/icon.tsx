@@ -1,11 +1,11 @@
 import {
-  Activity, BellRing, Bell, Building2, Code2, Coins, Compass, CreditCard, Eye, Globe, Home, Images, Landmark, LayoutGrid,
+  Activity, BellRing, Bell, Bookmark, BookOpen, Building2, Code2, History, Coins, Compass, CreditCard, Eye, Globe, Home, Images, Landmark, LayoutGrid,
   MessagesSquare, Newspaper, PanelsTopLeft, PieChart, Puzzle, ReceiptText, Rss, ScanSearch, Search, Settings, ShieldCheck,
   Sparkles, Target, TrendingUp, UserRound, Wallet, Waves, type LucideIcon,
 } from "lucide-react";
 
 const ICONS: Record<string, LucideIcon> = {
-  Activity, BellRing, Bell, Building2, Code2, Coins, Compass, CreditCard, Eye, Globe, Home, Images, Landmark, LayoutGrid,
+  Activity, BellRing, Bell, Bookmark, BookOpen, Building2, Code2, History, Coins, Compass, CreditCard, Eye, Globe, Home, Images, Landmark, LayoutGrid,
   MessagesSquare, Newspaper, PanelsTopLeft, PieChart, Puzzle, ReceiptText, Rss, ScanSearch, Search, Settings, ShieldCheck,
   Sparkles, Target, TrendingUp, UserRound, Wallet, Waves,
 };

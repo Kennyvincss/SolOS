@@ -9,20 +9,24 @@ import { readSync, syncConfigured, writeSync } from "@/lib/sync-store";
  * share them). Passwords never go here.
  */
 const SCOPES = new Set(["web", "desktop"]);
-const MAX_BYTES = 512 * 1024;
+const MAX_BYTES = 1024 * 1024;
 
-async function context(params: Promise<{ scope: string }>) {
-  const { scope } = await params;
-  if (!SCOPES.has(scope)) return { error: fail("Unknown sync scope", 404) };
+async function context(params: Promise<{ scope: string }>, req: Request) {
+  const { scope: base } = await params;
+  if (!SCOPES.has(base)) return { error: fail("Unknown sync scope", 404) };
+  // Desktop profiles other than the main one sync separately (?profile=trading).
+  const profile = new URL(req.url).searchParams.get("profile");
+  if (profile !== null && (base !== "desktop" || !/^[a-z0-9-]{1,40}$/.test(profile))) return { error: fail("Unknown profile", 400) };
+  const scope = profile ? `${base}:${profile}` : base;
   if (!syncConfigured()) return { error: fail("Sync isn't set up on this server (add the Upstash Redis integration in Vercel).", 501) };
   const session = await getSession();
   if (!session) return { error: fail("Sign in to sync", 401) };
   return { scope, uid: session.uid };
 }
 
-export async function GET(_req: Request, { params }: { params: Promise<{ scope: string }> }) {
+export async function GET(req: Request, { params }: { params: Promise<{ scope: string }> }) {
   return handle(async () => {
-    const c = await context(params);
+    const c = await context(params, req);
     if ("error" in c) return c.error!;
     const stored = await readSync(c.uid, c.scope);
     return ok({ data: stored?.data ?? null, updatedAt: stored?.updatedAt ?? 0 });
@@ -31,7 +35,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ scope: 
 
 export async function PUT(req: Request, { params }: { params: Promise<{ scope: string }> }) {
   return handle(async () => {
-    const c = await context(params);
+    const c = await context(params, req);
     if ("error" in c) return c.error!;
     const text = await req.text();
     if (text.length > MAX_BYTES) return fail("Sync data is too large", 413);

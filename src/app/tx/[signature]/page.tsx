@@ -9,6 +9,7 @@ import { useSession } from "@/lib/client/session";
 import { renderHeadline } from "@/lib/solana/explain";
 import type { Sourced, TxExplanation } from "@/lib/types";
 import { fmtDate, fmtNum, shortAddr, timeAgo } from "@/lib/format";
+import { BookmarkButton } from "@/components/library";
 
 export default function TxPage({ params }: { params: Promise<{ signature: string }> }) {
   const { signature } = use(params);
@@ -22,6 +23,7 @@ export default function TxPage({ params }: { params: Promise<{ signature: string
       <div className="mb-2 text-[13px] text-muted">Transaction</div>
       <div className="mb-6 flex flex-wrap items-center gap-2">
         <Address value={signature} chars={12} className="text-[13px]" />
+        <BookmarkButton title={`Transaction ${signature.slice(0, 8)}…`} className="mr-2" />
         <a href={`https://solscan.io/tx/${signature}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[12px] text-faint hover:text-fg">
           Solscan <ExternalLink size={11} />
         </a>

@@ -110,6 +110,40 @@ export interface UserState {
   submissions: Submission[];
   recentSearches: string[];
   watchAddress?: string;
+  /** Browser-style bookmarks, folders and reading list on the website (the desktop app keeps its own per profile). Records keep tombstones so account sync merges cleanly. */
+  webLibrary?: WebLibrary;
+}
+
+export interface WebLibraryBookmark {
+  id: string;
+  title: string;
+  type: string;
+  folderId: string | null;
+  favorite: boolean;
+  order: number;
+  createdAt: number;
+  updatedAt: number;
+  deleted?: boolean;
+}
+export interface WebLibraryFolder {
+  name: string;
+  order: number;
+  updatedAt: number;
+  deleted?: boolean;
+}
+export interface WebLibraryReading {
+  id: string;
+  title: string;
+  type?: string;
+  read: boolean;
+  addedAt: number;
+  updatedAt: number;
+  deleted?: boolean;
+}
+export interface WebLibrary {
+  bookmarks: Record<string, WebLibraryBookmark>;
+  folders: Record<string, WebLibraryFolder>;
+  readingList: Record<string, WebLibraryReading>;
 }
 
 export const DEFAULT_STATE: UserState = {
@@ -202,6 +236,12 @@ class Store {
 
 const store = new Store(localStorageAdapter);
 const StoreCtx = createContext(store);
+
+/** Direct access to the store (read the latest state, apply an update) for non-React helpers. */
+export function useStoreApi() {
+  const s = useContext(StoreCtx);
+  return useMemo(() => ({ get: s.get, set: s.set, subscribe: s.subscribe }), [s]);
+}
 
 /**
  * Account sync for signed-in users: on sign-in the newer of the local and

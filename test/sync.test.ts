@@ -49,7 +49,7 @@ describe("account sync API", () => {
     session = { uid: "email:abc" };
     expect((await GET(new Request("http://x"), params("passwords"))).status).toBe(404);
     expect((await PUT(new Request("http://x", { method: "PUT", body: "[1,2]" }), params("web"))).status).toBe(400);
-    expect((await PUT(new Request("http://x", { method: "PUT", body: JSON.stringify({ data: { big: "x".repeat(600_000) } }) }), params("web"))).status).toBe(413);
+    expect((await PUT(new Request("http://x", { method: "PUT", body: JSON.stringify({ data: { big: "x".repeat(1_100_000) } }) }), params("web"))).status).toBe(413);
   });
 
   it("reports 501 when sync storage isn't configured", async () => {

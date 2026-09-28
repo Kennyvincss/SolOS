@@ -17,6 +17,13 @@ const Body = z.object({
       watchlist: z.array(z.string().max(64)).max(25).optional(),
       watchAddress: z.string().max(64).optional(),
       installedExtensions: z.array(z.string().max(80)).max(30).optional(),
+      pageUrl: z.string().max(2000).optional(),
+      pageTitle: z.string().max(300).optional(),
+      pageType: z.string().max(30).optional(),
+      pageText: z.string().max(6000).optional(),
+      pageDescription: z.string().max(400).optional(),
+      selection: z.string().max(2000).optional(),
+      openTabs: z.array(z.object({ title: z.string().max(300), url: z.string().max(2000), active: z.boolean().optional() })).max(20).optional(),
     })
     .optional(),
 });
