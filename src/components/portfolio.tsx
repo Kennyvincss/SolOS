@@ -145,7 +145,7 @@ export function PortfolioView({ address, own }: { address: string; own?: boolean
           {pnl.data
             ? `Trading PnL from this wallet's ${pnl.data.trades} swaps against SOL or stablecoins (${pnl.data.txsAnalyzed} transactions checked${pnl.data.complete ? "" : ", most recent first"}): realized on sales plus unrealized on what's still held, at average entry prices. Transfers and airdrops aren't counted as trades.`
             : pnl.error
-              ? "PnL couldn't be calculated right now (the Solana RPC didn't respond in time)."
+              ? "PnL couldn't be calculated right now: the Solana RPC didn't return this wallet's transactions. Try again in a minute."
               : "Calculating PnL from this wallet's trades…"}
         </p>
         {data.meta.note && data.meta.mode === "live" && <p className="mt-1 text-[12px] text-warn">{data.meta.note}</p>}

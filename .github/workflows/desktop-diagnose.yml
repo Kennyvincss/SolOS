@@ -11,7 +11,7 @@ on:
         required: false
         default: "bfnaelmomeimhlpmgjnjophhpkkoljpa,bhhhlbepdkbapadjdnnojkbgioiodbic,aflkmfhebedbjioipglgcbcmnbpgliof"
       checks:
-        description: "Which checks to run: extensions, phantom, site (comma-separated)"
+        description: "Which checks to run: extensions, phantom, site, jupiter, pnl (comma-separated)"
         required: false
         default: "extensions,phantom,site"
 
@@ -41,6 +41,20 @@ jobs:
             for i in 1 2; do
               curl -s -o /dev/null -w "[site] %{http_code} ttfb=%{time_starttransfer}s total=%{time_total}s size=%{size_download} $u\n" "https://solos-rho.vercel.app$u"
             done
+          done
+      - name: PnL
+        if: contains(inputs.checks, 'pnl')
+        working-directory: .
+        run: |
+          RPC=https://api.mainnet-beta.solana.com
+          echo "[pnl] batch request to the public RPC:"
+          curl -s -m 20 -w " http=%{http_code}\n" $RPC -H 'content-type: application/json' -d '[{"jsonrpc":"2.0","id":1,"method":"getSlot"},{"jsonrpc":"2.0","id":2,"method":"getSlot"}]' | head -c 400; echo
+          # A wallet that trades: the signer of a recent Jupiter swap.
+          SIG=$(curl -s -m 20 $RPC -H 'content-type: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"getSignaturesForAddress","params":["JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4",{"limit":20}]}' | jq -r '[.result[] | select(.err == null)][5].signature')
+          W=$(curl -s -m 20 $RPC -H 'content-type: application/json' -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"getTransaction\",\"params\":[\"$SIG\",{\"encoding\":\"json\",\"maxSupportedTransactionVersion\":0}]}" | jq -r '.result.transaction.message.accountKeys[0]')
+          for w in $W; do
+            echo "[pnl] wallet $w"
+            curl -s -m 70 -w "\n[pnl] http=%{http_code} total=%{time_total}s\n" "https://solos-rho.vercel.app/api/wallets/$w/pnl" | head -c 1200; echo
           done
       - name: Jupiter links
         if: contains(inputs.checks, 'jupiter')
