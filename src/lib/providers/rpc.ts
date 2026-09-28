@@ -38,6 +38,28 @@ export async function rpc<T>(method: string, params: unknown[] = [], timeoutMs =
   }
 }
 
+/** Several calls in one HTTP request (JSON-RPC batch). Failed calls come back as null. */
+export async function rpcBatch<T>(calls: { method: string; params: unknown[] }[], timeoutMs = 20000): Promise<(T | null)[]> {
+  if (!calls.length) return [];
+  const send = async (url: string) => {
+    const body = calls.map((c) => ({ jsonrpc: "2.0", id: ++rpcId, method: c.method, params: c.params }));
+    const res = await fetchJson<{ id: number; result?: T; error?: unknown }[]>(url, { body, timeoutMs });
+    const byId = new Map((Array.isArray(res) ? res : []).map((r) => [r.id, r]));
+    return body.map((b) => (byId.get(b.id)?.result ?? null) as T | null);
+  };
+  const custom = config.rpcUrl !== PUBLIC_RPC;
+  if (!custom || Date.now() < customRejectedUntil) return send(PUBLIC_RPC);
+  try {
+    return await send(config.rpcUrl);
+  } catch (e) {
+    if (e instanceof UpstreamError && e.status !== undefined && REJECTED_STATUSES.has(e.status)) {
+      customRejectedUntil = Date.now() + 5 * 60 * 1000;
+      return send(PUBLIC_RPC);
+    }
+    throw e;
+  }
+}
+
 /** True while the configured RPC is being skipped because it rejected our key. */
 export function customRpcRejected(): boolean {
   return Date.now() < customRejectedUntil;

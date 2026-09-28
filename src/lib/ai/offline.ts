@@ -31,6 +31,19 @@ async function plan(q: string, ctx: ToolContext): Promise<Plan> {
       { tool: "get_wallet_activity", input: { address: id.value } },
     ];
   }
+  const install = q.match(/\b(?:install|add|get|download)\s+(?:the\s+)?(.+?)(?:\s+(?:extension|wallet|add-?on))?\s*[?.!]*$/i);
+  if (install && /\b(extension|wallet|phantom|solflare|backpack|install)\b/i.test(q)) return [{ tool: "install_extension", input: { name: install[1].replace(/\b(extension|wallet)\b/gi, "").trim() || install[1] } }];
+  if (/\b(wallets?|address(es)?)\s+(i'?m|i am)\s+following\b|\bfollowed wallets?\b/i.test(q)) {
+    const f = ctx.user?.followed ?? [];
+    if (!f.length) return [{ tool: "open_page", input: { path: "/wallets", label: "Explore Wallets" } }];
+    return f.slice(0, 3).flatMap((w) => [{ tool: "get_wallet_portfolio" as ToolName, input: { address: w.address } }]);
+  }
+  const open = q.match(/\b(?:open|go to|take me to|show me)\s+(?:the\s+)?(extensions|portfolio|security|news|defi|apps|app store|settings|profile|feed|notifications|wallets|payments|rwa|developers)\b/i);
+  if (open) {
+    const map: Record<string, string> = { "app store": "/apps", apps: "/apps", wallets: "/wallets" };
+    const k = open[1].toLowerCase();
+    return [{ tool: "open_page", input: { path: map[k] ?? `/${k}`, label: open[1] } }];
+  }
   const domain = q.match(/\b([a-z0-9-]+\.)+[a-z]{2,}\b/i);
   if (domain && /\b(safe|scam|legit|check|phish|risk)\b/.test(lower)) return [{ tool: "check_security", input: { target: domain[0] } }];
 
@@ -116,6 +129,10 @@ function write(tool: ToolName, out: ToolOutput): string {
       return `That address is a **${r.kind}**. [Open it](${r.link}).`;
     case "get_network_status":
       return `**Network**: slot ${Number(r.slot).toLocaleString()}, epoch ${r.epoch} (${Math.round(Number(r.epochProgress) * 100)}% complete)${r.tps ? `, ~${Math.round(Number(r.tps)).toLocaleString()} TPS` : ""}.`;
+    case "open_page":
+      return `Opening [${out.action?.label ?? "the page"}](${out.action?.href ?? "/"}).`;
+    case "install_extension":
+      return r.alreadyInstalled ? `**${r.name}** is already installed.` : `${r.note ?? ""} [Open ${r.name} on the Extensions page](${out.action?.href ?? "/extensions"}).`;
     case "search_solana": {
       const groups = (r.groups as { type: string; results: { title: string; link: string; detail?: string }[] }[]) ?? [];
       if (!groups.length) return "I couldn't find anything matching that on Solana OS.";
@@ -148,6 +165,7 @@ export async function* offlineChat(history: ChatTurn[], ctx: ToolContext): Async
       const out = await runTool(s.tool, s.input, ctx);
       yield { type: "tool", id, name: s.tool, label: TOOL_LABELS[s.tool], status: "done" };
       if (out.card) yield { type: "card", card: out.card };
+      if (out.action) yield { type: "action", action: out.action };
       sources.push(...out.sources);
       parts.push(write(s.tool, out));
     } catch (e) {

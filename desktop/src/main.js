@@ -6,7 +6,7 @@
 // electron-chrome-extensions (used under GPL-3.0).
 
 const path = require("node:path");
-const { app, BrowserWindow, Menu, WebContentsView, dialog, ipcMain, net, session, shell } = require("electron");
+const { app, BrowserWindow, Menu, MenuItem, WebContentsView, dialog, ipcMain, net, session, shell } = require("electron");
 const { ElectronChromeExtensions } = require("electron-chrome-extensions");
 const { installChromeWebStore, installExtension, uninstallExtension } = require("electron-chrome-web-store");
 const { WALLETS, SOLANA_OS_URL, normalizeInput, riskFromReport, hostOf } = require("./lib");
@@ -212,7 +212,7 @@ class BrowserShell {
         bookmarked: library.isBookmarked(wc.getURL()),
       };
     });
-    this.win.webContents.send("shell:state", { tabs, activeId: this.activeId, home: SOLANA_OS_URL, platform: process.platform });
+    this.win.webContents.send("shell:state", { tabs, activeId: this.activeId, home: SOLANA_OS_URL, platform: process.platform, hiddenExtensions: hiddenExtensions() });
     const active = this.activeTab;
     this.win.setTitle(active ? `${active.view.webContents.getTitle() || "Solana OS"} — Solana OS` : "Solana OS");
   }
@@ -357,7 +357,19 @@ function chromeMenu(s) {
         { label: "Solana extensions…", click: () => s.newTab(`${SOLANA_OS_URL}/extensions`) },
         { label: "Chrome Web Store", click: () => s.newTab("https://chromewebstore.google.com/category/extensions") },
         ...(installed.length
-          ? [{ type: "separator" }, ...installed.map((x) => ({ label: x.name, submenu: [{ label: `Remove ${x.name}…`, click: () => removeExtension(s, x.id, x.name) }] }))]
+          ? [
+              { type: "separator" },
+              ...installed.map((x) => {
+                const hidden = hiddenExtensions().includes(x.id);
+                return {
+                  label: hidden ? `${x.name} (hidden)` : x.name,
+                  submenu: [
+                    { label: hidden ? "Show in toolbar" : "Hide from toolbar", click: () => setExtensionHidden(x.id, !hidden) },
+                    { label: `Remove ${x.name}…`, click: () => removeExtension(s, x.id, x.name) },
+                  ],
+                };
+              }),
+            ]
           : []),
       ],
     },
@@ -459,7 +471,16 @@ function registerIpc() {
     }
   };
   ipcMain.on("desktop:homeOrigin", (e) => (e.returnValue = HOME_ORIGIN));
-  ipcMain.handle("desktop:extensions", (e) => (fromHome(e) ? browserSession.extensions.getAllExtensions().map((x) => ({ id: x.id, name: x.name, version: x.version })) : null));
+  ipcMain.handle("desktop:extensions", (e) => {
+    if (!fromHome(e)) return null;
+    const hidden = new Set(hiddenExtensions());
+    return browserSession.extensions.getAllExtensions().map((x) => ({ id: x.id, name: x.name, version: x.version, hidden: hidden.has(x.id), description: String(x.manifest?.description ?? "").slice(0, 200) }));
+  });
+  ipcMain.handle("desktop:setExtensionHidden", (e, id, hidden) => {
+    if (!fromHome(e) || typeof id !== "string" || !browserSession.extensions.getExtension(id)) return false;
+    setExtensionHidden(id, Boolean(hidden));
+    return true;
+  });
   ipcMain.handle("desktop:installExtension", async (e, id, claimedName) => {
     if (!fromHome(e) || typeof id !== "string" || !/^[a-p]{32}$/.test(id)) return { ok: false, error: "Not allowed" };
     if (browserSession.extensions.getExtension(id)) return { ok: true };
@@ -593,6 +614,19 @@ function openPasswords() {
   });
   passwordsWindow.loadFile(path.join(__dirname, "ui", "passwords.html"));
   passwordsWindow.on("closed", () => (passwordsWindow = null));
+}
+
+/** Extensions hidden from the toolbar (they keep working). Stored in synced settings. */
+function hiddenExtensions() {
+  const v = library.getSetting("hiddenExtensions", []);
+  return Array.isArray(v) ? v.filter((x) => typeof x === "string") : [];
+}
+function setExtensionHidden(id, hidden) {
+  const set = new Set(hiddenExtensions());
+  if (hidden) set.add(id);
+  else set.delete(id);
+  library.setSetting("hiddenExtensions", [...set]);
+  for (const w of windows) w.sendState();
 }
 
 async function removeExtension(s, id, name) {
@@ -863,6 +897,38 @@ app.whenReady().then(async () => {
     store.createWindow = (event, details = {}) => createWindow(event, resolveWindowUrls(details, event?.extension));
   } else {
     console.warn("[extensions] could not patch windows.create URL handling");
+  }
+
+  // Right-click menu on toolbar icons: the library's items plus Hide and Remove.
+  const browserActionApi = extensions.api?.browserAction;
+  if (browserActionApi && typeof browserActionApi.activateContextMenu === "function") {
+    const original = browserActionApi.activateContextMenu.bind(browserActionApi);
+    browserActionApi.activateContextMenu = (details) => {
+      const ext = browserSession.extensions.getExtension(details?.extensionId);
+      if (!ext) return original(details);
+      const s = focusedShell();
+      const manifest = ext.manifest || {};
+      const optionsPage = manifest.options_page || manifest.options_ui?.page;
+      let own = [];
+      try {
+        own = extensions.ctx.store.buildMenuItems(ext.id, "browser_action") || [];
+      } catch {
+        own = [];
+      }
+      const extra = new Menu();
+      const add = (o) => extra.append(new MenuItem(o));
+      add({ label: ext.name, enabled: false });
+      add({ type: "separator" });
+      for (const item of own) extra.append(item);
+      if (own.length) add({ type: "separator" });
+      add({ label: "Options", enabled: Boolean(optionsPage), click: () => optionsPage && s?.newTab(`chrome-extension://${ext.id}/${String(optionsPage).replace(/^\//, "")}`) });
+      add({ label: "Hide from toolbar", click: () => setExtensionHidden(ext.id, true) });
+      add({ label: `Remove ${ext.name}…`, click: () => removeExtension(s, ext.id, ext.name) });
+      add({ type: "separator" });
+      add({ label: "Manage extensions", click: () => s?.newTab(`${SOLANA_OS_URL}/extensions#installed`) });
+      const a = details?.anchorRect ?? { x: 0, y: 0, height: 0 };
+      extra.popup({ window: s?.win, x: Math.floor(a.x), y: Math.floor(a.y + (a.height ?? 0)) });
+    };
   }
 
   // Extension icons in the toolbar are served over crx:// in the toolbar's session.

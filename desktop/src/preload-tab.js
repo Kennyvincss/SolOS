@@ -19,6 +19,7 @@ try {
       installExtension: (id, name) => ipcRenderer.invoke("desktop:installExtension", String(id), String(name ?? "")),
       removeExtension: (id) => ipcRenderer.invoke("desktop:removeExtension", String(id)),
       searchExtensions: (query) => ipcRenderer.invoke("desktop:searchExtensions", String(query ?? "")),
+      setExtensionHidden: (id, hidden) => ipcRenderer.invoke("desktop:setExtensionHidden", String(id), Boolean(hidden)),
     });
   }
 } catch {

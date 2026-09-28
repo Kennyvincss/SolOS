@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, Download, ExternalLink, Loader2, Search, Star, Trash2, Users, X } from "lucide-react";
+import { Check, Download, Eye, EyeOff, ExternalLink, Loader2, Search, Star, Trash2, Users, X } from "lucide-react";
 import { Badge, Card, Monogram, Page, PageHeader, Section } from "@/components/ui";
 import { BROWSER_EXTENSIONS, chromeWebStoreUrl } from "@/lib/extensions/browser";
 import { useAppShell, useDesktopExtensions, type StoreExtension } from "@/lib/client/desktop";
@@ -96,6 +96,20 @@ export default function ExtensionsPage() {
   const [input, setInput] = useState("");
   const [query, setQuery] = useState(DEFAULT_QUERY);
 
+  // Links like /extensions?q=phantom&install=1 (used by Solana AI) open a search
+  // and offer to install the best match; ?id=<store id> installs that extension.
+  const [autoInstall, setAutoInstall] = useState<{ q?: string; id?: string } | null>(null);
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const q = sp.get("q")?.trim();
+    const id = sp.get("id")?.trim();
+    if (q) {
+      setInput(q);
+      setQuery(q);
+    }
+    if ((q && sp.get("install") === "1") || (id && /^[a-p]{32}$/.test(id))) setAutoInstall({ q: q || undefined, id: id || undefined });
+  }, []);
+
   // In the desktop app, list every Solana extension from the Chrome Web Store (and search any).
   const { canSearch, search } = desktop;
   useEffect(() => {
@@ -109,6 +123,24 @@ export default function ExtensionsPage() {
   const storeIcon = new Map(storeResults.filter((r) => r.icon && isSquareIcon(r.icon)).map((r) => [r.id, r.icon]));
   const featuredShown = featured.map((f) => (storeIcon.has(f.id) ? { ...f, icon: storeIcon.get(f.id) } : f));
   const isDefault = query === DEFAULT_QUERY;
+
+  // Fire the requested install once the results are in (the app still asks to confirm).
+  useEffect(() => {
+    if (!autoInstall || !desktop.available) return;
+    if (autoInstall.id) {
+      const known = [...featured, ...storeResults].find((x) => x.id === autoInstall.id);
+      if (!desktop.installed.has(autoInstall.id)) desktop.install(autoInstall.id, known?.name ?? "");
+      setAutoInstall(null);
+      return;
+    }
+    if (!desktop.results || desktop.searching) return;
+    const q = (autoInstall.q ?? "").toLowerCase();
+    const pool = [...featured, ...storeResults];
+    const best = pool.find((x) => x.name.toLowerCase() === q) ?? pool.find((x) => x.name.toLowerCase().startsWith(q)) ?? storeResults[0];
+    if (best && !desktop.installed.has(best.id)) desktop.install(best.id, best.name);
+    setAutoInstall(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoInstall, desktop.available, desktop.results, desktop.searching]);
   // The default view shows featured wallets first, then the rest of the store's Solana extensions.
   const listed = isDefault ? storeResults.filter((r) => !featuredIds.has(r.id)) : storeResults;
 
@@ -155,6 +187,37 @@ export default function ExtensionsPage() {
         </a>
       )}
       {desktop.error && <p className="mb-4 rounded-xl border border-line px-3 py-2 text-[13px] text-down">{desktop.error}</p>}
+
+      {desktop.available && desktop.installedList.length > 0 && (
+        <Section id="installed" title="Installed" subtitle="Extensions in your Solana OS browser. Hidden ones keep working; they just don't show next to the address bar.">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {desktop.installedList.map((x) => {
+              const busy = desktop.busy === x.id;
+              const known = [...featured, ...storeResults].find((f) => f.id === x.id);
+              return (
+                <Card key={x.id} className="flex items-center gap-3 p-3">
+                  <Monogram name={x.name} color={known?.color ?? "#9945ff"} size={40} src={known?.icon ?? `/api/extensions/${x.id}/icon`} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate text-[14px] font-semibold">{x.name}</span>
+                      {x.hidden && <Badge>Hidden</Badge>}
+                    </div>
+                    <div className="text-[12px] text-faint">Version {x.version}</div>
+                  </div>
+                  {desktop.canHide && (
+                    <button onClick={() => desktop.setHidden(x.id, !x.hidden)} disabled={busy} className="btn btn-ghost btn-sm" title={x.hidden ? "Show in toolbar" : "Hide from toolbar"} aria-label={x.hidden ? `Show ${x.name}` : `Hide ${x.name}`}>
+                      {x.hidden ? <Eye size={14} /> : <EyeOff size={14} />} {x.hidden ? "Show" : "Hide"}
+                    </button>
+                  )}
+                  <button onClick={() => desktop.remove(x.id)} disabled={busy} className="btn btn-ghost btn-sm text-down" aria-label={`Remove ${x.name}`}>
+                    {busy ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />} Remove
+                  </button>
+                </Card>
+              );
+            })}
+          </div>
+        </Section>
+      )}
 
       {isDefault && (
         <Section title="Popular Solana wallets">

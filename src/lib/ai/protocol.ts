@@ -7,8 +7,26 @@ export type AiEvent =
   | { type: "text"; delta: string }
   | { type: "card"; card: AiCard }
   | { type: "sources"; sources: AiSource[] }
+  | { type: "action"; action: AiAction }
   | { type: "error"; message: string }
   | { type: "done" };
+
+/** Something the app does for the user after the answer (e.g. open a page). */
+export interface AiAction {
+  type: "navigate";
+  href: string;
+  label: string;
+}
+
+/** What the app tells Solana AI about the user's session (all optional, all public-data). */
+export interface UserContext {
+  page?: string;
+  app?: "web" | "desktop" | "mobile";
+  followed?: { address: string; label?: string }[];
+  watchlist?: string[];
+  watchAddress?: string;
+  installedExtensions?: string[];
+}
 
 export interface ChatTurn {
   role: "user" | "assistant";

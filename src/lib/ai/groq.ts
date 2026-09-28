@@ -1,7 +1,7 @@
 import "server-only";
 import { config } from "../config";
 import type { AiEvent, ChatTurn } from "./protocol";
-import { SYSTEM_PROMPT } from "./prompt";
+import { SYSTEM_PROMPT, userContextPrompt } from "./prompt";
 import { runTool, TOOL_DEFS, TOOL_LABELS, TOOL_SCHEMAS, type AiSource, type ToolContext, type ToolName } from "./tools";
 
 /**
@@ -141,7 +141,7 @@ export async function* groqChat(history: ChatTurn[], ctx: ToolContext, signal?: 
   yield { type: "meta", engine: "groq", model };
   const today = new Date().toISOString().slice(0, 10);
   const messages: Msg[] = [
-    { role: "system", content: `${SYSTEM_PROMPT}\n\nCurrent date: ${today}. Connected wallet: ${ctx.wallet ?? "none"}.` },
+    { role: "system", content: `${SYSTEM_PROMPT}\n\nCurrent date: ${today}. Connected wallet: ${ctx.wallet ?? "none"}.${userContextPrompt(ctx.user)}` },
     ...history.map((m) => ({ role: m.role, content: m.content }) as Msg),
   ];
   const allSources: AiSource[] = [];
@@ -219,6 +219,7 @@ export async function* groqChat(history: ChatTurn[], ctx: ToolContext, signal?: 
       if ("out" in r && r.out) {
         yield { type: "tool", id: r.t.id, name, label: TOOL_LABELS[name as ToolName], status: "done" };
         if (r.out.card) yield { type: "card", card: r.out.card };
+        if (r.out.action) yield { type: "action", action: r.out.action };
         allSources.push(...r.out.sources);
         messages.push({ role: "tool", tool_call_id: r.t.id, content: JSON.stringify(r.out.result).slice(0, MAX_TOOL_RESULT_CHARS) });
       } else {

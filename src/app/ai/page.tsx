@@ -5,7 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowUp, ChevronLeft, Info, Plus, Sparkles, Square } from "lucide-react";
 import { AssistantBubble, reduceEvent, type AssistantMsg } from "@/components/ai/message";
-import { streamChat } from "@/lib/client/ai";
+import { streamChat, useAiContext } from "@/lib/client/ai";
+import type { AiAction } from "@/lib/ai/protocol";
 import { useSession } from "@/lib/client/session";
 import type { ChatTurn } from "@/lib/ai/protocol";
 import { cn } from "@/components/ui";
@@ -30,6 +31,7 @@ function Chat() {
   const params = useSearchParams();
   const router = useRouter();
   const session = useSession();
+  const aiContext = useAiContext();
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -70,18 +72,22 @@ function Chat() {
       setBusy(true);
       const ctrl = new AbortController();
       abortRef.current = ctrl;
+      let navigate: AiAction | null = null;
       try {
         await streamChat(
           history,
           session.address,
-          (e) =>
+          (e) => {
+            if (e.type === "action" && e.action.type === "navigate") navigate = e.action;
             setMsgs((all) => {
               const copy = [...all];
               const last = copy[copy.length - 1] as AssistantMsg;
               copy[copy.length - 1] = reduceEvent(last, e);
               return copy;
-            }),
+            });
+          },
           ctrl.signal,
+          { ...aiContext, page: "/ai" },
         );
       } catch (e) {
         if (!(e instanceof DOMException && e.name === "AbortError")) {
@@ -101,8 +107,11 @@ function Chat() {
         setBusy(false);
         abortRef.current = null;
       }
+      // The assistant asked to open a page (e.g. "install Phantom"): go there once the answer is shown.
+      const go = navigate as AiAction | null;
+      if (go && !ctrl.signal.aborted) setTimeout(() => router.push(go.href), 1200);
     },
-    [busy, msgs, session.address],
+    [busy, msgs, session.address, aiContext, router],
   );
 
   // ?q= starts a conversation (from search, command bar, other pages).

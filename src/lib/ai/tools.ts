@@ -41,12 +41,14 @@ export type AiCard =
 
 export interface ToolOutput {
   result: unknown;
+  action?: import("./protocol").AiAction;
   card?: AiCard;
   sources: AiSource[];
 }
 
 export interface ToolContext {
   wallet?: string | null;
+  user?: import("./protocol").UserContext;
 }
 
 function src(label: string, href: string, meta: DataMeta): AiSource {
@@ -71,6 +73,8 @@ export const TOOL_SCHEMAS = {
   get_protocols: z.object({ names: z.array(z.string().max(60)).max(6).optional() }),
   get_network_status: z.object({}),
   identify_address: z.object({ address: z.string().min(20).max(100) }),
+  open_page: z.object({ path: z.string().min(1).max(300), label: z.string().max(80).optional() }),
+  install_extension: z.object({ name: z.string().min(1).max(80) }),
 } as const;
 
 export type ToolName = keyof typeof TOOL_SCHEMAS;
@@ -87,6 +91,8 @@ export const TOOL_DEFS: { name: ToolName; description: string; input_schema: Rec
   { name: "get_news", description: "Latest Solana ecosystem headlines with their sources, optionally filtered by a topic keyword.", input_schema: { type: "object", properties: { topic: { type: "string" } } } },
   { name: "get_defi_yields", description: "Solana DeFi yield opportunities (APY, TVL, project) from DefiLlama. Filter by asset symbol (e.g. USDC, SOL) or category (Lending, Liquid staking, Liquidity providing, Perpetuals, Restaking, Stablecoins, Yield).", input_schema: { type: "object", properties: { asset: { type: "string" }, category: { type: "string" } } } },
   { name: "get_protocols", description: "Solana DeFi protocols with TVL and 1d/7d change from DefiLlama. Pass names to compare specific protocols, or omit for the top list.", input_schema: { type: "object", properties: { names: { type: "array", items: { type: "string" } } } } },
+  { name: "open_page", description: "Take the user to a page in Solana OS (it opens after your answer). Use for requests like 'open/show/take me to …'. path is an internal path such as /extensions, /wallets/<address>, /tokens/<mint>, /apps/<slug>, /portfolio, /security?q=<target>, /tx/<signature>.", input_schema: { type: "object", properties: { path: { type: "string" }, label: { type: "string", description: "Short name of the destination, e.g. 'Phantom on the Extensions page'" } }, required: ["path"] } },
+  { name: "install_extension", description: "Help the user install a browser extension (wallets like Phantom, Solflare, Backpack, or any Chrome Web Store extension) in the Solana OS desktop app: opens the Extensions page on it and starts the install, which the user confirms.", input_schema: { type: "object", properties: { name: { type: "string", description: "Extension name, e.g. Phantom" } }, required: ["name"] } },
   { name: "identify_address", description: "Find out what a pasted address or ID is before using it: a wallet, a token (mint / contract address / CA), a token account, a program, or a transaction signature. Call this first whenever the user pastes an address without saying what it is.", input_schema: { type: "object", properties: { address: { type: "string" } }, required: ["address"] } },
   { name: "get_network_status", description: "Solana network status: current slot, epoch progress, throughput (TPS) and priority fee percentiles.", input_schema: { type: "object", properties: {} } },
 ];
@@ -105,7 +111,18 @@ export const TOOL_LABELS: Record<ToolName, string> = {
   get_protocols: "Loading protocol data",
   get_network_status: "Checking network status",
   identify_address: "Identifying address",
+  open_page: "Opening page",
+  install_extension: "Finding extension",
 };
+
+/** Internal pages the assistant may open (no external URLs). */
+function safeInternalPath(path: string): string | null {
+  const p = path.trim();
+  if (!p.startsWith("/") || p.startsWith("//") || /[\s<>"'\\]/.test(p)) return null;
+  const root = "/" + (p.split(/[/?#]/)[1] ?? "");
+  const allowed = new Set(["/", "/search", "/discover", "/apps", "/extensions", "/ai", "/tokens", "/wallets", "/tx", "/defi", "/rwa", "/payments", "/news", "/security", "/portfolio", "/feed", "/notifications", "/profile", "/developers", "/settings", "/login", "/go"]);
+  return allowed.has(root) ? p : null;
+}
 
 const KIND_LABEL: Record<AccountClass["type"], string> = {
   wallet: "wallet",
@@ -136,6 +153,27 @@ export async function runTool(name: ToolName, rawInput: unknown, ctx: ToolContex
   const input = parsed.data as Record<string, unknown>;
 
   switch (name) {
+    case "open_page": {
+      const href = safeInternalPath(String(input.path));
+      if (!href) throw new Error("That isn't a Solana OS page.");
+      const label = String(input.label ?? href);
+      return { result: { opening: href, note: "The page opens when your answer finishes; tell the user." }, action: { type: "navigate", href, label }, sources: [] };
+    }
+    case "install_extension": {
+      const raw = String(input.name).trim();
+      const name = raw.charAt(0).toUpperCase() + raw.slice(1);
+      const inDesktop = ctx.user?.app === "desktop";
+      const already = ctx.user?.installedExtensions?.find((x) => x.toLowerCase().includes(name.toLowerCase()));
+      if (already) return { result: { name, alreadyInstalled: already, note: "It's already installed; its icon is next to the address bar (or in ⋮ → Extensions if hidden)." }, sources: [] };
+      const href = `/extensions?q=${encodeURIComponent(name)}&install=1`;
+      return {
+        result: inDesktop
+          ? { name, opening: href, note: `The Extensions page opens on ${name} and the app asks the user to confirm the install.` }
+          : { name, opening: href, note: "Browser extensions install in the Solana OS desktop app. In a normal browser the page links to the Chrome Web Store; on phones, wallets connect through the wallet's own app instead." },
+        action: { type: "navigate", href, label: `Install ${name}` },
+        sources: [],
+      };
+    }
     case "identify_address": {
       const a = String(input.address).trim();
       if (isSignature(a) && !isAddress(a)) return { result: { kind: "transaction signature", next: "explain_transaction", link: `/tx/${a}` }, sources: [] };

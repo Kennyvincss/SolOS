@@ -28,10 +28,20 @@ export function useAppShell(): "web" | "desktop" | "mobile" {
 
 /** Bridge the desktop app exposes to the Solana OS site (see desktop/src/preload-tab.js). */
 interface DesktopBridge {
-  extensions(): Promise<{ id: string; name: string; version: string }[] | null>;
+  extensions(): Promise<InstalledExtension[] | null>;
+  setExtensionHidden?(id: string, hidden: boolean): Promise<boolean>;
   installExtension(id: string, name: string): Promise<{ ok: boolean; cancelled?: boolean; error?: string; name?: string }>;
   removeExtension(id: string): Promise<boolean>;
   searchExtensions?(query: string): Promise<{ ok: boolean; error?: string; results: StoreExtension[] } | null>;
+}
+
+/** An extension installed in the desktop browser. */
+export interface InstalledExtension {
+  id: string;
+  name: string;
+  version: string;
+  hidden?: boolean;
+  description?: string;
 }
 
 /** One Chrome Web Store search result, read by the desktop app. */
@@ -51,13 +61,17 @@ function bridge(): DesktopBridge | null {
 /** Browser extensions installed in the desktop app, with install/remove (null outside the desktop app). */
 export function useDesktopExtensions() {
   const [installed, setInstalled] = useState<Set<string> | null>(null);
+  const [list, setList] = useState<InstalledExtension[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const refresh = async () => {
     const b = bridge();
     if (!b) return;
     const list = await b.extensions().catch(() => null);
-    if (list) setInstalled(new Set(list.map((x) => x.id)));
+    if (list) {
+      setInstalled(new Set(list.map((x) => x.id)));
+      setList(list);
+    }
   };
   useEffect(() => {
     refresh();
@@ -108,6 +122,9 @@ export function useDesktopExtensions() {
     searchError,
     search,
     installed: installed ?? new Set<string>(),
+    installedList: list,
+    canHide: Boolean(bridge()?.setExtensionHidden),
+    setHidden: (id: string, hidden: boolean) => run(id, (b) => b.setExtensionHidden?.(id, hidden) ?? Promise.resolve(false)),
     busy,
     error,
     install: (id: string, name: string) => run(id, (b) => b.installExtension(id, name)),

@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { AlertTriangle, Layers } from "lucide-react";
 import type { ActivityItem, Portfolio, PricePoint, RiskIndicator, Sourced } from "@/lib/types";
+import type { PnlResult, PnlWindow } from "@/lib/services/pnl-core";
 import { useApi } from "@/lib/client/fetch";
 import { fmtUsd, fmtNum } from "@/lib/format";
 import { APPS } from "@/lib/catalog/apps";
@@ -70,9 +71,22 @@ function portfolioRisks(p: Portfolio): RiskIndicator[] {
   return out;
 }
 
+function PnlStat({ label, w, loading, failed }: { label: string; w?: PnlWindow; loading: boolean; failed: boolean }) {
+  if (!w) return <Stat label={label} value={<span className="text-faint">{loading ? "…" : "—"}</span>} sub={<span className="text-faint">{loading ? "Calculating" : failed ? "Unavailable" : ""}</span>} />;
+  const tone = w.total > 0 ? "text-up" : w.total < 0 ? "text-down" : "";
+  return (
+    <Stat
+      label={label}
+      value={<span className={tone}>{`${w.total > 0 ? "+" : w.total < 0 ? "−" : ""}${fmtUsd(Math.abs(w.total))}`}</span>}
+      sub={<span className="text-faint">{`${fmtUsd(w.realized)} realized · ${fmtUsd(w.unrealized)} open`}</span>}
+    />
+  );
+}
+
 export function PortfolioView({ address, own }: { address: string; own?: boolean }) {
   const { data, error, loading, reload } = useApi<Sourced<Portfolio>>(`/api/wallets/${address}`, { refreshMs: 60_000 });
   const act = useApi<Sourced<ActivityItem[]>>(`/api/wallets/${address}/activity?limit=25`);
+  const pnl = useApi<PnlResult>(address === "demo" ? null : `/api/wallets/${address}/pnl`);
   const [allocBy, setAllocBy] = useState<"type" | "token">("type");
 
   if (loading)
@@ -123,11 +137,17 @@ export function PortfolioView({ address, own }: { address: string; own?: boolean
         </div>
         <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
           <Stat label="24h change (price)" value={<Change value={p.change24hPct} />} />
-          <Stat label="7d PnL" value={<span className="text-faint">—</span>} sub={<span className="text-faint">Needs indexer</span>} />
-          <Stat label="30d PnL" value={<span className="text-faint">—</span>} sub={<span className="text-faint">Needs indexer</span>} />
-          <Stat label="All-time PnL" value={<span className="text-faint">—</span>} sub={<span className="text-faint">Needs indexer</span>} />
+          <PnlStat label="7d PnL" w={pnl.data?.d7} loading={pnl.loading} failed={!!pnl.error} />
+          <PnlStat label="30d PnL" w={pnl.data?.d30} loading={pnl.loading} failed={!!pnl.error} />
+          <PnlStat label={pnl.data && !pnl.data.complete && pnl.data.historyFrom ? `PnL since ${new Date(pnl.data.historyFrom).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}` : "All-time PnL"} w={pnl.data?.all} loading={pnl.loading} failed={!!pnl.error} />
         </div>
-        {!p.pnl.available && <p className="mt-4 text-[12px] leading-relaxed text-faint">{p.pnl.reason}</p>}
+        <p className="mt-4 text-[12px] leading-relaxed text-faint">
+          {pnl.data
+            ? `Trading PnL from this wallet's ${pnl.data.trades} swaps against SOL or stablecoins (${pnl.data.txsAnalyzed} transactions checked${pnl.data.complete ? "" : ", most recent first"}): realized on sales plus unrealized on what's still held, at average entry prices. Transfers and airdrops aren't counted as trades.`
+            : pnl.error
+              ? "PnL couldn't be calculated right now (the Solana RPC didn't respond in time)."
+              : "Calculating PnL from this wallet's trades…"}
+        </p>
         {data.meta.note && data.meta.mode === "live" && <p className="mt-1 text-[12px] text-warn">{data.meta.note}</p>}
       </Card>
 

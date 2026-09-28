@@ -117,8 +117,24 @@ function render() {
   star.title = t?.bookmarked ? "Remove bookmark" : "Bookmark this page (Ctrl/⌘+D)";
 }
 
+// Hide extensions the user hid from the toolbar (inside the list's shadow DOM).
+function applyHiddenExtensions(ids) {
+  const list = document.querySelector("browser-action-list");
+  const root = list && list.shadowRoot;
+  if (!root) return;
+  let style = root.getElementById("sos-hidden");
+  if (!style) {
+    style = document.createElement("style");
+    style.id = "sos-hidden";
+    root.appendChild(style);
+  }
+  const safe = (ids || []).filter((id) => /^[a-p]{32}$/.test(id));
+  style.textContent = safe.length ? `${safe.map((id) => `#${id}`).join(", ")} { display: none !important; }` : "";
+}
+
 window.sos.onState((s) => {
   state = s;
+  applyHiddenExtensions(s.hiddenExtensions);
   document.body.classList.toggle("darwin", s.platform === "darwin");
   document.body.classList.toggle("overlay", s.platform !== "darwin");
   render();

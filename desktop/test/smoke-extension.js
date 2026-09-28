@@ -9,7 +9,7 @@ const http = require("node:http");
 const home = http.createServer((_q, r) => r.end("<!doctype html><title>Home</title><body>home</body>")).listen(0);
 process.env.SOLANA_OS_URL = `http://localhost:${home.address().port}`;
 
-const { app, BrowserWindow, session } = require("electron");
+const { app, BrowserWindow, Menu, session } = require("electron");
 
 require("../src/main.js");
 
@@ -62,10 +62,30 @@ app.whenReady().then(() => {
         }
         result.approvalWindow = approve ? approve.webContents.getURL() : null;
       } else result.popup = { visible: false };
+      // Right-click the toolbar icon: our menu with Hide and Remove, and Hide works.
+      let menu = null;
+      const origPopup = Menu.prototype.popup;
+      Menu.prototype.popup = function () {
+        menu = this;
+      };
+      win.webContents.sendInputEvent({ type: "mouseDown", x: pt.x, y: pt.y, button: "right", clickCount: 1 });
+      win.webContents.sendInputEvent({ type: "mouseUp", x: pt.x, y: pt.y, button: "right", clickCount: 1 });
+      for (let i = 0; i < 20 && !menu; i++) await new Promise((r) => setTimeout(r, 150));
+      Menu.prototype.popup = origPopup;
+      result.contextMenu = menu ? menu.items.map((i) => i.label).filter(Boolean) : null;
+      const hide = menu?.items.find((i) => i.label === "Hide from toolbar");
+      if (hide) {
+        hide.click();
+        await new Promise((r) => setTimeout(r, 800));
+        result.hiddenAfterClick = await win.webContents.executeJavaScript(
+          "(() => { const b = document.querySelector('browser-action-list').shadowRoot.querySelector('.action, [part~=action]'); return b ? getComputedStyle(b).display === 'none' : true })()",
+        );
+      }
       const img = await win.webContents.capturePage();
       fs.writeFileSync(process.env.SMOKE_OUT || "smoke-ext.png", img.toPNG());
       result.ok = result.contentScript === "injected" && result.toolbarActions > 0 && result.desktopUA === true && result.popup.visible && result.popupInsideWindow && /^chrome-extension:\/\/[a-p]{32}\/popup\.html\?approve=1$/.test(result.approvalWindow || "") &&
-        /chromiumapp\.org\/x$/.test(result.apis?.page?.identity) && /chromiumapp\.org\/cb$/.test(result.apis?.worker?.identity || "") && result.apis.worker.sidePanel === true && result.apis.worker.browserIsChrome === true && result.apis.page.browserIsChrome === true;
+        /chromiumapp\.org\/x$/.test(result.apis?.page?.identity) && /chromiumapp\.org\/cb$/.test(result.apis?.worker?.identity || "") && result.apis.worker.sidePanel === true && result.apis.worker.browserIsChrome === true && result.apis.page.browserIsChrome === true &&
+        Array.isArray(result.contextMenu) && result.contextMenu.includes("Hide from toolbar") && result.contextMenu.some((l) => /^Remove /.test(l)) && result.hiddenAfterClick === true;
     } catch (e) {
       result.error = String(e && e.stack || e);
     }

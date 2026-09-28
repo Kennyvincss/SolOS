@@ -10,7 +10,7 @@ import { Card, DataBadge, EmptyState, ErrorState, Monogram, Page, Skeleton, Badg
 import { AssistantBubble, reduceEvent, type AssistantMsg } from "@/components/ai/message";
 import { Icon } from "@/components/icon";
 import { useApi } from "@/lib/client/fetch";
-import { streamChat } from "@/lib/client/ai";
+import { streamChat, useAiContext } from "@/lib/client/ai";
 import { useSession } from "@/lib/client/session";
 import { useStore } from "@/lib/client/store";
 import type { SearchHit, SearchResponse } from "@/lib/types";
@@ -20,6 +20,9 @@ const AI_INTENTS = new Set(["question", "trending_tokens", "whales", "today", "c
 /** Streams a short Solana AI answer at the top of the results page. */
 function InlineAnswer({ question }: { question: string }) {
   const session = useSession();
+  const aiContext = useAiContext();
+  const ctxRef = useRef(aiContext);
+  ctxRef.current = aiContext;
   const [m, setM] = useState<AssistantMsg | null>(null);
   const ran = useRef<string | null>(null);
   useEffect(() => {
@@ -27,7 +30,7 @@ function InlineAnswer({ question }: { question: string }) {
     ran.current = question;
     const ctrl = new AbortController();
     setM({ role: "assistant", text: "", tools: [], cards: [], sources: [], done: false });
-    streamChat([{ role: "user", content: `${question}\n\n(Answer concisely for a search results page: at most ~120 words plus the key data.)` }], session.address, (e) => setM((cur) => (cur ? reduceEvent(cur, e) : cur)), ctrl.signal).catch(() => {});
+    streamChat([{ role: "user", content: `${question}\n\n(Answer concisely for a search results page: at most ~120 words plus the key data.)` }], session.address, (e) => setM((cur) => (cur ? reduceEvent(cur, e) : cur)), ctrl.signal, ctxRef.current).catch(() => {});
     return () => ctrl.abort();
   }, [question, session.address]);
   if (!m) return null;

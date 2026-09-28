@@ -1,5 +1,6 @@
 "use client";
 
+
 import { use, useState } from "react";
 import Link from "next/link";
 import { BellPlus, CheckCircle2, ExternalLink, Globe, Share2, Star } from "lucide-react";
@@ -12,6 +13,14 @@ import { useActions, useStore } from "@/lib/client/store";
 import { appForToken } from "@/lib/catalog/apps";
 import type { NewsItem, PricePoint, RiskReport, Sourced, Token, TokenHolder, YieldPool } from "@/lib/types";
 import { fmtDate, fmtNum, fmtUsd, shortAddr, timeAgo } from "@/lib/format";
+
+const SOL = "So11111111111111111111111111111111111111112";
+const USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+/** Jupiter's swap page with this token already selected to buy (paying with SOL; SOL itself is bought with USDC). */
+function jupiterSwapUrl(mint: string): string {
+  const sell = mint === SOL ? USDC : SOL;
+  return `https://jup.ag/swap?sell=${sell}&buy=${mint}`;
+}
 
 type Range = "1D" | "7D" | "30D" | "90D" | "1Y";
 
@@ -180,7 +189,7 @@ export default function TokenPage({ params }: { params: Promise<{ id: string }> 
                 X <ExternalLink size={12} />
               </a>
             )}
-            <a href={`https://jup.ag/swap/USDC-${t.mint}`} target="_blank" rel="noopener noreferrer" className="btn btn-primary btn-sm">
+            <a href={jupiterSwapUrl(t.mint)} target="_blank" rel="noopener noreferrer" className="btn btn-primary btn-sm">
               Trade on Jupiter <ExternalLink size={12} />
             </a>
           </div>

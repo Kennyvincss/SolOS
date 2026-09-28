@@ -4,17 +4,18 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { AssistantBubble, reduceEvent, type AssistantMsg } from "./message";
-import { streamChat } from "@/lib/client/ai";
+import { streamChat, useAiContext } from "@/lib/client/ai";
 import { useSession } from "@/lib/client/session";
 import { Badge, Card, cn } from "../ui";
 
 /** A one-shot Solana AI panel, triggered by a button, that streams an answer in place. */
 export function AskAIPanel({ label, prompt, description, className }: { label: string; prompt: string; description?: string; className?: string }) {
   const session = useSession();
+  const aiContext = useAiContext();
   const [m, setM] = useState<AssistantMsg | null>(null);
   const run = () => {
     setM({ role: "assistant", text: "", tools: [], cards: [], sources: [], done: false });
-    streamChat([{ role: "user", content: prompt }], session.address, (e) => setM((cur) => (cur ? reduceEvent(cur, e) : cur))).catch(() => {});
+    streamChat([{ role: "user", content: prompt }], session.address, (e) => setM((cur) => (cur ? reduceEvent(cur, e) : cur)), undefined, aiContext).catch(() => {});
   };
   return (
     <Card className={cn("p-4 sm:p-5", className)}>

@@ -24,6 +24,7 @@ export interface AssistantMsg {
   sources: AiSource[];
   engine?: "groq" | "offline";
   error?: string;
+  actions?: import("@/lib/ai/protocol").AiAction[];
   done: boolean;
 }
 
@@ -220,6 +221,15 @@ export function AssistantBubble({ m, viewer }: { m: AssistantMsg; viewer?: strin
       )}
       {m.text ? <Markdown text={m.text} /> : !m.done && !m.tools.length ? <ThinkingDots /> : null}
       {m.error && <div className="mt-2 rounded-xl border border-down/20 bg-down/5 p-3 text-[13px] text-down">{m.error}</div>}
+      {m.actions?.length ? (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {m.actions.map((a, i) => (
+            <Link key={i} href={a.href} className="btn btn-soft btn-sm">
+              {a.label} →
+            </Link>
+          ))}
+        </div>
+      ) : null}
       {m.done && <Sources sources={m.sources} />}
     </div>
   );
@@ -250,6 +260,8 @@ export function reduceEvent(m: AssistantMsg, e: import("@/lib/ai/protocol").AiEv
       return { ...m, cards: [...m.cards, e.card] };
     case "sources":
       return { ...m, sources: [...m.sources, ...e.sources] };
+    case "action":
+      return { ...m, actions: [...(m.actions ?? []), e.action] };
     case "error":
       return { ...m, error: e.message };
     case "done":
