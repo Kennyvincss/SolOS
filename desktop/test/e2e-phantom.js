@@ -174,7 +174,29 @@ app.whenReady().then(async () => {
     popup.webContents.on("did-finish-load", () => log("approval loaded", popup.webContents.getURL(), `${Date.now() - t}ms`));
     popup.webContents.on("render-process-gone", (_e, d) => log("approval renderer gone", d.reason));
   }
-  if (popup) try {
+  if (popup) {
+    // Don't executeJavaScript yet (it waits for the page to load): just watch.
+    let beat = Date.now();
+    const hb = setInterval(() => {
+      const lag = Date.now() - beat - 500;
+      if (lag > 300) log("main process lag", `${lag}ms`);
+      beat = Date.now();
+    }, 500);
+    popup.webContents.on("console-message", (d) => log("approval console", d.level, String(d.message).slice(0, 200)));
+    popup.webContents.on("did-fail-load", (_e, code, desc, url) => log("approval did-fail-load", code, desc, url));
+    popup.webContents.session.webRequest.onCompleted({ urls: ["<all_urls>"] }, (d) => {
+      if (d.webContentsId === popup.webContents.id) log("approval request", d.statusCode, d.url.slice(0, 100));
+    });
+    for (let i = 0; i < 40; i++) {
+      await sleep(500);
+      if (popup.isDestroyed()) break;
+      const wc = popup.webContents;
+      if (i % 4 === 0) log("approval state", JSON.stringify({ url: wc.getURL(), loading: wc.isLoading(), mainFrameLoading: wc.isLoadingMainFrame(), waiting: wc.isWaitingForResponse(), crashed: wc.isCrashed(), visible: popup.isVisible(), bounds: popup.getBounds() }));
+      if (!wc.isLoading()) break;
+    }
+    clearInterval(hb);
+  }
+  if (popup && !popup.isDestroyed() && !popup.webContents.isLoading()) try {
     // Wait for content, then approve.
     let st = null;
     for (let i = 0; i < 40; i++) {
