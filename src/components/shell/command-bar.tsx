@@ -2,12 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Clock, CornerDownLeft, Search, ShieldCheck, Sparkles, Wallet, ReceiptText, Coins } from "lucide-react";
+import { ArrowRight, Clock, Globe, CornerDownLeft, Search, ShieldCheck, Sparkles, Wallet, ReceiptText, Coins } from "lucide-react";
 import { PAGES } from "@/lib/catalog/pages";
 import { APPS, appLogo } from "@/lib/catalog/apps";
 import { EXTENSIONS } from "@/lib/extensions/catalog";
 import { scoreDoc } from "@/lib/search/fuzzy";
 import { detectIntent } from "@/lib/search/intent";
+import { asWebUrl, goHref } from "@/lib/web-url";
 import { useActions, useStore } from "@/lib/client/store";
 import type { SearchResponse } from "@/lib/types";
 import { shortAddr } from "@/lib/format";
@@ -91,6 +92,8 @@ export function CommandBar() {
       PAGES.filter((p) => p.nav).forEach((p) => out.push({ id: p.href, group: "Go to", title: p.title, subtitle: p.description, href: p.href, icon: <Icon name={p.icon} size={16} /> }));
       return out;
     }
+    const site = asWebUrl(t);
+    if (site) out.push({ id: "site", group: "Website", title: `Go to ${new URL(site).hostname}`, subtitle: "Opens the site after a quick safety check", href: goHref(site), icon: <Globe size={16} /> });
     const intent = detectIntent(t);
     if (intent.type === "analyze_wallet" && intent.entity) {
       out.push({ id: "wallet", group: "Actions", title: `Analyze ${shortAddr(intent.entity, 6)}`, subtitle: "Wallet, token or program", href: `/wallets/${intent.entity}`, icon: <Wallet size={16} /> });

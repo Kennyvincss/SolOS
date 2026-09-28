@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ArrowRight, Search, Sparkles } from "lucide-react";
 import { useActions } from "@/lib/client/store";
+import { asWebUrl, goHref } from "@/lib/web-url";
 import { cn } from "./ui";
 
 export const SUGGESTIONS = [
@@ -23,7 +24,8 @@ export function SearchBox({ initial = "", size = "lg", autoFocus, className }: {
     const t = value.trim();
     if (!t) return;
     pushRecentSearch(t);
-    router.push(`/search?q=${encodeURIComponent(t)}`);
+    const site = asWebUrl(t);
+    router.push(site ? goHref(site) : `/search?q=${encodeURIComponent(t)}`);
   };
   return (
     <form

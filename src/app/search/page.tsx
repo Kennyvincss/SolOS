@@ -2,7 +2,8 @@
 
 import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { asWebUrl, goHref } from "@/lib/web-url";
 import { ArrowRight, ExternalLink, Sparkles } from "lucide-react";
 import { SearchBox, SuggestionChips } from "@/components/search-box";
 import { Card, DataBadge, EmptyState, ErrorState, Monogram, Page, Skeleton, Badge } from "@/components/ui";
@@ -82,6 +83,12 @@ function HitRow({ h }: { h: SearchHit }) {
 function Results() {
   const params = useSearchParams();
   const q = params.get("q") ?? "";
+  const router = useRouter();
+  // A web address typed into search goes to the site (after a safety check).
+  useEffect(() => {
+    const site = asWebUrl(q);
+    if (site) router.replace(goHref(site));
+  }, [q, router]);
   const { data, error, loading, reload } = useApi<SearchResponse>(q ? `/api/search?q=${encodeURIComponent(q)}` : null, { staleMs: 30_000 });
   const recent = useStore((s) => s.recentSearches);
 

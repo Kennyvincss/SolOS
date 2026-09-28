@@ -116,3 +116,17 @@ describe("RPC configuration", () => {
     expect(redact("fetch failed for https://x.io/?api-key=supersecretkey", "https://x.io/?api-key=supersecretkey")).not.toContain("supersecretkey");
   });
 });
+
+describe("web addresses in search", () => {
+  it("recognises domains and URLs but not tokens, addresses or questions", async () => {
+    const { asWebUrl } = await import("@/lib/web-url");
+    expect(asWebUrl("Axiom.trade")).toBe("https://axiom.trade/");
+    expect(asWebUrl("jup.ag")).toBe("https://jup.ag/");
+    expect(asWebUrl("app.kamino.finance/lending")).toBe("https://app.kamino.finance/lending");
+    expect(asWebUrl("https://jup.ag/swap?x=1")).toBe("https://jup.ag/swap?x=1");
+    expect(asWebUrl("JUP")).toBeNull();
+    expect(asWebUrl("what is jup.ag")).toBeNull();
+    expect(asWebUrl("3.5")).toBeNull();
+    expect(asWebUrl("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v")).toBeNull();
+  });
+});
