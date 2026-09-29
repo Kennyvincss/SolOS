@@ -1,18 +1,14 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { setMode, useMode, type Mode } from "@/lib/client/mode";
+import { useMode, type Mode } from "@/lib/client/mode";
+import { switchModeAnimated } from "./mode-transition";
 import { cn } from "./ui";
 
-/** Lite / Pro switch, shown in both modes. Switching takes you to that mode's home. */
+/** Lite / Pro switch, shown in both modes. Switching plays the mode transition and opens that mode's home. */
 export function ModeSwitch({ compact, className }: { compact?: boolean; className?: string }) {
   const mode = useMode();
-  const router = useRouter();
   const pick = (m: Mode) => {
-    if (m === mode) return;
-    setMode(m);
-    router.push("/");
-    window.scrollTo({ top: 0 });
+    if (m !== mode) switchModeAnimated(m);
   };
   return (
     <div role="radiogroup" aria-label="Interface mode" className={cn("inline-flex shrink-0 items-center rounded-full border border-line bg-surface p-[3px] shadow-[var(--shadow)]", className)}>
