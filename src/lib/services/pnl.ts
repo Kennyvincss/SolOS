@@ -16,11 +16,12 @@ const DAY = 86_400_000;
  * each swap against SOL or a USD stablecoin is priced at that day's SOL price,
  * positions use average cost, and current holdings are marked at today's price.
  */
-export async function walletPnl(address: string, currentPrices: Map<string, number>, holdings: Map<string, number>): Promise<PnlResult> {
+export async function walletPnl(address: string, currentPrices: Map<string, number>, holdings: Map<string, number>, opts: { budgetMs?: number } = {}): Promise<PnlResult> {
   const fast = config.rpcUrl !== PUBLIC_RPC && !customRpcRejected();
   // The public RPC is slow and rate-limited: look at less history there.
   const maxTx = fast ? 600 : 100;
-  return cached(`pnl:${address}:${maxTx}`, 5 * 60_000, async () => {
+  const budget = opts.budgetMs ?? 40_000;
+  return cached(`pnl:${address}:${maxTx}:${budget}`, 5 * 60_000, async () => {
     // 1) Signatures, newest first, up to a year back.
     const sigs: { signature: string; blockTime: number | null; err: unknown }[] = [];
     let before: string | undefined;
@@ -35,7 +36,7 @@ export async function walletPnl(address: string, currentPrices: Map<string, numb
     const ok = sigs.filter((s) => !s.err);
 
     // 2) Transactions (batched when the RPC allows it, one by one otherwise).
-    const deadline = Date.now() + 40_000;
+    const deadline = Date.now() + budget;
     const { txs, attempted } = await fetchTransactions(
       ok.map((s) => s.signature),
       fast,

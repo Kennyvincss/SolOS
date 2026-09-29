@@ -11,7 +11,7 @@ import { APPS } from "@/lib/catalog/apps";
 import { AreaChart } from "./charts";
 import { ActivityList, AllocationBreakdown, HoldingsTable, TokenAllocation } from "./domain";
 import { Card, Change, DataBadge, DemoNotice, EmptyState, InfoNote, RiskPill, Section, Skeleton, SkeletonRows, Stat, Tabs } from "./ui";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const LST_PROTOCOL: Record<string, string> = { JitoSOL: "jito", mSOL: "marinade", bSOL: "sanctum", INF: "sanctum", JLP: "jupiter" };
 
@@ -86,7 +86,18 @@ function PnlStat({ label, w, loading, failed }: { label: string; w?: PnlWindow; 
 export function PortfolioView({ address, own }: { address: string; own?: boolean }) {
   const { data, error, loading, reload } = useApi<Sourced<Portfolio>>(`/api/wallets/${address}`, { refreshMs: 60_000 });
   const act = useApi<Sourced<ActivityItem[]>>(`/api/wallets/${address}/activity?limit=25`);
-  const pnl = useApi<PnlResult>(address === "demo" ? null : `/api/wallets/${address}/pnl`);
+  const pnl = useApi<PnlResult & { refining?: boolean }>(address === "demo" ? null : `/api/wallets/${address}/pnl`);
+  // The first answer covers recent trades; ask again while the server reads the rest.
+  const [refineTries, setRefineTries] = useState(0);
+  const { reload: reloadPnl } = pnl;
+  useEffect(() => {
+    if (!pnl.data?.refining || refineTries >= 3) return;
+    const t = setTimeout(() => {
+      setRefineTries((n) => n + 1);
+      reloadPnl();
+    }, 20_000);
+    return () => clearTimeout(t);
+  }, [pnl.data, refineTries, reloadPnl]);
   const [allocBy, setAllocBy] = useState<"type" | "token">("type");
 
   if (loading)
@@ -143,10 +154,10 @@ export function PortfolioView({ address, own }: { address: string; own?: boolean
         </div>
         <p className="mt-4 text-[12px] leading-relaxed text-faint">
           {pnl.data
-            ? `Profit and loss from ${pnl.data.trades} ${pnl.data.trades === 1 ? "trade" : "trades"}${pnl.data.complete ? "" : " (most recent)"}. "Realized" is from what you sold; "open" is on what you still hold. Transfers and airdrops don't count.`
+            ? `Profit and loss from ${pnl.data.trades} ${pnl.data.trades === 1 ? "trade" : "trades"}${pnl.data.complete ? "" : " (most recent)"}. "Realized" is from what you sold; "open" is on what you still hold. Transfers and airdrops don't count.${pnl.data.unmatchedSells >= 1 ? ` ${fmtUsd(pnl.data.unmatchedSells)} of sales had no matching purchase in the history read (tokens received by transfer or bought earlier), so they're left out.` : ""}${pnl.data.refining && refineTries < 3 ? " Reading older trades…" : ""}`
             : pnl.error
               ? "Couldn't load profit and loss right now. Try again in a minute."
-              : "Working out profit and loss from your trades…"}
+              : "Reading your trades on-chain… this takes up to 15 seconds the first time."}
         </p>
       </Card>
 
