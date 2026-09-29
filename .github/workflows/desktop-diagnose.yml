@@ -61,6 +61,7 @@ jobs:
           fi
           W=${W:-5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1}
           echo "[pnl] wallet $W"
+          echo "[pnl] site status: $(curl -s -m 20 https://solos-rho.vercel.app/api/status)"
           for w in $W; do
             echo "[pnl] first request (quick pass):"
             curl -s -m 90 -w "\n[pnl] http=%{http_code} total=%{time_total}s\n" "https://solos-rho.vercel.app/api/wallets/$w/pnl" | head -c 1500; echo || true
