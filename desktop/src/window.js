@@ -153,7 +153,7 @@ class BrowserShell {
   }
 
   get bookmarksBarVisible() {
-    return Boolean(this.profile.library.getSetting("bookmarksBar", true));
+    return Boolean(this.profile.library.getSetting("bookmarksBar", false));
   }
 
   get activeTab() {

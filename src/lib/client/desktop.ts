@@ -28,10 +28,12 @@ export function useAppShell(): "web" | "desktop" | "mobile" {
 
 /** Bridge the desktop app exposes to the STRATA site (see desktop/src/preload-tab.js). */
 interface DesktopBridge {
+  version?: number;
   extensions(): Promise<InstalledExtension[] | null>;
   setExtensionHidden?(id: string, hidden: boolean): Promise<boolean>;
-  installExtension(id: string, name: string): Promise<{ ok: boolean; cancelled?: boolean; error?: string; name?: string }>;
-  removeExtension(id: string): Promise<boolean>;
+  installExtension(id: string, name: string, opts?: { confirmed?: boolean }): Promise<{ ok: boolean; cancelled?: boolean; error?: string; name?: string }>;
+  removeExtension(id: string, opts?: { confirmed?: boolean }): Promise<boolean>;
+  profile?(): Promise<{ name: string }>;
   searchExtensions?(query: string): Promise<{ ok: boolean; error?: string; results: StoreExtension[] } | null>;
 }
 
@@ -127,7 +129,10 @@ export function useDesktopExtensions() {
     setHidden: (id: string, hidden: boolean) => run(id, (b) => b.setExtensionHidden?.(id, hidden) ?? Promise.resolve(false)),
     busy,
     error,
-    install: (id: string, name: string) => run(id, (b) => b.installExtension(id, name)),
-    remove: (id: string) => run(id, (b) => b.removeExtension(id)),
+    /** The app lets the site show the confirm dialog itself (desktop 0.5+); older apps ask natively. */
+    confirmsInPage: (bridge()?.version ?? 0) >= 3,
+    profileName: () => bridge()?.profile?.().then((p) => p?.name ?? "") ?? Promise.resolve(""),
+    install: (id: string, name: string, confirmed = false) => run(id, (b) => b.installExtension(id, name, { confirmed })),
+    remove: (id: string, confirmed = false) => run(id, (b) => b.removeExtension(id, { confirmed })),
   };
 }

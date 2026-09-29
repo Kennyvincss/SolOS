@@ -510,27 +510,29 @@ function registerBridge() {
     setExtensionHidden(s.profile, id, Boolean(hidden));
     return true;
   });
-  handle("desktop:installExtension", async (s, _e, id, claimedName) => {
+  handle("desktop:installExtension", async (s, _e, id, claimedName, confirmedInPage) => {
     if (typeof id !== "string" || !/^[a-p]{32}$/.test(id)) return { ok: false, error: "Not allowed" };
     const ses = s.profile.session;
     if (ses.extensions.getExtension(id)) return { ok: true };
     const label = typeof claimedName === "string" && claimedName.trim() ? claimedName.trim().slice(0, 60) : "this extension";
-    const { response } = await dialog.showMessageBox(s.win, {
-      type: "question",
-      buttons: ["Install", "Cancel"],
-      defaultId: 0,
-      cancelId: 1,
-      message: `Install ${label} in “${s.profile.meta.name}”?`,
-      detail: `From the Chrome Web Store (ID ${id}). Extensions can read and change the sites you visit, so only install ones you trust.`,
-    });
-    if (response !== 0) return { ok: false, cancelled: true };
+    if (confirmedInPage !== true) {
+      const { response } = await dialog.showMessageBox(s.win, {
+        type: "question",
+        buttons: ["Install", "Cancel"],
+        defaultId: 0,
+        cancelId: 1,
+        message: `Install ${label} in “${s.profile.meta.name}”?`,
+        detail: "Extensions can read and change the sites you visit, so only install ones you trust.",
+      });
+      if (response !== 0) return { ok: false, cancelled: true };
+    }
     try {
       const ext = await installExtension(id, { session: ses, extensionsPath: s.profile.extensionsPath });
       // Guard against a wrong ID in the catalog: the store's name must match what the page said.
       const word = label.split(/\s+/)[0].toLowerCase();
       if (label !== "this extension" && !ext.name.toLowerCase().includes(word)) {
         await uninstallExtension(id, { session: ses, extensionsPath: s.profile.extensionsPath }).catch(() => {});
-        return { ok: false, error: `The Chrome Web Store returned "${ext.name}" instead of ${label}, so it was not kept.` };
+        return { ok: false, error: `The store returned "${ext.name}" instead of ${label}, so it was not kept.` };
       }
       return { ok: true, name: ext.name };
     } catch (err) {
@@ -544,11 +546,11 @@ function registerBridge() {
       return { ok: false, error: String(err?.message ?? err), results: [] };
     }
   });
-  handle("desktop:removeExtension", async (s, _e, id) => {
+  handle("desktop:removeExtension", async (s, _e, id, confirmedInPage) => {
     if (typeof id !== "string") return false;
     const x = s.profile.session.extensions.getExtension(id);
     if (!x) return true;
-    return removeExtension(s, id, x.name);
+    return removeExtension(s, id, x.name, { confirmed: confirmedInPage === true });
   });
 
   /* developer mode */
@@ -748,16 +750,18 @@ function setExtensionHidden(rt, id, hidden) {
   for (const w of shellsOf(rt.id)) w.sendState();
 }
 
-async function removeExtension(s, id, name) {
-  const { response } = await dialog.showMessageBox(s?.win, {
-    type: "warning",
-    buttons: ["Cancel", "Remove"],
-    defaultId: 0,
-    cancelId: 0,
-    message: `Remove ${name}?`,
-    detail: `If this is a wallet, make sure you have its recovery phrase saved. Removing the extension deletes its data from the “${s.profile.meta.name}” profile.`,
-  });
-  if (response !== 1) return false;
+async function removeExtension(s, id, name, { confirmed = false } = {}) {
+  if (!confirmed) {
+    const { response } = await dialog.showMessageBox(s?.win, {
+      type: "warning",
+      buttons: ["Cancel", "Remove"],
+      defaultId: 0,
+      cancelId: 0,
+      message: `Remove ${name}?`,
+      detail: `If this is a wallet, make sure you have its recovery phrase saved. Removing the extension deletes its data from the “${s.profile.meta.name}” profile.`,
+    });
+    if (response !== 1) return false;
+  }
   const ses = s.profile.session;
   const ext = ses.extensions.getExtension(id);
   if (ext && !path.resolve(ext.path).startsWith(path.resolve(s.profile.extensionsPath))) {

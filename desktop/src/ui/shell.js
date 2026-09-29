@@ -450,10 +450,11 @@ function renderToolbar() {
   $("reload").innerHTML = n.loading ? SVG.stop : SVG.reload;
   $("reload").title = n.loading ? "Stop" : "Reload (Ctrl+R)";
   if (!editing) address.value = displayUrl(n.url);
-  if (n.risk) {
+  // Only warnings show in the address bar; verified and neutral sites stay clean.
+  if (n.risk && (n.risk.level === "high" || n.risk.level === "medium")) {
     riskEl.hidden = false;
     riskEl.className = `risk ${n.risk.level}`;
-    riskEl.textContent = n.risk.level === "high" ? `⚠ ${n.risk.label}` : n.risk.level === "medium" ? n.risk.label : "✓ " + n.risk.label;
+    riskEl.textContent = n.risk.level === "high" ? `⚠ ${n.risk.label}` : n.risk.label;
     riskEl.title = n.risk.detail || "";
   } else riskEl.hidden = true;
   const web = /^https?:/.test(n.url || "");
@@ -579,7 +580,7 @@ $("side-collapse").onclick = () => window.sos.setSidebarCollapsed(!state?.sideba
 $("back").onclick = () => window.sos.back();
 $("forward").onclick = () => window.sos.forward();
 $("reload").onclick = () => (state?.nav.loading ? window.sos.stop() : window.sos.reload());
-$("home").onclick = () => window.sos.home();
+// Home: Alt+Home, or open a new tab (the toolbar has no home button).
 $("star").onclick = (e) => window.sos.starClicked(rectOf(e.currentTarget));
 $("reading").onclick = () => window.sos.toggleReading();
 $("split").onclick = (e) => window.sos.splitMenu(rectOf(e.currentTarget));

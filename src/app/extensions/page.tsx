@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, Download, ExternalLink, Pin, PinOff, Loader2, Search, Star, Trash2, Users, X } from "lucide-react";
-import { Badge, Card, Monogram, Page, PageHeader, Section } from "@/components/ui";
+import { AlertTriangle, Check, Download, ExternalLink, Pin, PinOff, Loader2, Search, ShieldCheck, Star, Trash2, Users, X } from "lucide-react";
+import { Badge, Card, Modal, Monogram, Page, PageHeader, Section } from "@/components/ui";
 import { BROWSER_EXTENSIONS, chromeWebStoreUrl } from "@/lib/extensions/browser";
 import { useAppShell, useDesktopExtensions, type StoreExtension } from "@/lib/client/desktop";
 import { appLogo } from "@/lib/catalog/apps";
@@ -11,6 +11,37 @@ const RELEASES_URL = "https://github.com/Kennyvincss/SolOS/releases/latest";
 const DEFAULT_QUERY = "solana";
 
 type Desktop = ReturnType<typeof useDesktopExtensions>;
+type Ask = { kind: "install" | "remove"; id: string; name: string };
+type Request = (a: Ask) => void;
+
+/** Install / remove confirmation shown on the page (the desktop app then skips its own dialog). */
+function ConfirmExtension({ ask, profile, onCancel, onConfirm }: { ask: Ask | null; profile: string; onCancel: () => void; onConfirm: (a: Ask) => void }) {
+  const remove = ask?.kind === "remove";
+  return (
+    <Modal open={Boolean(ask)} onClose={onCancel} title={ask ? `${remove ? "Remove" : "Install"} ${ask.name || "this extension"}?` : ""}>
+      {ask && (
+        <>
+          <div className="flex items-start gap-3 rounded-2xl bg-surface-2/70 p-3.5 text-[13.5px] leading-relaxed text-muted">
+            {remove ? <AlertTriangle size={18} className="mt-0.5 shrink-0 text-warn" /> : <ShieldCheck size={18} className="mt-0.5 shrink-0 text-sol-green" />}
+            <p>
+              {remove
+                ? `If this is a wallet, make sure you have its recovery phrase saved. Removing the extension deletes its data from the “${profile || "current"}” profile.`
+                : `It will be added to the “${profile || "current"}” profile. Extensions can read and change the sites you visit, so only install ones you trust.`}
+            </p>
+          </div>
+          <div className="mt-5 flex justify-end gap-2">
+            <button onClick={onCancel} className="btn btn-ghost">
+              Cancel
+            </button>
+            <button onClick={() => onConfirm(ask)} autoFocus={!remove} className={remove ? "btn bg-down text-white hover:opacity-90" : "btn btn-primary"}>
+              {remove ? <Trash2 size={15} /> : <Download size={15} />} {remove ? "Remove" : "Install"}
+            </button>
+          </div>
+        </>
+      )}
+    </Modal>
+  );
+}
 
 interface CardData {
   id: string;
@@ -23,7 +54,7 @@ interface CardData {
   users?: string | null;
 }
 
-function ExtensionCard({ x, desktop, shell }: { x: CardData; desktop: Desktop; shell: "web" | "desktop" | "mobile" }) {
+function ExtensionCard({ x, desktop, shell, request }: { x: CardData; desktop: Desktop; shell: "web" | "desktop" | "mobile"; request: Request }) {
   const installed = desktop.installed.has(x.id);
   const busy = desktop.busy === x.id;
   return (
@@ -46,7 +77,6 @@ function ExtensionCard({ x, desktop, shell }: { x: CardData; desktop: Desktop; s
                 <Users size={11} /> {x.users}
               </span>
             ) : null}
-            {!x.rating && !x.users && <span>Chrome Web Store</span>}
           </div>
         </div>
       </div>
@@ -58,18 +88,18 @@ function ExtensionCard({ x, desktop, shell }: { x: CardData; desktop: Desktop; s
               <span className="mr-auto flex items-center gap-1 text-[12.5px] text-sol-green">
                 <Check size={14} /> Installed
               </span>
-              <button onClick={() => desktop.remove(x.id)} disabled={busy} className="btn btn-ghost btn-sm" aria-label={`Remove ${x.name}`}>
+              <button onClick={() => request({ kind: "remove", id: x.id, name: x.name })} disabled={busy} className="btn btn-ghost btn-sm" aria-label={`Remove ${x.name}`}>
                 {busy ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />} Remove
               </button>
             </>
           ) : (
-            <button onClick={() => desktop.install(x.id, x.name)} disabled={busy} className="btn btn-primary btn-sm">
+            <button onClick={() => request({ kind: "install", id: x.id, name: x.name })} disabled={busy} className="btn btn-primary btn-sm">
               {busy ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} {busy ? "Installing…" : "Install"}
             </button>
           )
         ) : shell === "mobile" ? null : (
           <a href={chromeWebStoreUrl(x.id)} target="_blank" rel="noopener noreferrer" className="btn btn-soft btn-sm">
-            Chrome Web Store <ExternalLink size={12} />
+            Get extension <ExternalLink size={12} />
           </a>
         )}
       </div>
@@ -94,6 +124,20 @@ export default function ExtensionsPage() {
   const shell = useAppShell();
   const desktop = useDesktopExtensions();
   const [input, setInput] = useState("");
+  const [ask, setAsk] = useState<Ask | null>(null);
+  const [profile, setProfile] = useState("");
+  const { profileName } = desktop;
+  useEffect(() => {
+    if (desktop.available) profileName().then(setProfile).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [desktop.available]);
+  // Newer desktop apps let the page confirm; older ones show their own dialog.
+  const request: Request = (a) => (desktop.confirmsInPage ? setAsk(a) : a.kind === "install" ? desktop.install(a.id, a.name) : desktop.remove(a.id));
+  const confirm = (a: Ask) => {
+    setAsk(null);
+    if (a.kind === "install") desktop.install(a.id, a.name, true);
+    else desktop.remove(a.id, true);
+  };
   const [query, setQuery] = useState(DEFAULT_QUERY);
 
   // Links like /extensions?q=phantom&install=1 (used by STRATA AI) open a search
@@ -129,7 +173,7 @@ export default function ExtensionsPage() {
     if (!autoInstall || !desktop.available) return;
     if (autoInstall.id) {
       const known = [...featured, ...storeResults].find((x) => x.id === autoInstall.id);
-      if (!desktop.installed.has(autoInstall.id)) desktop.install(autoInstall.id, known?.name ?? "");
+      if (!desktop.installed.has(autoInstall.id)) request({ kind: "install", id: autoInstall.id, name: known?.name ?? "" });
       setAutoInstall(null);
       return;
     }
@@ -137,7 +181,7 @@ export default function ExtensionsPage() {
     const q = (autoInstall.q ?? "").toLowerCase();
     const pool = [...featured, ...storeResults];
     const best = pool.find((x) => x.name.toLowerCase() === q) ?? pool.find((x) => x.name.toLowerCase().startsWith(q)) ?? storeResults[0];
-    if (best && !desktop.installed.has(best.id)) desktop.install(best.id, best.name);
+    if (best && !desktop.installed.has(best.id)) request({ kind: "install", id: best.id, name: best.name });
     setAutoInstall(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoInstall, desktop.available, desktop.results, desktop.searching]);
@@ -152,8 +196,8 @@ export default function ExtensionsPage() {
           shell === "mobile"
             ? "Phones can't run browser extensions. In the STRATA app, sites connect to your Phantom or Solflare app instead: pick it in any site's “Connect wallet” list."
             : shell === "desktop"
-              ? "Every Solana wallet and extension from the Chrome Web Store. Install one and it appears next to the address bar and works on every site, just like in Chrome."
-              : "Solana wallets and browser extensions. Get the STRATA desktop app to search the whole Chrome Web Store and install any extension with one click."
+              ? "Every Solana wallet and extension. Install one and it appears next to the address bar and works on every site."
+              : "Solana wallets and browser extensions. Get the STRATA desktop app to search every extension and install any of them with one click."
         }
       />
 
@@ -209,7 +253,7 @@ export default function ExtensionsPage() {
                       {x.hidden ? <Pin size={14} /> : <PinOff size={14} />} {x.hidden ? "Pin" : "Unpin"}
                     </button>
                   )}
-                  <button onClick={() => desktop.remove(x.id)} disabled={busy} className="btn btn-ghost btn-sm text-down" aria-label={`Remove ${x.name}`}>
+                  <button onClick={() => request({ kind: "remove", id: x.id, name: x.name })} disabled={busy} className="btn btn-ghost btn-sm text-down" aria-label={`Remove ${x.name}`}>
                     {busy ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />} Remove
                   </button>
                 </Card>
@@ -223,23 +267,23 @@ export default function ExtensionsPage() {
         <Section title="Popular Solana wallets">
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {featuredShown.map((x) => (
-              <ExtensionCard key={x.id} x={x} desktop={desktop} shell={shell} />
+              <ExtensionCard request={request} key={x.id} x={x} desktop={desktop} shell={shell} />
             ))}
           </div>
         </Section>
       )}
 
       {desktop.canSearch && (
-        <Section title={isDefault ? "All Solana extensions" : `Results for “${query}”`} subtitle="Live from the Chrome Web Store">
+        <Section title={isDefault ? "All Solana extensions" : `Results for “${query}”`}>
           {desktop.searching && !desktop.results ? (
             <p className="flex items-center gap-2 text-[13.5px] text-muted">
-              <Loader2 size={15} className="animate-spin" /> Searching the Chrome Web Store…
+              <Loader2 size={15} className="animate-spin" /> Searching extensions…
             </p>
           ) : listed.length ? (
             <div className={desktop.searching ? "opacity-60" : ""}>
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {listed.map((x) => (
-                  <ExtensionCard key={x.id} x={x} desktop={desktop} shell={shell} />
+                  <ExtensionCard request={request} key={x.id} x={x} desktop={desktop} shell={shell} />
                 ))}
               </div>
             </div>
@@ -248,6 +292,7 @@ export default function ExtensionsPage() {
           )}
         </Section>
       )}
+      <ConfirmExtension ask={ask} profile={profile} onCancel={() => setAsk(null)} onConfirm={confirm} />
     </Page>
   );
 }

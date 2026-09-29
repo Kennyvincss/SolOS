@@ -21,11 +21,13 @@ try {
       return () => ipcRenderer.removeListener(channel, fn);
     };
     contextBridge.exposeInMainWorld("solanaOSDesktop", {
-      version: 2,
+      version: 3,
       // extensions (of the current profile)
       extensions: () => ipcRenderer.invoke("desktop:extensions"),
-      installExtension: (id, name) => ipcRenderer.invoke("desktop:installExtension", String(id), String(name ?? "")),
-      removeExtension: (id) => ipcRenderer.invoke("desktop:removeExtension", String(id)),
+      // The site shows its own confirm dialog and passes { confirmed: true }. That is only
+      // honoured during a real click (user activation); otherwise the app asks natively.
+      installExtension: (id, name, opts) => ipcRenderer.invoke("desktop:installExtension", String(id), String(name ?? ""), Boolean(opts?.confirmed && navigator.userActivation?.isActive)),
+      removeExtension: (id, opts) => ipcRenderer.invoke("desktop:removeExtension", String(id), Boolean(opts?.confirmed && navigator.userActivation?.isActive)),
       searchExtensions: (query) => ipcRenderer.invoke("desktop:searchExtensions", String(query ?? "")),
       setExtensionHidden: (id, hidden) => ipcRenderer.invoke("desktop:setExtensionHidden", String(id), Boolean(hidden)),
       // profile
