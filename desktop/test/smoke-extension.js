@@ -65,14 +65,15 @@ app.whenReady().then(() => {
       } else result.popup = { visible: false };
       // Right-click the toolbar icon: our menu with Hide and Remove, and Hide works.
       let menu = null;
-      const origPopup = Menu.prototype.popup;
-      Menu.prototype.popup = function () {
-        menu = this;
+      const popmenu = require("../src/popmenu");
+      const origShow = popmenu.show;
+      popmenu.show = (m) => {
+        menu = m;
       };
       win.webContents.sendInputEvent({ type: "mouseDown", x: pt.x, y: pt.y, button: "right", clickCount: 1 });
       win.webContents.sendInputEvent({ type: "mouseUp", x: pt.x, y: pt.y, button: "right", clickCount: 1 });
       for (let i = 0; i < 20 && !menu; i++) await new Promise((r) => setTimeout(r, 150));
-      Menu.prototype.popup = origPopup;
+      popmenu.show = origShow;
       result.contextMenu = menu ? menu.items.map((i) => i.label).filter(Boolean) : null;
       const hide = menu?.items.find((i) => i.label === "Unpin");
       if (hide) {

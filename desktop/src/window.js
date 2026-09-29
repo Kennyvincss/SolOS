@@ -22,6 +22,35 @@ const PANEL_MAX = 720;
 const GROUP_COLORS = { grey: "#9aa0a6", blue: "#8ab4f8", red: "#f28b82", yellow: "#fdd663", green: "#81c995", pink: "#ff8bcb", purple: "#c58af9", cyan: "#78d9ec", orange: "#fcad70" };
 
 const shells = new Set();
+
+const faviconCache = new Map(); // icon URL -> data: URL (or null when it can't be loaded)
+async function faviconData(ses, url) {
+  if (url.startsWith("data:")) return url.length < 300_000 ? url : null;
+  if (faviconCache.has(url)) return faviconCache.get(url);
+  let out = null;
+  try {
+    const res = await Promise.race([ses.fetch(url, { headers: { accept: "image/avif,image/webp,image/svg+xml,image/png,image/*;q=0.8,*/*;q=0.5" } }), new Promise((_, no) => setTimeout(() => no(new Error("timeout")), 6000))]);
+    const type = (res.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+    if (res.ok && (type.startsWith("image/") || /\.(ico|png|svg|gif|jpe?g|webp)(\?|$)/i.test(url))) {
+      const buf = Buffer.from(await res.arrayBuffer());
+      if (buf.length > 0 && buf.length < 200_000) out = `data:${type.startsWith("image/") ? type : "image/x-icon"};base64,${buf.toString("base64")}`;
+    }
+  } catch {
+    /* fall back below */
+  }
+  if (faviconCache.size > 400) faviconCache.delete(faviconCache.keys().next().value);
+  faviconCache.set(url, out);
+  return out;
+}
+/** Google's favicon service, for sites whose own icon can't be loaded. */
+function fallbackFavicon(pageUrl) {
+  try {
+    const u = new URL(pageUrl);
+    return /^https?:$/.test(u.protocol) ? `https://www.google.com/s2/favicons?sz=32&domain_url=${encodeURIComponent(u.origin)}` : null;
+  } catch {
+    return null;
+  }
+}
 let quitting = false;
 const newId = () => crypto.randomUUID().slice(0, 8);
 
@@ -950,7 +979,8 @@ class BrowserShell {
           const t = this.tabs.get(id);
           const wc = t.view.webContents;
           const url = t.pending?.url ?? wc.getURL();
-          return { url, title: wc.getTitle() || t.placeholderTitle || "", pinned: t.pinned, groupId: t.groupId, splitId: t.splitId, favicon: typeof t.favicon === "string" && t.favicon.length < 2048 ? t.favicon : null };
+          const fav = t.faviconUrl ?? t.favicon;
+          return { url, title: wc.getTitle() || t.placeholderTitle || "", pinned: t.pinned, groupId: t.groupId, splitId: t.splitId, favicon: typeof fav === "string" && fav.length < 2048 ? fav : null };
         })
         .filter((x) => /^https?:/.test(x.url)),
       groups: [...this.groups.values()],
@@ -1026,9 +1056,34 @@ function wireTab(tab) {
     s.sendState();
     if (s.activeId === wc.id) s.notifyPanel();
   });
-  wc.on("page-favicon-updated", (_e, favicons) => {
-    tab.favicon = favicons[0] ?? null;
-    push();
+  // Favicons are fetched with the tab's own session (its cookies and browser identity):
+  // sites behind bot protection refuse the same request from the toolbar.
+  wc.on("page-favicon-updated", async (_e, favicons) => {
+    const pageUrl = wc.getURL();
+    const candidates = (favicons ?? []).filter((f) => /^(https?|data):/.test(f)).slice(0, 4);
+    tab.faviconUrl = candidates[0] ?? null;
+    for (const f of candidates) {
+      const data = await faviconData(wc.session, f);
+      if (wc.isDestroyed() || wc.getURL() !== pageUrl) return;
+      if (data) {
+        tab.favicon = data;
+        return push();
+      }
+    }
+    if (!wc.isDestroyed() && wc.getURL() === pageUrl) {
+      tab.favicon = fallbackFavicon(pageUrl);
+      push();
+    }
+  });
+  // Pages that never declare an icon still get one.
+  wc.on("did-finish-load", () => {
+    if (!tab.favicon && !wc.isDestroyed()) {
+      const f = fallbackFavicon(wc.getURL());
+      if (f) {
+        tab.favicon = f;
+        push();
+      }
+    }
   });
   wc.on("did-navigate", async (_e, navUrl) => {
     const s = owner();

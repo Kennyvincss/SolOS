@@ -31,8 +31,8 @@ function set(theme) {
 /** Colors native window parts need (window background, title bar buttons). */
 function colors() {
   return nativeTheme.shouldUseDarkColors
-    ? { bg: "#07070b", bar: "#0d0d12", symbol: "#9ba1ab", bubble: "#16161d", panel: "#1b1e23", page: "#07070b" }
-    : { bg: "#f6f6f7", bar: "#eeeef1", symbol: "#5f636b", bubble: "#ffffff", panel: "#ffffff", page: "#ffffff" };
+    ? { bg: "#07070b", bar: "#0d0d12", symbol: "#9ba1ab", bubble: "#16161d", panel: "#1b1e23", page: "#07070b", menu: "#2b2c2f" }
+    : { bg: "#f6f6f7", bar: "#eeeef1", symbol: "#5f636b", bubble: "#ffffff", panel: "#ffffff", page: "#ffffff", menu: "#ffffff" };
 }
 
 function onChange(fn) {

@@ -12,6 +12,16 @@ const { getRuntime, dropRuntime, runtimes } = require("./runtime");
 const profiles = require("./profiles");
 const bubbles = require("./bubbles");
 const menus = require("./menus");
+const popmenu = require("./popmenu");
+
+/** Show a menu (Chrome-style) at x, y in the window. alignRight: the menu's right edge sits at x (the ⋮ button). */
+function pop(menu, s, x, y, name, alignRight = false) {
+  if (!menu) return;
+  const ctx = { window: s.win, webContents: s.activeTab?.view.webContents };
+  if (!alignRight) return popmenu.show(menu, { window: s.win, x: Math.round(x), y: Math.round(y), name, context: ctx });
+  const cb = s.win.getContentBounds();
+  popmenu.show(menu, { window: s.win, screen: { x: cb.x + x, y: cb.y + y }, alignRight: true, name, context: ctx });
+}
 const devices = require("./devices");
 const { eligibleOrigin } = require("./passwords");
 const { checkForUpdatesInteractive } = require("./updater");
@@ -407,8 +417,8 @@ function register() {
   });
   on("shell:toggleMute", (s, id) => s.toggleMuteSite(num(id)));
   on("shell:detachTab", (s, id) => s.moveTabToNewWindow(num(id)));
-  on("shell:tabMenu", (s, id, x, y) => menus.tabMenu(s, num(id))?.popup({ window: s.win, x: Math.round(x), y: Math.round(y) }));
-  on("shell:stripMenu", (s, x, y) => menus.stripMenu(s).popup({ window: s.win, x: Math.round(x), y: Math.round(y) }));
+  on("shell:tabMenu", (s, id, x, y) => pop(menus.tabMenu(s, num(id)), s, x, y, "tab"));
+  on("shell:stripMenu", (s, x, y) => pop(menus.stripMenu(s), s, x, y, "strip"));
   on("shell:groupEditor", (s, groupId, rect) => openGroupEditor(s, String(groupId), rect));
 
   /* navigation */
@@ -449,15 +459,15 @@ function register() {
     else lib.addToReadingList(url, wc.getTitle());
     s.sendState();
   });
-  on("shell:splitMenu", (s, rect) => menus.splitMenu(s).popup({ window: s.win, x: Math.round(rect?.left ?? 0), y: Math.round((rect?.bottom ?? 0) + 4) }));
-  on("shell:walletMenu", (s, rect) => menus.walletMenu(s, (id) => openExtensionPopup(s, id, rect ? { x: rect.left, y: rect.top, width: rect.right - rect.left, height: rect.bottom - rect.top } : null)).popup({ window: s.win, x: Math.round(rect?.left ?? 0), y: Math.round((rect?.bottom ?? 0) + 4) }));
+  on("shell:splitMenu", (s, rect) => pop(menus.splitMenu(s), s, rect?.left ?? 0, (rect?.bottom ?? 0) + 4, "split"));
+  on("shell:walletMenu", (s, rect) => pop(menus.walletMenu(s, (id) => openExtensionPopup(s, id, rect ? { x: rect.left, y: rect.top, width: rect.right - rect.left, height: rect.bottom - rect.top } : null)), s, rect?.left ?? 0, (rect?.bottom ?? 0) + 4, "wallet"));
   on("shell:profileMenu", (s, rect) => openProfileBubble(s, rect));
   on("shell:togglePanel", (s) => s.togglePanel());
-  on("shell:appMenu", (s, pos) => menus.appMenu(s, actionsFor(s)).popup({ window: s.win, x: Math.round(pos?.x ?? 0), y: Math.round(pos?.y ?? 0) }));
-  on("shell:bookmarkFolderMenu", (s, folderId, rect) => menus.bookmarkFolderMenu(s, String(folderId)).popup({ window: s.win, x: Math.round(rect?.left ?? 0), y: Math.round((rect?.bottom ?? 0) + 2) }));
-  on("shell:bookmarkItemMenu", (s, url, x, y) => menus.bookmarkItemMenu(s, String(url))?.popup({ window: s.win, x: Math.round(x), y: Math.round(y) }));
+  on("shell:appMenu", (s, pos) => pop(menus.appMenu(s, actionsFor(s)), s, pos?.x ?? 0, pos?.y ?? 0, "app", true));
+  on("shell:bookmarkFolderMenu", (s, folderId, rect) => pop(menus.bookmarkFolderMenu(s, String(folderId)), s, rect?.left ?? 0, (rect?.bottom ?? 0) + 2, "bmfolder"));
+  on("shell:bookmarkItemMenu", (s, url, x, y) => pop(menus.bookmarkItemMenu(s, String(url)), s, x, y, "bmitem"));
   on("shell:savedGroup", (s, groupId) => openSavedGroup(s, String(groupId)));
-  on("shell:savedGroupMenu", (s, groupId, x, y) => menus.savedGroupMenu(s, String(groupId))?.popup({ window: s.win, x: Math.round(x), y: Math.round(y) }));
+  on("shell:savedGroupMenu", (s, groupId, x, y) => pop(menus.savedGroupMenu(s, String(groupId)), s, x, y, "savedgroup"));
   on("shell:extensionsPanel", (s, rect) => rect && openExtensionsPanel(s, { left: num(rect.left) || 0, top: num(rect.top) || 0, right: num(rect.right) || 0, bottom: num(rect.bottom) || 0 }));
 
   /* layout */
@@ -913,7 +923,7 @@ function registerExtensionsPanel() {
       { label: "Manage extensions", click: () => (closeExtensionsPanel(), s.newTab(`${SOLANA_OS_URL}/extensions#installed`)) },
     ]);
     p.holdOpen = true;
-    menu.popup({ window: p.win, x: Math.round(pos.x ?? 0), y: Math.round(pos.y ?? 0), callback: () => setTimeout(() => (p.holdOpen = false), 0) });
+    popmenu.show(menu, { window: p.win, x: Math.round(pos.x ?? 0), y: Math.round(pos.y ?? 0), onClose: () => setTimeout(() => (p.holdOpen = false), 0), context: { window: s.win } });
   });
 }
 

@@ -104,7 +104,7 @@ function configureRuntime(rt) {
       add({ type: "separator" });
       add({ label: "Manage extensions", click: () => s?.newTab(`${SOLANA_OS_URL}/extensions#installed`) });
       const a = details?.anchorRect ?? { x: 0, y: 0, height: 0 };
-      menu.popup({ window: s?.win, x: Math.floor(a.x), y: Math.floor(a.y + (a.height ?? 0)) });
+      require("./popmenu").show(menu, { window: s?.win, x: Math.floor(a.x), y: Math.floor(a.y + (a.height ?? 0)), name: "extension", context: { window: s?.win } });
     };
   }
 
@@ -195,6 +195,7 @@ app.whenReady().then(() => {
   ElectronChromeExtensions.handleCRXProtocol(session.defaultSession);
   ipc.register();
   bubbles.registerIpc();
+  require("./popmenu").registerIpc();
   menus.buildMenuBar(ipc.actionsFor());
   initUpdater();
 

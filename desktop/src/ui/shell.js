@@ -53,7 +53,16 @@ function iconFor(t) {
     const img = document.createElement("img");
     img.className = "fav";
     img.src = t.favicon;
-    img.onerror = () => img.replaceWith(Object.assign(document.createElement("span"), { className: "dot" }));
+    // If the site's own icon fails, try Google's favicon service, then the placeholder.
+    img.onerror = () => {
+      let host = "";
+      try {
+        host = /^https?:/.test(t.url || "") ? new URL(t.url).origin : "";
+      } catch {}
+      const g = host ? `https://www.google.com/s2/favicons?sz=32&domain_url=${encodeURIComponent(host)}` : "";
+      if (g && img.src !== g) img.src = g;
+      else img.replaceWith(Object.assign(document.createElement("span"), { className: "dot" }));
+    };
     return img;
   }
   return Object.assign(document.createElement("span"), { className: "dot" });
@@ -591,7 +600,7 @@ $("ai").onclick = () => window.sos.togglePanel();
 $("profile").onclick = (e) => window.sos.profileMenu(rectOf(e.currentTarget));
 $("menu").onclick = (e) => {
   const r = e.currentTarget.getBoundingClientRect();
-  window.sos.appMenu(r.left, r.bottom + 4);
+  window.sos.appMenu(r.right, r.bottom + 2);
 };
 $("tabstrip").addEventListener("dblclick", (e) => {
   if (e.target === $("tabstrip") || e.target.classList.contains("drag-fill")) window.sos.newTab();

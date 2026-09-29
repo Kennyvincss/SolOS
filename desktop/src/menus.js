@@ -1,5 +1,5 @@
-// Native menus: tab context menu, page context menu, the ⋮ menu, split view,
-// wallet, bookmarks bar menus and the macOS menu bar.
+// Menus: tab context menu, page context menu, the ⋮ menu, split view, wallet,
+// bookmarks bar menus (drawn Chrome-style by popmenu.js) and the macOS menu bar.
 // SPDX-License-Identifier: GPL-3.0-only
 
 const { app, BrowserWindow, Menu, clipboard, dialog, shell: electronShell } = require("electron");
@@ -8,12 +8,14 @@ const { BrowserShell, shellsOf, focusedShell, GROUP_COLORS } = require("./window
 const profiles = require("./profiles");
 const devices = require("./devices");
 const appearance = require("./appearance");
+const popmenu = require("./popmenu");
+const build = (template) => popmenu.build(template);
 
 const acc = (a) => ({ accelerator: a, registerAccelerator: false });
 const colorName = (c) => c.charAt(0).toUpperCase() + c.slice(1);
 
 function popup(menu, s, x, y) {
-  menu.popup({ window: s.win, ...(Number.isFinite(x) ? { x: Math.round(x), y: Math.round(y) } : {}) });
+  popmenu.show(menu, { window: s.win, ...(Number.isFinite(x) ? { x: Math.round(x), y: Math.round(y) } : {}), context: { window: s.win, webContents: s.activeTab?.view.webContents } });
 }
 
 function tabUrl(s, id) {
@@ -80,7 +82,7 @@ function tabMenu(s, id) {
   const otherWindows = shellsOf(s.profile.id).filter((w) => w !== s);
   const groupItems = [...s.groups.values()].filter((g) => g.id !== t.groupId);
   const muted = Boolean(s.profile.library.getSetting("mutedSites", []).includes(new URL(url || "about:blank").hostname.replace(/^www\./, ""))) || t.view.webContents.isAudioMuted();
-  return Menu.buildFromTemplate([
+  return build([
     { label: "New tab to the right", click: () => s.newTab(SOLANA_OS_URL, { index: idx + 1, groupId: t.groupId }) },
     t.splitId
       ? { label: "Exit split view", click: () => s.closeSplit(t.splitId) }
@@ -122,7 +124,7 @@ function tabMenu(s, id) {
 
 /** Right-click on empty tab strip space. */
 function stripMenu(s) {
-  return Menu.buildFromTemplate([
+  return build([
     { label: "New tab", ...acc("CmdOrCtrl+T"), click: () => s.newTab(SOLANA_OS_URL) },
     { label: "Reopen closed tab", ...acc("CmdOrCtrl+Shift+T"), enabled: s.profile.closedTabs.length > 0, click: () => s.reopenClosedTab() },
     { type: "separator" },
@@ -198,7 +200,7 @@ function pageContextMenu(s, wc, params) {
   const ext = s.profile.extensions.getContextMenuItems(wc, params);
   if (ext.length) items.push(...ext, { type: "separator" });
   items.push({ label: "Inspect", click: () => wc.inspectElement(params.x, params.y) });
-  Menu.buildFromTemplate(items).popup({ window: s.win });
+  popmenu.show(build(items), { window: s.win, context: { window: s.win, webContents: wc } });
 }
 
 function openLinkInSplit(s, fromId, link) {
@@ -212,13 +214,13 @@ function splitMenu(s) {
   const sp = s.activeSplit;
   if (!sp) {
     const others = s.order.filter((x) => x !== s.activeId && !s.tabs.get(x)?.pinned).slice(-12);
-    return Menu.buildFromTemplate([
+    return build([
       { label: "Split with a new tab", click: () => s.splitTabs(s.activeId) },
       { label: "Split with STRATA AI", click: () => s.splitTabs(s.activeId, s.newTab(`${SOLANA_OS_URL}/ai`, { background: true }).id) },
       ...(others.length ? [{ type: "separator" }, { label: "Split with an open tab", enabled: false }, ...others.map((x) => ({ label: `  ${tabTitle(s, x).slice(0, 60)}`, click: () => s.splitTabs(s.activeId, x) }))] : []),
     ]);
   }
-  return Menu.buildFromTemplate([
+  return build([
     { label: "Swap sides", click: () => s.swapSplit(sp.id) },
     { label: "Reset sizes", click: () => ((sp.ratio = 0.5), s.layout()) },
     { type: "separator" },
@@ -234,7 +236,7 @@ function walletMenu(s, openExtensionPopup) {
   const exts = s.profile.session.extensions.getAllExtensions();
   const installed = WALLETS.filter((w) => exts.some((x) => x.id === w.id));
   const missing = WALLETS.filter((w) => !exts.some((x) => x.id === w.id));
-  return Menu.buildFromTemplate([
+  return build([
     { label: `${s.profile.meta.name} wallet`, enabled: false },
     { type: "separator" },
     ...(installed.length ? installed.map((w) => ({ label: `Open ${w.name}`, click: () => openExtensionPopup(w.id) })) : [{ label: "No wallet installed in this profile", enabled: false }]),
@@ -251,7 +253,7 @@ function walletMenu(s, openExtensionPopup) {
 function bookmarkFolderMenu(s, folderId) {
   const lib = s.profile.library;
   const items = lib.bookmarks().filter((b) => b.folderId === folderId);
-  return Menu.buildFromTemplate([
+  return build([
     ...(items.length ? items.map((b) => ({ label: b.title.slice(0, 60) || b.url, click: () => s.navigate(b.url) })) : [{ label: "(empty)", enabled: false }]),
     { type: "separator" },
     { label: `Open all (${items.length})`, enabled: items.length > 0, click: () => items.forEach((b) => s.newTab(b.url, { background: true })) },
@@ -269,7 +271,7 @@ function bookmarkItemMenu(s, url) {
   const lib = s.profile.library;
   const b = lib.getBookmark(url);
   if (!b) return null;
-  return Menu.buildFromTemplate([
+  return build([
     { label: "Open in new tab", click: () => s.newTab(url, { background: true }) },
     { label: "Open in new window", click: () => new BrowserShell(s.profile.id, { url }) },
     { label: "Open in split view", click: () => openLinkInSplit(s, s.activeId, url) },
@@ -286,7 +288,7 @@ function savedGroupMenu(s, groupId) {
   const lib = s.profile.library;
   const g = lib.savedGroups().find((x) => x.id === groupId);
   if (!g) return null;
-  return Menu.buildFromTemplate([
+  return build([
     { label: g.title || "Saved group", enabled: false },
     { type: "separator" },
     ...g.tabs.slice(0, 20).map((t) => ({ label: (t.title || t.url).slice(0, 60), click: () => s.newTab(t.url) })),
@@ -306,7 +308,7 @@ function appMenu(s, actions) {
   const wc = s.activeTab?.view.webContents;
   const lib = s.profile.library;
   const url = wc?.getURL() ?? "";
-  const zoomPct = wc ? Math.round(Math.pow(1.2, wc.getZoomLevel()) * 100) : 100;
+  const zoomPct = () => (wc && !wc.isDestroyed() ? `${Math.round(Math.pow(1.2, wc.getZoomLevel()) * 100)}%` : "100%");
   const history = lib.recentHistory(12);
   const closed = [...s.profile.closedTabs].reverse().slice(0, 10);
   const reading = lib.readingList().filter((r) => !r.read).slice(0, 12);
@@ -314,42 +316,47 @@ function appMenu(s, actions) {
   const exts = s.profile.session.extensions.getAllExtensions();
   const sync = lib.getSyncState();
   const dev = Boolean(lib.getSetting("developerMode", false));
-  return Menu.buildFromTemplate([
-    { label: "New tab", ...acc("CmdOrCtrl+T"), click: () => s.newTab(SOLANA_OS_URL) },
-    { label: "New window", ...acc("CmdOrCtrl+N"), click: () => new BrowserShell(s.profile.id) },
-    { label: "New split view", click: () => s.splitTabs(s.activeId) },
+  const zoomBy = (d) => wc && !wc.isDestroyed() && wc.setZoomLevel(Math.max(-4, Math.min(5, wc.getZoomLevel() + d)));
+  // Laid out like Chrome's ⋮ menu; the icons, avatar and zoom row are drawn by popmenu.js.
+  return build([
+    { label: "New tab", ico: "new-tab", ...acc("CmdOrCtrl+T"), click: () => s.newTab(SOLANA_OS_URL) },
+    { label: "New window", ico: "window", ...acc("CmdOrCtrl+N"), click: () => new BrowserShell(s.profile.id) },
+    { label: "New split view", ico: "split", click: () => s.splitTabs(s.activeId) },
     { type: "separator" },
     {
-      label: `Profile: ${s.profile.meta.name}`,
+      label: s.profile.meta.name,
+      avatar: { color: s.profile.meta.color, letter: s.profile.meta.name },
       submenu: [
         ...profiles.list().map((p) => ({ label: p.name, type: "radio", checked: p.id === s.profile.id, click: () => require("./ipc").openProfile(p.id) })),
         { type: "separator" },
-        { label: "Add or edit profiles…", click: () => actions.profileBubble() },
+        { label: "Add or edit profiles…", ico: "profile", click: () => actions.profileBubble() },
       ],
     },
     { type: "separator" },
+    { label: "Passwords", ico: "key", click: () => actions.openPasswords() },
     {
       label: "History",
+      ico: "history",
       submenu: [
-        { label: "History", ...acc("CmdOrCtrl+H"), click: () => s.newTab(`${SOLANA_OS_URL}/history`) },
-        { label: "Reopen closed tab", ...acc("CmdOrCtrl+Shift+T"), enabled: closed.length > 0, click: () => s.reopenClosedTab() },
-        ...(closed.length ? [{ type: "separator" }, { label: "Recently closed", enabled: false }, ...closed.map((c) => ({ label: `  ${(c.title || c.url).slice(0, 60)}`, click: () => s.newTab(c.url, { entries: c.entries, historyIndex: c.index }) }))] : []),
+        { label: "History", ico: "history", ...acc("CmdOrCtrl+H"), click: () => s.newTab(`${SOLANA_OS_URL}/history`) },
+        { label: "Reopen closed tab", ico: "tabs", ...acc("CmdOrCtrl+Shift+T"), enabled: closed.length > 0, click: () => s.reopenClosedTab() },
+        ...(closed.length ? [{ type: "separator" }, { label: "Recently closed", enabled: false }, ...closed.map((c) => ({ label: (c.title || c.url).slice(0, 60), click: () => s.newTab(c.url, { entries: c.entries, historyIndex: c.index }) }))] : []),
         { type: "separator" },
         ...(history.length ? history.map((h) => ({ label: (h.title || h.url).slice(0, 60), click: () => s.newTab(h.url) })) : [{ label: "No history yet", enabled: false }]),
-        { type: "separator" },
-        { label: "Clear browsing data…", ...acc("CmdOrCtrl+Shift+Delete"), click: () => actions.clearHistory() },
       ],
     },
     {
       label: "Bookmarks and lists",
+      ico: "bookmark",
       submenu: [
-        { label: lib.isBookmarked(url) ? "Edit bookmark…" : "Bookmark this tab…", ...acc("CmdOrCtrl+D"), enabled: /^https?:/.test(url), click: () => actions.bookmarkEditor() },
-        { label: "Bookmark all tabs…", click: () => actions.bookmarkAll() },
-        { label: s.bookmarksBarVisible ? "Hide bookmarks bar" : "Show bookmarks bar", ...acc("CmdOrCtrl+Shift+B"), click: () => actions.toggleBookmarksBar() },
-        { label: "Bookmark manager", ...acc("CmdOrCtrl+Shift+O"), click: () => s.newTab(`${SOLANA_OS_URL}/bookmarks`) },
+        { label: lib.isBookmarked(url) ? "Edit bookmark…" : "Bookmark this tab…", ico: "bookmark", ...acc("CmdOrCtrl+D"), enabled: /^https?:/.test(url), click: () => actions.bookmarkEditor() },
+        { label: "Bookmark all tabs…", ico: "tabs", click: () => actions.bookmarkAll() },
+        { label: s.bookmarksBarVisible ? "Hide bookmarks bar" : "Show bookmarks bar", ico: "window", ...acc("CmdOrCtrl+Shift+B"), click: () => actions.toggleBookmarksBar() },
+        { label: "Bookmark manager", ico: "bookmark", ...acc("CmdOrCtrl+Shift+O"), click: () => s.newTab(`${SOLANA_OS_URL}/bookmarks`) },
         { type: "separator" },
         {
           label: "Reading list",
+          ico: "reading",
           submenu: [
             { label: lib.inReadingList(url) ? "Remove this tab" : "Add this tab", enabled: /^https?:/.test(url), click: () => (lib.inReadingList(url) ? lib.removeFromReadingList(url) : lib.addToReadingList(url, wc?.getTitle()), s.sendState()) },
             { label: "Open reading list", click: () => s.newTab(`${SOLANA_OS_URL}/reading-list`) },
@@ -358,28 +365,14 @@ function appMenu(s, actions) {
         },
         {
           label: "Saved tab groups",
+          ico: "tabs",
           submenu: saved.length ? saved.map((g) => ({ label: g.title || `${g.tabs.length} tabs`, click: () => require("./ipc").openSavedGroup(s, g.id) })) : [{ label: "Right-click a group and choose Save group", enabled: false }],
         },
       ],
     },
-    { label: "Passwords", click: () => actions.openPasswords() },
-    {
-      label: "Extensions",
-      submenu: [
-        { label: "Manage extensions", click: () => s.newTab(`${SOLANA_OS_URL}/extensions#installed`) },
-        { label: "Find extensions", click: () => s.newTab(`${SOLANA_OS_URL}/extensions`) },
-        { label: "Chrome Web Store", click: () => s.newTab("https://chromewebstore.google.com/category/extensions") },
-        ...(exts.length ? [{ type: "separator" }, ...exts.map((x) => ({ label: x.name, click: () => actions.openExtension(x.id) }))] : []),
-      ],
-    },
-    { type: "separator" },
-    { label: `Zoom in (${zoomPct}%)`, ...acc("CmdOrCtrl+="), click: () => wc && wc.setZoomLevel(wc.getZoomLevel() + 0.5) },
-    { label: "Zoom out", ...acc("CmdOrCtrl+-"), click: () => wc && wc.setZoomLevel(wc.getZoomLevel() - 0.5) },
-    { label: "Reset zoom", ...acc("CmdOrCtrl+0"), click: () => wc?.setZoomLevel(0) },
-    { label: "Full screen", ...acc("F11"), click: () => s.win.setFullScreen(!s.win.isFullScreen()) },
-    { type: "separator" },
     {
       label: "Tabs",
+      ico: "tabs",
       submenu: [
         { label: s.vertical ? "Show tabs horizontally" : "Show tabs vertically", click: () => setVertical(s.profile, !s.vertical) },
         { label: "Reopen closed tab", ...acc("CmdOrCtrl+Shift+T"), enabled: s.profile.closedTabs.length > 0, click: () => s.reopenClosedTab() },
@@ -388,11 +381,34 @@ function appMenu(s, actions) {
         { label: "Move tab to new window", enabled: s.tabs.size > 1, click: () => s.moveTabToNewWindow(s.activeId) },
       ],
     },
-    { label: "STRATA AI side panel", ...acc("CmdOrCtrl+Shift+A"), type: "checkbox", checked: Boolean(s.panel?.open), click: () => s.togglePanel() },
-    { label: "Send to your devices", enabled: /^https?:/.test(url), submenu: devicesSubmenu(s, url, wc?.getTitle() ?? url) },
+    {
+      label: "Extensions",
+      ico: "puzzle",
+      submenu: [
+        { label: "Manage extensions", ico: "puzzle", click: () => s.newTab(`${SOLANA_OS_URL}/extensions#installed`) },
+        { label: "Find extensions", ico: "zoom", click: () => s.newTab(`${SOLANA_OS_URL}/extensions`) },
+        ...(exts.length ? [{ type: "separator" }, ...exts.map((x) => ({ label: x.name, click: () => actions.openExtension(x.id) }))] : []),
+      ],
+    },
+    { label: "Delete browsing data…", ico: "trash", ...acc("CmdOrCtrl+Shift+Delete"), click: () => actions.clearHistory() },
     { type: "separator" },
     {
+      label: `Zoom (${zoomPct()})`,
+      kind: "zoom",
+      zoom: { value: zoomPct, in: () => zoomBy(0.5), out: () => zoomBy(-0.5), full: () => s.win.setFullScreen(!s.win.isFullScreen()) },
+      submenu: [
+        { label: "Zoom in", ...acc("CmdOrCtrl+="), click: () => zoomBy(0.5) },
+        { label: "Zoom out", ...acc("CmdOrCtrl+-"), click: () => zoomBy(-0.5) },
+        { label: "Reset zoom", ...acc("CmdOrCtrl+0"), click: () => wc?.setZoomLevel(0) },
+        { label: "Full screen", ...acc("F11"), click: () => s.win.setFullScreen(!s.win.isFullScreen()) },
+      ],
+    },
+    { type: "separator" },
+    { label: "STRATA AI side panel", ico: "ai", ...acc("CmdOrCtrl+Shift+A"), type: "checkbox", checked: Boolean(s.panel?.open), click: () => s.togglePanel() },
+    { label: "Send to your devices", ico: "devices", enabled: /^https?:/.test(url), submenu: devicesSubmenu(s, url, wc?.getTitle() ?? url) },
+    {
       label: "Developer",
+      ico: "code",
       submenu: [
         { label: "Developer mode", type: "checkbox", checked: dev, click: () => actions.setDeveloperMode(!dev) },
         { label: "Load unpacked extension…", enabled: dev, click: () => actions.loadUnpacked() },
@@ -402,20 +418,29 @@ function appMenu(s, actions) {
         { label: "Developer tools", ...acc("F12"), click: () => wc?.toggleDevTools() },
       ],
     },
-    { label: syncLabel(sync), click: () => (sync.status === "signed-out" ? s.newTab(`${SOLANA_OS_URL}/login`) : lib.syncNow()) },
+    { type: "separator" },
+    { label: syncLabel(sync), ico: "sync", click: () => (sync.status === "signed-out" ? s.newTab(`${SOLANA_OS_URL}/login`) : lib.syncNow()) },
     {
       label: "Appearance",
+      ico: "appearance",
       submenu: [
         ["light", "Light"],
         ["dark", "Dark"],
         ["system", "Match system"],
       ].map(([id, label]) => ({ label, type: "radio", checked: appearance.get() === id, click: () => appearance.set(id) })),
     },
-    { label: "Settings", click: () => s.newTab(`${SOLANA_OS_URL}/settings`) },
-    { label: "Check for updates…", click: () => actions.checkForUpdates() },
-    { label: "About STRATA", click: () => s.newTab(SOLANA_OS_URL) },
+    { label: "Settings", ico: "settings", click: () => s.newTab(`${SOLANA_OS_URL}/settings`) },
+    {
+      label: "Help",
+      ico: "help",
+      submenu: [
+        { label: "About STRATA", ico: "info", click: () => s.newTab(SOLANA_OS_URL) },
+        { label: "Check for updates…", ico: "update", click: () => actions.checkForUpdates() },
+        { label: "Help center", ico: "help", click: () => s.newTab(`${SOLANA_OS_URL}/ai?q=${encodeURIComponent("How do I use STRATA?")}`) },
+      ],
+    },
     { type: "separator" },
-    { label: "Exit", click: () => app.quit() },
+    { label: "Exit", ico: "exit", click: () => app.quit() },
   ]);
 }
 

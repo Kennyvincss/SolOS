@@ -68,15 +68,32 @@ app.whenReady().then(async () => {
   await key(pageWc, "W", ["control"]);
   results.afterCtrlWInPage = await tabCount(shell);
 
-  // The ⋮ menu builds (popup is intercepted).
-  let menuLabels = null;
-  const origPopup = Menu.prototype.popup;
-  Menu.prototype.popup = function () {
-    menuLabels = this.items.map((i) => i.label).filter(Boolean);
-  };
+  // The ⋮ menu: STRATA's own Chrome-style menu window.
+  const menuWins = () => BrowserWindow.getAllWindows().filter((w) => !w.isDestroyed() && w.webContents.getURL().endsWith("/ui/menu.html"));
+  const tabsBeforeMenu = await tabCount(shell);
   await click(shell, "#menu");
-  Menu.prototype.popup = origPopup;
-  results.menu = menuLabels;
+  await wait(700);
+  const root = menuWins()[0];
+  if (!root) return fail("⋮ menu did not open");
+  const labels = () => root.webContents.executeJavaScript("[...document.querySelectorAll('.row .label')].map((e) => e.textContent)");
+  results.menu = await labels();
+  results.menuVisible = root.isVisible();
+  results.menuHasZoomRow = await root.webContents.executeJavaScript("Boolean(document.querySelector('.row.zoom .val'))");
+  results.menuIcons = await root.webContents.executeJavaScript("document.querySelectorAll('.row .ic svg').length");
+  // Hovering History opens its submenu beside the menu.
+  const rowPos = (label) => root.webContents.executeJavaScript(`(() => { const r = [...document.querySelectorAll('.row')].find((e) => e.querySelector('.label')?.textContent === ${JSON.stringify(label)}).getBoundingClientRect(); return { x: Math.round(r.left + 30), y: Math.round(r.top + r.height / 2) }; })()`);
+  const h = await rowPos("History");
+  root.webContents.sendInputEvent({ type: "mouseMove", x: h.x, y: h.y });
+  await wait(700);
+  results.submenuOpened = menuWins().length === 2;
+  // Clicking "New tab" runs it and closes the menu.
+  const n = await rowPos("New tab");
+  root.webContents.sendInputEvent({ type: "mouseMove", x: n.x, y: n.y });
+  root.webContents.sendInputEvent({ type: "mouseDown", x: n.x, y: n.y, button: "left", clickCount: 1 });
+  root.webContents.sendInputEvent({ type: "mouseUp", x: n.x, y: n.y, button: "left", clickCount: 1 });
+  await wait(700);
+  results.menuClosedAfterClick = menuWins().length === 0;
+  results.newTabFromMenu = (await tabCount(shell)) === tabsBeforeMenu + 1;
 
   // Bridge: present on the home site, absent elsewhere; bad IDs refused.
   const tab = require("../src/window").shellFor(win.webContents).activeTab.view.webContents;
@@ -97,7 +114,8 @@ app.whenReady().then(async () => {
     results.afterCloseClick === 2 &&
     results.afterSecondClose === 1 &&
     results.afterCtrlWInPage === 1 &&
-    Array.isArray(results.menu) && results.menu.includes("New tab") &&
+    Array.isArray(results.menu) && results.menu.includes("New tab") && results.menuHasZoomRow && results.menuIcons > 5 &&
+    results.submenuOpened && results.menuClosedAfterClick && results.newTabFromMenu &&
     results.bridgeOnHome === "object" &&
     Array.isArray(results.extensionsList) &&
     results.badInstall?.ok === false &&

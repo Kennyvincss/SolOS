@@ -1,0 +1,78 @@
+/* Chrome-style menu panel. */
+:root {
+  --bg: #ffffff;
+  --text: #1f1f1f;
+  --muted: #5f6368;
+  --icon: #474747;
+  --hover: rgba(31, 31, 31, 0.08);
+  --line: #e3e3e3;
+  --btn: rgba(31, 31, 31, 0.06);
+  --accent: #0b57d0;
+  --shadow: 0 2px 6px 2px rgba(60, 64, 67, 0.15), 0 1px 2px rgba(60, 64, 67, 0.3);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #2b2c2f;
+    --text: #e3e3e3;
+    --muted: #a8abb0;
+    --icon: #c4c7c5;
+    --hover: rgba(255, 255, 255, 0.08);
+    --line: #444746;
+    --btn: rgba(255, 255, 255, 0.08);
+    --accent: #a8c7fa;
+    --shadow: 0 2px 8px 2px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(0, 0, 0, 0.5);
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); overflow: hidden; }
+body {
+  padding: 0;
+  font: 13px/1.2 "Segoe UI Variable Text", "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  color: var(--text);
+  user-select: none;
+  cursor: default;
+}
+#panel {
+  display: inline-block;
+  min-width: 200px;
+  max-width: 420px;
+  padding: 8px 0;
+  background: var(--bg);
+  outline: none;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 32px;
+  padding: 0 16px;
+  white-space: nowrap;
+}
+.row.sel { background: var(--hover); }
+.row.off { opacity: 0.38; }
+.row .ic { width: 20px; height: 20px; flex: none; display: grid; place-items: center; color: var(--icon); }
+.row .ic svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.row .ic .check { stroke: var(--accent); stroke-width: 2.2; }
+.row .avatar { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 700; color: #0b0b12; }
+.row .label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; padding-right: 8px; }
+.row .accel { color: var(--muted); font-size: 12.5px; margin-left: 24px; }
+.row .chev { width: 16px; height: 16px; color: var(--icon); flex: none; margin-left: 16px; }
+.row .chev svg, .row .tick svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.row .tick { color: var(--accent); margin-left: 16px; display: grid; }
+.sep { height: 1px; margin: 8px 0; background: var(--line); }
+
+/* Zoom row: Zoom   [ −   100%   + ]  [⛶] */
+.zoom { gap: 12px; padding-right: 8px; }
+.zoom .label { flex: 1; }
+.zoom .ctl { display: flex; align-items: center; gap: 2px; }
+.zoom button {
+  width: 32px; height: 28px; border: 0; border-radius: 6px; background: transparent; color: var(--icon);
+  display: grid; place-items: center; font: inherit;
+}
+.zoom button:hover { background: var(--btn); }
+.zoom button svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.zoom .val { min-width: 48px; text-align: center; font-variant-numeric: tabular-nums; }
+.zoom .bar { width: 1px; height: 20px; background: var(--line); margin: 0 6px; }
+.zoom.sel { background: transparent; }
