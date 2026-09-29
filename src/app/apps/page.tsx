@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { useEffect, Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Search } from "lucide-react";
 import { AppCard } from "@/components/domain";
@@ -16,6 +16,7 @@ type Sort = "featured" | "tvl" | "az";
 function Store() {
   const params = useSearchParams();
   const [cat, setCat] = useState<AppCategory | "All">((params.get("category") as AppCategory) || "All");
+  useEffect(() => setCat((params.get("category") as AppCategory) || "All"), [params]);
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<Sort>("featured");
   const { data } = useApi<{ metrics: Record<string, AppMetrics>; meta: DataMeta }>("/api/apps");

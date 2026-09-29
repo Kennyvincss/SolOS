@@ -1,12 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { Activity, ArrowRight, Bell, Download, Flame, LayoutGrid, Newspaper, Sparkles, Star, TrendingUp, Wallet } from "lucide-react";
-import { openAiPanel } from "./ai/side-panel";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Activity, ArrowRight, Bell, Download, Flame, LayoutGrid, Newspaper, Star, TrendingUp, Wallet } from "lucide-react";
 import { AreaChart, Meter } from "./charts";
-import { SearchBox, SuggestionChips } from "./search-box";
-import { LogoMark } from "./shell/logo";
 import { AppCard, NewsRow } from "./domain";
 import { Card, CardHeader, DataBadge, Monogram, Select, Skeleton, SkeletonRows, StatCard, Tabs, Change, cn } from "./ui";
 import { useApi } from "@/lib/client/fetch";
@@ -220,45 +218,15 @@ function News() {
   );
 }
 
-/** First-visit welcome: what STRATA is, the universal search box and how to start. */
-function Welcome() {
-  const s = useSession();
-  return (
-    <Card className="glow-bg mb-5 overflow-hidden p-5 sm:p-7">
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-center">
-        <div className="lg:w-[46%]">
-          <LogoMark size={40} />
-          <h2 className="mt-4 text-[26px] font-semibold leading-tight tracking-[-0.025em] sm:text-[30px]">The browser for the onchain world.</h2>
-          <p className="mt-2 max-w-md text-[14px] leading-relaxed text-muted">Search any token, wallet or app, research with STRATA AI, and use every onchain app with your wallet built in.</p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <button onClick={() => s.setWalletModal(true)} className="btn btn-primary btn-sm">
-              <Wallet size={14} /> Connect wallet
-            </button>
-            <button onClick={() => openAiPanel()} className="btn btn-ghost btn-sm">
-              <Sparkles size={14} className="text-sol-green" /> Ask STRATA AI
-            </button>
-            <Link href="/login" className="btn btn-ghost btn-sm">
-              Sign in
-            </Link>
-          </div>
-        </div>
-        <div className="min-w-0 flex-1">
-          <SearchBox />
-          <div className="mt-3 hidden sm:block">
-            <SuggestionChips />
-          </div>
-        </div>
-      </div>
-    </Card>
-  );
-}
-
 /* ---------------------------------------------------------------- page */
 
 export function Overview() {
   const s = useSession();
   const watch = useStore((st) => st.watchlist);
-  const [focus, setFocus] = useState<Focus>("all");
+  const params = useSearchParams();
+  const view = params.get("view") as Focus | null;
+  const [focus, setFocus] = useState<Focus>(view ?? "all");
+  useEffect(() => setFocus(view ?? "all"), [view]);
   const mints = [SOL, ...watch.filter((m) => m !== SOL)].slice(0, 12);
   const toks = useApi<Sourced<Token[]>>(`/api/tokens?list=mints&mints=${mints.join(",")}`, { refreshMs: 60_000 });
   const tokens = useMemo(() => {
@@ -274,7 +242,7 @@ export function Overview() {
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="text-[12.5px] text-muted">{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</div>
-          <h1 className="text-[22px] font-semibold tracking-[-0.02em]">{name ? `Welcome back, ${name}` : "Overview"}</h1>
+          <h1 className="text-[22px] font-semibold tracking-[-0.02em]">{name ? `Welcome back, ${name}` : "Dashboard"}</h1>
         </div>
         <Tabs
           value={focus}
@@ -288,8 +256,6 @@ export function Overview() {
           ]}
         />
       </div>
-
-      {!s.user && !s.wallet && s.ready && <Welcome />}
 
       {(show("market") || show("portfolio")) && <Kpis tokens={tokens} loadingTokens={toks.loading} />}
 

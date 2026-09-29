@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Bell, ChevronDown, ChevronRight, Command, Compass, Home, Menu, PanelLeft, Plus, Search, Sparkles, Wallet, X } from "lucide-react";
 import { PAGES } from "@/lib/catalog/pages";
@@ -13,20 +13,26 @@ import { Wordmark, LogoMark } from "./logo";
 import { shortAddr } from "@/lib/format";
 import { openCommandBar } from "./command-bar";
 import { openAiPanel } from "../ai/side-panel";
+import { ModeSwitch } from "../mode-switch";
+import { LiteSearchInput } from "../lite/search-input";
 
-type NavItem = { href: string; label?: string };
+type NavItem = { href: string; label?: string; icon?: string };
 type NavGroup = { id: string; title?: string; badge?: string; add?: { href: string; label: string }; items: NavItem[] };
 
+/** Pro workspace navigation. Items with a query (e.g. ?tab=trending) point at a view of an existing page. */
 const GROUPS: NavGroup[] = [
-  { id: "main", items: [{ href: "/", label: "Overview" }, { href: "/search" }, { href: "/discover" }, { href: "/ai" }, { href: "/portfolio" }, { href: "/notifications" }] },
-  { id: "explore", title: "Explore", items: [{ href: "/tokens" }, { href: "/wallets" }, { href: "/defi" }, { href: "/rwa" }, { href: "/payments" }, { href: "/news" }, { href: "/security" }] },
-  { id: "apps", title: "Apps & tools", badge: "New", add: { href: "/apps", label: "Browse apps" }, items: [{ href: "/apps" }, { href: "/extensions" }, { href: "/developers" }] },
+  { id: "main", items: [{ href: "/", label: "Dashboard", icon: "Home" }, { href: "/search" }, { href: "/notifications" }] },
+  { id: "discover", title: "Discover", items: [{ href: "/discover", label: "Explore" }, { href: "/tokens" }, { href: "/apps?category=NFTs", label: "NFTs", icon: "Images" }, { href: "/defi" }, { href: "/rwa" }, { href: "/news" }] },
+  { id: "markets", title: "Markets", items: [{ href: "/?view=market", label: "Market Overview", icon: "Activity" }, { href: "/tokens?tab=trending", label: "Trending", icon: "Flame" }, { href: "/tokens?tab=watchlist", label: "Watchlist", icon: "Star" }, { href: "/portfolio" }] },
+  { id: "tools", title: "Tools", items: [{ href: "/ai" }, { href: "/wallets", label: "Wallets" }, { href: "/tx", label: "Transactions" }, { href: "/security" }, { href: "/payments" }, { href: "/developers", label: "Developer" }] },
+  { id: "store", title: "App Store", badge: "New", add: { href: "/apps", label: "Browse apps" }, items: [{ href: "/apps" }, { href: "/extensions" }] },
   { id: "library", title: "Library", items: [{ href: "/bookmarks" }, { href: "/history" }, { href: "/reading-list" }] },
 ];
+const ALL_ITEMS = GROUPS.flatMap((g) => g.items);
 
 function isActive(path: string, href: string) {
   if (href === "/") return path === "/";
-  return path === href || path.startsWith(`${href}/`) || (href === "/wallets" && path.startsWith("/tx"));
+  return path === href || path.startsWith(`${href}/`);
 }
 
 /** The catalog page the current path belongs to (longest matching prefix). */
@@ -124,18 +130,27 @@ export function Sidebar() {
       } catch {}
       return next;
     });
+  const params = useSearchParams();
   const byHref = (h: string) => PAGES.find((p) => p.href === h);
+  const queryMatches = (qs: string) => [...new URLSearchParams(qs)].every(([k, v]) => params.get(k) === v);
+  const isOn = (href: string) => {
+    const [base, qs] = href.split("?");
+    if (!isActive(path, base)) return false;
+    if (qs) return queryMatches(qs);
+    // A plain link loses to a sibling view of the same page that matches the query.
+    return !ALL_ITEMS.some((o) => o.href !== href && o.href.split("?")[0] === base && o.href.includes("?") && queryMatches(o.href.split("?")[1]));
+  };
 
   const link = (it: NavItem) => {
-    const p = byHref(it.href);
+    const p = byHref(it.href.split("?")[0]);
     if (!p) return null;
-    const active = isActive(path, p.href);
+    const active = isOn(it.href);
     const label = it.label ?? p.title;
     const badge = p.href === "/notifications" && unread > 0 ? (unread > 99 ? "99+" : String(unread)) : null;
     return (
       <Link
-        key={p.href}
-        href={p.href}
+        key={it.href}
+        href={it.href}
         prefetch
         title={collapsed ? label : undefined}
         aria-current={active ? "page" : undefined}
@@ -145,7 +160,7 @@ export function Sidebar() {
           active ? "bg-surface-3/80 font-medium text-fg" : "text-muted hover:bg-surface-3/50 hover:text-fg",
         )}
       >
-        <Icon name={p.icon} size={17} strokeWidth={1.8} className={active ? "text-fg" : "text-muted group-hover:text-fg"} />
+        <Icon name={it.icon ?? p.icon} size={17} strokeWidth={1.8} className={active ? "text-fg" : "text-muted group-hover:text-fg"} />
         {!collapsed && <span className="flex-1 truncate">{label}</span>}
         {badge && (collapsed ? <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-down" /> : <span className="rounded-full bg-down px-1.5 text-[10.5px] font-semibold text-white">{badge}</span>)}
       </Link>
@@ -153,7 +168,7 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-40 hidden w-[var(--sb-w)] flex-col border-r border-line bg-sidebar transition-[width] duration-200 md:flex">
+    <aside className="pro-only fixed inset-y-0 left-0 z-40 hidden w-[var(--sb-w)] flex-col border-r border-line bg-sidebar transition-[width] duration-200 md:flex">
       <div className={cn("flex h-[60px] shrink-0 items-center border-b border-line", collapsed ? "justify-center" : "justify-between pl-5 pr-3")}>
         {!collapsed && (
           <Link href="/" aria-label="STRATA home">
@@ -201,7 +216,7 @@ export function DesktopHeader() {
   const page = pageFor(path);
   const deeper = page && page.href !== "/" && path !== page.href;
   return (
-    <header id="app-header" className="sticky top-0 z-30 hidden h-[60px] items-center gap-3 border-b border-line bg-bg/85 px-6 backdrop-blur-xl md:flex">
+    <header id="app-header" className="pro-only sticky top-0 z-30 hidden h-[60px] items-center gap-3 border-b border-line bg-bg/85 px-6 backdrop-blur-xl md:flex">
       <nav aria-label="Breadcrumb" className="flex min-w-[96px] flex-1 items-center gap-2 text-[14px]">
         <Icon name={page?.icon ?? "Home"} size={17} className="shrink-0 text-muted" />
         {deeper ? (
@@ -213,9 +228,10 @@ export function DesktopHeader() {
             <span className="truncate font-medium">Details</span>
           </>
         ) : (
-          <span className="truncate font-medium">{page?.href === "/" ? "Overview" : page?.title ?? "STRATA"}</span>
+          <span className="truncate font-medium">{page?.href === "/" ? "Dashboard" : page?.title ?? "STRATA"}</span>
         )}
       </nav>
+      <ModeSwitch compact />
       <button onClick={openCommandBar} className="flex h-10 min-w-0 flex-[2] max-w-[420px] items-center gap-2.5 rounded-full border border-line bg-surface px-4 text-[13px] text-faint shadow-[var(--shadow)] transition-colors hover:border-line-strong">
         <Search size={15} className="text-muted" />
         <span className="flex-1 truncate text-left">Search (tokens, wallets, apps, transactions)</span>
@@ -240,20 +256,40 @@ export function TopBar() {
   const unread = useStore((s) => s.notifications.filter((n) => !n.read).length);
   if (path.startsWith("/ai")) return null; // STRATA AI has its own full-screen header
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-line bg-bg/85 px-4 backdrop-blur-xl md:hidden">
+    <header className="pro-only sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-line bg-bg/85 px-4 backdrop-blur-xl md:hidden">
       <Link href="/" aria-label="STRATA home">
         <LogoMark size={26} />
       </Link>
-      <button onClick={openCommandBar} className="flex h-9 flex-1 items-center gap-2 rounded-full border border-line bg-surface px-3 text-[13px] text-faint shadow-[var(--shadow)]">
-        <Search size={14} /> Search Solana…
+      <button onClick={openCommandBar} className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-full border border-line bg-surface px-3 text-[13px] text-faint shadow-[var(--shadow)]">
+        <Search size={14} className="shrink-0" /> <span className="truncate">Search…</span>
       </button>
-      <button onClick={() => openAiPanel()} className="grid h-9 w-9 place-items-center rounded-full text-sol-green" aria-label="Ask STRATA AI">
-        <Sparkles size={18} />
-      </button>
+      <ModeSwitch compact />
       <Link href="/notifications" className="relative grid h-9 w-9 place-items-center rounded-full text-muted" aria-label="Notifications">
         <Bell size={18} />
         {unread > 0 && <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-down" />}
       </Link>
+    </header>
+  );
+}
+
+/** Lite mode top bar on content pages: logo, search, Lite/Pro. (Home and search have their own.) */
+export function LiteTopBar() {
+  const path = usePathname();
+  if (path === "/" || path === "/search" || path.startsWith("/ai")) return null;
+  return (
+    <header className="lite-only sticky top-0 z-30 border-b border-line bg-bg/90 backdrop-blur-xl">
+      <div className="mx-auto flex h-14 max-w-[1400px] items-center gap-3 px-4 sm:h-[60px] sm:gap-5 sm:px-6">
+        <Link href="/" aria-label="STRATA home" className="shrink-0">
+          <span className="hidden sm:inline">
+            <Wordmark />
+          </span>
+          <span className="sm:hidden">
+            <LogoMark size={28} />
+          </span>
+        </Link>
+        <LiteSearchInput size="sm" className="max-w-[440px] flex-1" />
+        <ModeSwitch compact className="ml-auto" />
+      </div>
     </header>
   );
 }
@@ -272,7 +308,7 @@ export function MobileNav() {
   if (path.startsWith("/ai")) return null; // the chat composer owns the bottom of the screen
   return (
     <>
-      <nav className="pb-safe fixed inset-x-0 bottom-0 z-40 border-t border-line bg-bg/90 backdrop-blur-xl md:hidden">
+      <nav className="pro-only pb-safe fixed inset-x-0 bottom-0 z-40 border-t border-line bg-bg/90 backdrop-blur-xl md:hidden">
         <div className="grid grid-cols-6">
           {TABS.map((t) => {
             const active = isActive(path, t.href);

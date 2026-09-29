@@ -220,6 +220,8 @@ export interface AppEntry {
   color: string;
   featured?: boolean;
   keywords?: string[];
+  /** The project's own products (shown in search: apps first, then related ones). */
+  products?: { name: string; url: string; description: string; related?: boolean }[];
 }
 
 export interface AppMetrics {

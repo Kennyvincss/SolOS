@@ -112,3 +112,23 @@ describe("developer starters", () => {
     expect(crc32(new TextEncoder().encode("123456789"))).toBe(0xcbf43926);
   });
 });
+
+describe("lite search", () => {
+  it("finds the key terms of a question", async () => {
+    const { searchTerms, isQuestion } = await import("@/lib/search/lite");
+    expect(searchTerms("What is Jito?")).toBe("Jito");
+    expect(searchTerms("How do I stake SOL?")).toBe("stake SOL");
+    expect(searchTerms("What are the most popular Solana wallets?")).toBe("Solana wallets");
+    expect(searchTerms("Show me Solana lending protocols")).toBe("Solana lending protocols");
+    expect(searchTerms("Jupiter")).toBe("Jupiter");
+    expect(isQuestion("Jupiter")).toBe(false);
+    expect(isQuestion("what is jito")).toBe(true);
+  });
+  it("treats a bare category as a category search", async () => {
+    const { detectIntent } = await import("@/lib/search/intent");
+    expect(detectIntent("Solana wallets")).toMatchObject({ type: "category", category: "Wallets" });
+    expect(detectIntent("Solana lending protocols")).toMatchObject({ type: "category", category: "DeFi" });
+    expect(detectIntent("best NFT projects")).toMatchObject({ type: "category", category: "NFTs" });
+    expect(detectIntent("Jupiter").type).toBe("lookup");
+  });
+});

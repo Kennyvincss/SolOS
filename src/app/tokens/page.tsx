@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { useEffect, Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Search } from "lucide-react";
 import { Card, DataBadge, DemoNotice, EmptyState, ErrorState, Page, PageHeader, SkeletonRows, Tabs } from "@/components/ui";
@@ -47,6 +47,7 @@ function List({ tab, interval }: { tab: Tab; interval: string }) {
 function TokensInner() {
   const params = useSearchParams();
   const [tab, setTab] = useState<Tab>((params.get("tab") as Tab) || "trending");
+  useEffect(() => setTab((params.get("tab") as Tab) || "trending"), [params]);
   const [interval, setInterval] = useState("24h");
   const [q, setQ] = useState("");
   const search = useApi<SearchResponse>(q.trim().length >= 2 ? `/api/search?q=${encodeURIComponent(q.trim())}` : null);

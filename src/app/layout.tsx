@@ -3,7 +3,7 @@ import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import "./globals.css";
 import { SessionProvider } from "@/lib/client/session";
-import { DesktopHeader, MobileNav, Sidebar, TopBar } from "@/components/shell/nav";
+import { DesktopHeader, LiteTopBar, MobileNav, Sidebar, TopBar } from "@/components/shell/nav";
 import { CommandBar } from "@/components/shell/command-bar";
 import { WalletModal } from "@/components/shell/wallet-modal";
 import { ThemeSync, Watchers } from "@/components/shell/watchers";
@@ -29,11 +29,11 @@ export const viewport: Viewport = {
 };
 
 // Apply the saved theme before paint to avoid a flash.
-const themeScript = `try{var k=Object.keys(localStorage).find(function(x){return x.indexOf('sos:v1:')===0});var s=k&&JSON.parse(localStorage.getItem(k));var t=s&&s.themeChosen?s.theme:'light';if(t==='system'){t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'}document.documentElement.dataset.theme=t||'light';if(localStorage.getItem('strata:sidebar')==='collapsed')document.documentElement.classList.add('sb-collapsed')}catch(e){document.documentElement.dataset.theme='light'}`;
+const themeScript = `try{var k=Object.keys(localStorage).find(function(x){return x.indexOf('sos:v1:')===0});var s=k&&JSON.parse(localStorage.getItem(k));var t=s&&s.themeChosen?s.theme:'light';if(t==='system'){t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'}document.documentElement.dataset.theme=t||'light';if(localStorage.getItem('strata:sidebar')==='collapsed')document.documentElement.classList.add('sb-collapsed');if(localStorage.getItem('strata:mode')==='pro'){document.documentElement.classList.remove('mode-lite');document.documentElement.classList.add('mode-pro')}}catch(e){document.documentElement.dataset.theme='light'}`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" data-theme="light" className={`${GeistSans.variable} ${GeistMono.variable}`} suppressHydrationWarning>
+    <html lang="en" data-theme="light" className={`mode-lite ${GeistSans.variable} ${GeistMono.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
@@ -41,10 +41,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <SessionProvider>
           <ThemeSync />
           <Watchers />
-          <Sidebar />
-          <div className="transition-[padding] duration-200 md:pl-[var(--sb-w)]">
+          <Suspense>
+            <Sidebar />
+          </Suspense>
+          <div id="app-root" className="transition-[padding] duration-200 md:pl-[var(--sb-w)]">
             <TopBar />
             <DesktopHeader />
+            <LiteTopBar />
             <main className="min-h-[calc(100dvh-3.5rem)] md:min-h-[calc(100dvh-60px)]">{children}</main>
           </div>
           <MobileNav />

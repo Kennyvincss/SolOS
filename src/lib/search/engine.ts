@@ -33,6 +33,17 @@ const LABELS: Record<SearchKind, string> = {
 
 const ORDER: SearchKind[] = ["wallet", "transaction", "token", "app", "protocol", "news", "extension", "developer", "page", "project", "nft"];
 
+const TOPIC_WORDS: Record<string, string> = {
+  stake: "stak", staking: "stak", staked: "stak", lend: "lend", lending: "lend", borrow: "borrow", borrowing: "borrow",
+  yield: "yield", yields: "yield", earn: "yield", apy: "yield", perps: "perp", perpetuals: "perp", swap: "swap", swaps: "swap",
+  dex: "dex", dexs: "dex", liquidity: "liquidity", restaking: "restak", bridge: "bridge", payments: "pay", payment: "pay",
+};
+/** Stems of the topic words in a query ("stake SOL" → ["stak"]). */
+function topicStems(q: string): string[] {
+  return [...new Set(q.toLowerCase().split(/[^a-z]+/).map((w) => TOPIC_WORDS[w]).filter(Boolean))];
+}
+const appText = (a: (typeof APPS)[number]) => [a.tagline, a.description, ...(a.subcategories ?? []), ...(a.keywords ?? [])].join(" ").toLowerCase();
+
 function withBudget<T>(p: Promise<T>, ms: number): Promise<T | null> {
   return Promise.race([p.catch(() => null), new Promise<null>((r) => setTimeout(() => r(null), ms))]);
 }
@@ -127,11 +138,23 @@ export async function search(query: string, opts: { limitPerGroup?: number } = {
     }
   }
 
-  // Category intents surface every app in the category.
+  // Category intents surface every app in the category; apps about the topic
+  // asked for ("lending", "staking", "perps") rank first.
+  const topics = topicStems(intent.type === "category" ? intent.entity ?? "" : intent.type === "yield" ? q : "");
+  const aboutTopic = (a: (typeof APPS)[number]) => topics.length > 0 && topics.some((t) => appText(a).includes(t));
   if (intent.type === "category" && intent.category) {
     for (const app of APPS.filter((a) => a.category === intent.category || a.subcategories?.includes(intent.category!))) {
+      const s = aboutTopic(app) ? 0.8 : 0.6;
+      const existing = hits.find((h) => h.kind === "app" && h.id === app.slug);
+      if (existing) existing.score = Math.max(existing.score, s);
+      else hits.push({ kind: "app", id: app.slug, title: app.name, subtitle: `${app.category} · ${app.tagline}`, href: `/apps/${app.slug}`, color: app.color, score: s });
+    }
+  }
+  // "stake SOL", "lend USDC", "earn yield": the apps that do it.
+  if (intent.type === "yield" && topics.length) {
+    for (const app of APPS.filter(aboutTopic)) {
       if (!hits.some((h) => h.kind === "app" && h.id === app.slug)) {
-        hits.push({ kind: "app", id: app.slug, title: app.name, subtitle: `${app.category} · ${app.tagline}`, href: `/apps/${app.slug}`, color: app.color, score: 0.6 });
+        hits.push({ kind: "app", id: app.slug, title: app.name, subtitle: `${app.category} · ${app.tagline}`, href: `/apps/${app.slug}`, color: app.color, score: 0.7 + (app.featured ? 0.02 : 0) });
       }
     }
   }

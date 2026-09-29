@@ -49,7 +49,8 @@ export function detectIntent(raw: string): SearchIntent {
   if (/\b(vs\.?|versus|compare|comparison|better than)\b/.test(lower)) {
     return { type: "compare", label: "Comparison", aiPrompt: q };
   }
-  if (/\b(yield|apy|apr|earn|interest|lend(ing)?|stake|staking)\b/.test(lower) || /what can i do with/.test(lower)) {
+  const asksForApps = /\b(apps?|protocols?|projects?|platforms?)\b/.test(lower);
+  if ((/\b(yield|apy|apr|earn|interest|lend(ing)?|stake|staking)\b/.test(lower) && !asksForApps) || /what can i do with/.test(lower)) {
     return { type: "yield", label: "Earn on Solana", href: "/defi", aiPrompt: q };
   }
   if (/\b(safe|scam|rug|risk|audit|drainer|phishing)\b/.test(lower)) {
@@ -57,11 +58,18 @@ export function detectIntent(raw: string): SearchIntent {
   }
   for (const [alias, cat] of Object.entries(CATEGORY_ALIASES)) {
     if (new RegExp(`\\b${alias}\\b`).test(lower) && /\b(apps?|protocols?|projects?|tools?|platforms?)\b/.test(lower)) {
-      return { type: "category", label: `${cat} apps`, href: `/apps?category=${encodeURIComponent(cat)}`, category: cat };
+      return { type: "category", label: `${cat} apps`, href: `/apps?category=${encodeURIComponent(cat)}`, category: cat, entity: alias };
     }
   }
   const exactCat = APP_CATEGORIES.find((c) => c.toLowerCase() === lower);
   if (exactCat) return { type: "category", label: `${exactCat} apps`, href: `/apps?category=${encodeURIComponent(exactCat)}`, category: exactCat };
+
+  // "Solana wallets", "best DeFi", "top NFT projects": a bare category is a category search.
+  const bare = lower.replace(/\b(solana|sol|best|top|popular|the|most|good|on|apps?|projects?|protocols?|platforms?)\b/g, " ").replace(/[?!.]/g, " ").trim().replace(/\s+/g, " ");
+  if (bare && q.split(/\s+/).length <= 4 && CATEGORY_ALIASES[bare]) {
+    const cat = CATEGORY_ALIASES[bare];
+    return { type: "category", label: `${cat} apps`, href: `/apps?category=${encodeURIComponent(cat)}`, category: cat, entity: bare };
+  }
 
   const questionLike = /\?$/.test(q) || /^(what|why|how|who|when|where|which|is|are|can|should|does|do|explain|tell me|help)\b/.test(lower) || q.split(/\s+/).length >= 6;
   if (questionLike) return { type: "question", label: "Ask STRATA AI", href: `/ai?q=${encodeURIComponent(q)}`, aiPrompt: q };

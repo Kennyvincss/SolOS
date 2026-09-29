@@ -453,3 +453,30 @@ html.sb-collapsed {
     --sb-w: 248px;
   }
 }
+
+/* ------------------------------------------------------------ Lite / Pro */
+/* The chrome for both modes is rendered; the html class (set before paint) picks one. */
+html.mode-lite .pro-only,
+html.mode-pro .lite-only {
+  display: none !important;
+}
+html.mode-lite {
+  --sb-w: 0px !important;
+}
+html.mode-lite main {
+  min-height: 100svh;
+}
+@keyframes mode-in {
+  from {
+    opacity: 0.35;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+html.mode-switching #app-root,
+html.mode-switching aside {
+  animation: mode-in 0.22s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
