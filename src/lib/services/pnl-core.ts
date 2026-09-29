@@ -32,6 +32,8 @@ export interface PnlResult {
   d30: PnlWindow;
   all: PnlWindow;
   trades: number;
+  buys: number;
+  sells: number;
   txsAnalyzed: number;
   /** Oldest transaction looked at. */
   historyFrom?: number;
@@ -179,6 +181,8 @@ export function computePnl(
     available: true,
     ...out,
     trades: trades.length,
+    buys: trades.filter((t) => t.side === "buy").length,
+    sells: trades.filter((t) => t.side === "sell").length,
     txsAnalyzed: opts.txsAnalyzed,
     historyFrom: opts.historyFrom,
     complete: opts.complete,

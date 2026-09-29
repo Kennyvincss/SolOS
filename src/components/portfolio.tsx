@@ -156,7 +156,7 @@ export function PortfolioView({ address, own }: { address: string; own?: boolean
         </div>
         <p className="mt-4 text-[12px] leading-relaxed text-faint">
           {pnl.data
-            ? `Profit and loss from ${pnl.data.trades} ${pnl.data.trades === 1 ? "trade" : "trades"}${pnl.data.complete ? "" : " (most recent)"}. "Realized" is from what you sold; "open" is on what you still hold. Transfers and airdrops don't count.${pnl.data.unmatchedSells >= 1 ? ` ${fmtUsd(pnl.data.unmatchedSells)} of sales had no matching purchase in the history read (tokens received by transfer or bought earlier), so they're left out.` : ""}${pnl.data.refining && refineTries < 3 ? " Reading older trades…" : ""}`
+            ? `Profit and loss from ${pnl.data.trades} ${pnl.data.trades === 1 ? "trade" : "trades"}${pnl.data.buys !== undefined ? ` (${pnl.data.buys} buys, ${pnl.data.sells} sells)` : ""}${pnl.data.complete ? "" : ", most recent first"}. "Realized" is from what you sold; "open" is on what you still hold. Transfers and airdrops don't count.${pnl.data.unmatchedSells >= 1 ? ` ${fmtUsd(pnl.data.unmatchedSells)} of sales had no matching purchase in the history read (tokens received by transfer or bought earlier), so they're left out.` : ""}${pnl.data.refining && refineTries < 3 ? " Reading older trades…" : ""}`
             : pnl.error
               ? "Couldn't load profit and loss right now. Try again in a minute."
               : "Reading your trades on-chain… this takes up to 15 seconds the first time."}
