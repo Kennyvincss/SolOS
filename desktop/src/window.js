@@ -23,6 +23,14 @@ const GROUP_COLORS = { grey: "#9aa0a6", blue: "#8ab4f8", red: "#f28b82", yellow:
 
 const shells = new Set();
 
+/** The STRATA home page, which is what a new tab shows. */
+function isNewTabUrl(url) {
+  if (!url) return true;
+  if (url === "about:blank") return true;
+  const base = SOLANA_OS_URL.replace(/\/$/, "");
+  return url === base || url === `${base}/` || url.startsWith(`${base}/?`) || url.startsWith(`${base}/#`);
+}
+
 const faviconCache = new Map(); // icon URL -> data: URL (or null when it can't be loaded)
 async function faviconData(ses, url) {
   if (url.startsWith("data:")) return url.length < 300_000 ? url : null;
@@ -243,6 +251,8 @@ class BrowserShell {
     if (opts.lazy) tab.pending = { url, entries: opts.entries, index: opts.historyIndex };
     else loadInto(wc, url, opts.entries, opts.historyIndex);
 
+    // A new tab on the home page puts the cursor in the address bar (like Chrome).
+    tab.freshNewTab = isNewTabUrl(url) && !opts.entries;
     if (!opts.background || !this.activeId) this.selectTab(tab.id);
     else this.changed();
     return wc;
@@ -303,7 +313,8 @@ class BrowserShell {
       }
     }
     this.layout();
-    tab.view.webContents.focus();
+    if (tab.freshNewTab) this.focusAddress();
+    else tab.view.webContents.focus();
     this.profile.extensions.selectTab(tab.view.webContents);
     this.changed();
   }
@@ -913,7 +924,7 @@ class BrowserShell {
       const url = t.pending?.url ?? wc.getURL();
       return {
         id,
-        title: wc.getTitle() || t.placeholderTitle || (url && !url.startsWith("about:") ? url : "New tab"),
+        title: isNewTabUrl(url) ? "New tab" : wc.getTitle() || t.placeholderTitle || url,
         url,
         favicon: t.favicon,
         loading: !t.pending && wc.isLoading(),
@@ -1075,6 +1086,11 @@ function wireTab(tab) {
       push();
     }
   });
+  // A new tab keeps the cursor in the address bar while its page loads (unless the user clicked into the page).
+  wc.on("did-finish-load", () => {
+    const s = owner();
+    if (tab.freshNewTab && s && s.activeId === tab.id && !wc.isFocused()) s.focusAddress();
+  });
   // Pages that never declare an icon still get one.
   wc.on("did-finish-load", () => {
     if (!tab.favicon && !wc.isDestroyed()) {
@@ -1088,6 +1104,7 @@ function wireTab(tab) {
   wc.on("did-navigate", async (_e, navUrl) => {
     const s = owner();
     if (!s) return;
+    if (!isNewTabUrl(navUrl)) tab.freshNewTab = false;
     s.profile.library.addHistory(navUrl, wc.getTitle());
     wc.setAudioMuted(isSiteMuted(s.profile, navUrl));
     tab.risk = null;

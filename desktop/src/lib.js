@@ -162,7 +162,8 @@ function riskFromReport(report) {
   if (!ind.length) return null;
   const high = ind.find((i) => i.level === "high");
   if (high) return { level: "high", label: high.label, detail: high.explanation };
-  const medium = ind.find((i) => i.level === "medium");
+  // "Not in the app registry" is not a warning: most websites aren't Solana apps.
+  const medium = ind.find((i) => i.level === "medium" && i.id !== "registry");
   if (medium) return { level: "medium", label: medium.label, detail: medium.explanation };
   const known = ind.find((i) => i.id === "registry");
   return { level: "low", label: known?.value ? `Known app · ${known.value}` : "No warnings", detail: known?.explanation };

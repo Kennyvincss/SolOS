@@ -219,7 +219,23 @@ function renderStrip() {
     else updateHorizontalTab(el, tabById(Number(k.slice(2))));
     if (tabsEl.children[i] !== el) tabsEl.insertBefore(el, tabsEl.children[i] ?? null);
   });
+  // With more tabs than fit, keep the active one in view.
+  if (state.activeId !== lastScrolledTo) {
+    lastScrolledTo = state.activeId;
+    requestAnimationFrame(() => stripEls.get(`t:${state.activeId}`)?.scrollIntoView({ block: "nearest", inline: "nearest" }));
+  }
 }
+let lastScrolledTo = null;
+// The mouse wheel scrolls the tab strip sideways when tabs overflow.
+tabsEl.addEventListener(
+  "wheel",
+  (e) => {
+    if (tabsEl.scrollWidth <= tabsEl.clientWidth) return;
+    tabsEl.scrollLeft += Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+    e.preventDefault();
+  },
+  { passive: false },
+);
 
 function makeHorizontalTab(id) {
   const el = document.createElement("div");

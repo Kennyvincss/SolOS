@@ -63,9 +63,22 @@ body.darwin #tabstrip { padding-left: 80px; }
 body.overlay #tabstrip { padding-right: 140px; }
 body.vertical #tabstrip { display: none; }
 .drag-fill { flex: 1; align-self: stretch; }
-#tabs { display: flex; align-items: flex-end; gap: 2px; min-width: 0; flex: 0 1 auto; overflow: hidden; height: 100%; padding-top: 6px; }
+#tabs { display: flex; align-items: flex-end; gap: 2px; min-width: 0; flex: 0 1 auto; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; height: 100%; padding-top: 6px; }
+#tabs::-webkit-scrollbar { display: none; }
 
-.tab { -webkit-app-region: no-drag; position: relative; display: flex; align-items: center; gap: 8px; height: 34px; width: 220px; min-width: 44px; padding: 0 8px 0 11px; border-radius: 10px 10px 0 0; background: var(--tab); color: var(--muted); flex: 0 1 220px; transition: background 0.12s; }
+.tab { -webkit-app-region: no-drag; position: relative; display: flex; align-items: center; gap: 8px; height: 34px; width: 220px; min-width: 34px; padding: 0 8px 0 11px; border-radius: 10px 10px 0 0; background: var(--tab); color: var(--muted); flex: 0 1 220px; transition: background 0.12s; container-type: inline-size; }
+.tab.active { min-width: 58px; }
+/* Many tabs (like Chrome): titles go first, then everything but the icon; the active tab keeps its close button. */
+@container (max-width: 96px) {
+  .tab .title, .tab .aud, .tab .split-mark { display: none; }
+  .tab .close { margin-left: auto; }
+}
+@container (max-width: 64px) {
+  .tab:not(.active) .close { display: none; }
+}
+@container (max-width: 40px) {
+  .tab .ic { margin-left: -4px; }
+}
 .tab:hover:not(.active) { background: var(--tab-hover); }
 .tab.active { background: var(--tab-active); color: var(--text); }
 .tab.pinned { flex: 0 0 44px; width: 44px; padding: 0; justify-content: center; }
