@@ -22,17 +22,31 @@ async function call<T>(url: string, method: string, params: unknown[], timeoutMs
   return res.result as T;
 }
 
+const rateLimited = (e: unknown) => e instanceof UpstreamError && (e.status === 429 || e.status === -32429 || /rate|too many/i.test(e.message));
+
+/** Rate limits are usually momentary: try again twice, briefly, before giving up. */
+async function callWithRetry<T>(url: string, method: string, params: unknown[], timeoutMs: number): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await call<T>(url, method, params, timeoutMs);
+    } catch (e) {
+      if (attempt >= 2 || !rateLimited(e)) throw e;
+      await new Promise((r) => setTimeout(r, 400 + attempt * 600 + Math.random() * 200));
+    }
+  }
+}
+
 export async function rpc<T>(method: string, params: unknown[] = [], timeoutMs = 10000): Promise<T> {
   const custom = config.rpcUrl !== PUBLIC_RPC;
-  if (!custom || Date.now() < customRejectedUntil) return call<T>(PUBLIC_RPC, method, params, timeoutMs);
+  if (!custom || Date.now() < customRejectedUntil) return callWithRetry<T>(PUBLIC_RPC, method, params, timeoutMs);
   try {
-    return await call<T>(config.rpcUrl, method, params, timeoutMs);
+    return await callWithRetry<T>(config.rpcUrl, method, params, timeoutMs);
   } catch (e) {
     // An invalid, expired or out-of-credit API key shouldn't take wallets offline.
     if (e instanceof UpstreamError && e.status !== undefined && REJECTED_STATUSES.has(e.status)) {
       customRejectedUntil = Date.now() + 5 * 60 * 1000;
       console.warn(`[solana-os] SOLANA_RPC_URL rejected the request (HTTP ${e.status}); using the public Solana RPC for now. Check the RPC API key.`);
-      return call<T>(PUBLIC_RPC, method, params, timeoutMs);
+      return callWithRetry<T>(PUBLIC_RPC, method, params, timeoutMs);
     }
     throw e;
   }

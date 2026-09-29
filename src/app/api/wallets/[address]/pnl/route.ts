@@ -50,7 +50,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ address
       await writeJson(lockKey(address), Date.now(), 70).catch(() => {});
       after(async () => {
         try {
-          const full = await walletPnl(address, prices, holdings, { budgetMs: 38_000 });
+          const full = await walletPnl(address, prices, holdings, { budgetMs: 38_000, gentle: true });
           await writeJson(savedKey(address), { ...full, at: Date.now() }, SAVED_MS / 1000);
         } catch {
           /* the quick result stands; the next visit tries again */

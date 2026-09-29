@@ -16,12 +16,12 @@ const DAY = 86_400_000;
  * each swap against SOL or a USD stablecoin is priced at that day's SOL price,
  * positions use average cost, and current holdings are marked at today's price.
  */
-export async function walletPnl(address: string, currentPrices: Map<string, number>, holdings: Map<string, number>, opts: { budgetMs?: number } = {}): Promise<PnlResult> {
+export async function walletPnl(address: string, currentPrices: Map<string, number>, holdings: Map<string, number>, opts: { budgetMs?: number; gentle?: boolean } = {}): Promise<PnlResult> {
   const fast = config.rpcUrl !== PUBLIC_RPC && !customRpcRejected();
   // The public RPC is slow and rate-limited: look at less history there.
   const maxTx = fast ? 600 : 100;
   const budget = opts.budgetMs ?? 40_000;
-  return cached(`pnl:${address}:${maxTx}:${budget}`, 5 * 60_000, async () => {
+  return cached(`pnl:${address}:${maxTx}:${budget}${opts.gentle ? ":g" : ""}`, 5 * 60_000, async () => {
     // 1) Signatures, newest first, up to a year back.
     const sigs: { signature: string; blockTime: number | null; err: unknown }[] = [];
     let before: string | undefined;
@@ -41,6 +41,7 @@ export async function walletPnl(address: string, currentPrices: Map<string, numb
       ok.map((s) => s.signature),
       fast,
       deadline,
+      Boolean(opts.gentle),
     );
     if (ok.length && !txs.length) throw new UpstreamError("Couldn't load this wallet's trades right now.");
 
@@ -74,11 +75,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
  * rate limits) when batches come back empty. Stops at the deadline; returns how
  * many signatures were covered so the caller can report partial history.
  */
-async function fetchTransactions(signatures: string[], fast: boolean, deadline: number): Promise<{ txs: ParsedTransaction[]; attempted: number }> {
+async function fetchTransactions(signatures: string[], fast: boolean, deadline: number, gentle = false): Promise<{ txs: ParsedTransaction[]; attempted: number }> {
   const txs: ParsedTransaction[] = [];
   let i = 0;
   let batches = true;
-  const size = fast ? 50 : 20;
+  // Gentle (background) reads leave room under the RPC's rate limit for pages people are waiting on.
+  const size = fast && !gentle ? 50 : 20;
   while (batches && i < signatures.length && Date.now() < deadline) {
     const chunk = signatures.slice(i, i + size);
     const res = await rpcBatch<ParsedTransaction>(chunk.map((sig) => ({ method: "getTransaction", params: [sig, TX_PARAMS] }))).catch(() => null);
@@ -105,8 +107,8 @@ async function fetchTransactions(signatures: string[], fast: boolean, deadline: 
     return null;
   };
   // The public RPC allows about 40 getTransaction calls per 10 s: pace to 4/s there.
-  const concurrency = fast ? 10 : 4;
-  const minRoundMs = fast ? 0 : 1000;
+  const concurrency = gentle ? 2 : fast ? 6 : 4;
+  const minRoundMs = gentle ? 700 : fast ? 0 : 1000;
   while (i < signatures.length && Date.now() < deadline) {
     const chunk = signatures.slice(i, i + concurrency);
     const started = Date.now();
