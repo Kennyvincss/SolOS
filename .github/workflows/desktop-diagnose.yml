@@ -62,12 +62,13 @@ jobs:
           W=${W:-5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1}
           echo "[pnl] wallet $W"
           for w in $W; do
-            for i in 1 2; do
-              echo "[pnl] live wallet $w (try $i)"
-              curl -s -m 90 -w "\n[pnl] http=%{http_code} total=%{time_total}s\n" "https://solos-rho.vercel.app/api/wallets/$w/pnl" | head -c 1500; echo || true
-            done
-            echo "[pnl] portfolio:"
-            curl -s -m 60 -w "\n[pnl] http=%{http_code} total=%{time_total}s\n" "https://solos-rho.vercel.app/api/wallets/$w" | head -c 400; echo || true
+            echo "[pnl] first request (quick pass):"
+            curl -s -m 90 -w "\n[pnl] http=%{http_code} total=%{time_total}s\n" "https://solos-rho.vercel.app/api/wallets/$w/pnl" | head -c 1500; echo || true
+            echo "[pnl] portfolio while the background pass runs:"
+            curl -s -m 60 -o /dev/null -w "[pnl] portfolio http=%{http_code} total=%{time_total}s\n" "https://solos-rho.vercel.app/api/wallets/$w" || true
+            sleep 35
+            echo "[pnl] again after 35 s (should be the saved full result):"
+            curl -s -m 90 -w "\n[pnl] http=%{http_code} total=%{time_total}s\n" "https://solos-rho.vercel.app/api/wallets/$w/pnl" | head -c 1500; echo || true
           done
       - name: Jupiter links
         if: contains(inputs.checks, 'jupiter')
