@@ -5,7 +5,8 @@ import { UpstreamError } from "../providers/http";
 import { customRpcRejected, getSignatures, rpc, rpcBatch, type ParsedTransaction } from "../providers/rpc";
 import { priceHistory } from "../providers/geckoterminal";
 import { SOL_MINT } from "../solana/constants";
-import { computePnl, tradeFromTx, type PnlResult } from "./pnl-core";
+import { computePnl, tradeFromEnhanced, tradeFromTx, type EnhancedTx, type PnlResult, type Trade } from "./pnl-core";
+import { fetchJson } from "../providers/http";
 
 export type { PnlResult } from "./pnl-core";
 
@@ -21,6 +22,10 @@ export async function walletPnl(address: string, currentPrices: Map<string, numb
   // The public RPC is slow and rate-limited: look at less history there.
   const maxTx = fast ? 600 : 100;
   const budget = opts.budgetMs ?? 40_000;
+  if (config.heliusKey) {
+    const viaHelius = await cached(`pnl:h:${address}:${budget}`, 5 * 60_000, () => heliusPnl(address, currentPrices, holdings, budget)).catch(() => null);
+    if (viaHelius) return viaHelius;
+  }
   return cached(`pnl:${address}:${maxTx}:${budget}${opts.gentle ? ":g" : ""}`, 5 * 60_000, async () => {
     // 1) Signatures, newest first, up to a year back.
     const sigs: { signature: string; blockTime: number | null; err: unknown }[] = [];
@@ -119,4 +124,65 @@ async function fetchTransactions(signatures: string[], fast: boolean, deadline: 
     i += chunk.length;
   }
   return { txs, attempted: i };
+}
+
+/* ------------------------------------------------------------ Helius */
+
+const HELIUS_PAGE = 100;
+
+async function solPriceLookup(currentPrices: Map<string, number>) {
+  const solDaily = await priceHistory(SOL_MINT, "1Y").catch(() => []);
+  return (ms: number) => {
+    if (!solDaily.length) return currentPrices.get(SOL_MINT);
+    let best = solDaily[0];
+    for (const p of solDaily) if (Math.abs(p.t - ms) < Math.abs(best.t - ms)) best = p;
+    return best.v;
+  };
+}
+
+/**
+ * The wallet's history from Helius' Enhanced Transactions API: 100 decoded
+ * transactions per request, so a year of trading reads in seconds.
+ */
+async function heliusPnl(address: string, currentPrices: Map<string, number>, holdings: Map<string, number>, budgetMs: number): Promise<PnlResult> {
+  const deadline = Date.now() + budgetMs;
+  const since = Date.now() - 365 * DAY;
+  const solPriceAt = await solPriceLookup(currentPrices);
+  const trades: Trade[] = [];
+  let before: string | undefined;
+  let read = 0;
+  let oldest: number | undefined;
+  let complete = false;
+  for (let page = 0; page < 60 && Date.now() < deadline; page++) {
+    const url = `https://api.helius.xyz/v0/addresses/${address}/transactions?api-key=${encodeURIComponent(config.heliusKey!)}&limit=${HELIUS_PAGE}${before ? `&before=${before}` : ""}`;
+    let txs: EnhancedTx[] | null = null;
+    for (let attempt = 0; attempt < 3 && !txs; attempt++) {
+      try {
+        txs = await fetchJson<EnhancedTx[]>(url, { timeoutMs: 15_000 });
+      } catch (e) {
+        const status = (e as { status?: number }).status;
+        if (status !== 429 || attempt === 2) throw e;
+        await sleep(800 * (attempt + 1));
+      }
+    }
+    if (!Array.isArray(txs) || !txs.length) {
+      complete = true;
+      break;
+    }
+    for (const t of txs) {
+      const trade = tradeFromEnhanced(t, address, solPriceAt);
+      if (trade) trades.push(trade);
+    }
+    read += txs.length;
+    const last = txs[txs.length - 1];
+    before = last.signature;
+    oldest = last.timestamp ? last.timestamp * 1000 : oldest;
+    if (txs.length < HELIUS_PAGE || (oldest && oldest < since)) {
+      complete = true;
+      break;
+    }
+  }
+  if (!read) throw new UpstreamError("No history from Helius");
+  const kept = trades.filter((t) => t.time >= since);
+  return computePnl(kept, currentPrices, holdings, { now: Date.now(), txsAnalyzed: read, historyFrom: oldest, complete });
 }

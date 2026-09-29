@@ -72,7 +72,7 @@ export function HoldingsTable({ p, limit }: { p: Portfolio; limit?: number }) {
   return (
     <div className="divide-y divide-line">
       {rows.map((h) => (
-        <Link key={h.mint} href={`/tokens/${h.mint}`} className="flex items-center gap-3 py-3 transition-colors hover:bg-surface-2/40 sm:px-2">
+        <Link key={h.mint} href={`/tokens/${h.mint === "native-stake" ? "So11111111111111111111111111111111111111112" : h.mint}`} className="flex items-center gap-3 py-3 transition-colors hover:bg-surface-2/40 sm:px-2">
           <Monogram name={h.symbol ?? "?"} src={h.icon} size={34} rounded="full" color="#9ba1ab" />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5 text-[14px] font-medium">

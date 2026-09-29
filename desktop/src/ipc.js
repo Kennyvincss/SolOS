@@ -140,6 +140,8 @@ function openBookmarkEditor(s, url, rect) {
   });
 }
 
+const profileRows = () => profiles.list().map((p) => ({ ...p, open: shellsOf(p.id).length > 0, picture: profiles.pictureUrl(p.id) }));
+
 function openProfileBubble(s, rect) {
   const exts = s.profile.session.extensions.getAllExtensions();
   const wallet = WALLETS.find((w) => exts.some((x) => x.id === w.id));
@@ -149,7 +151,7 @@ function openProfileBubble(s, rect) {
     width: 320,
     data: {
       current: s.profile.id,
-      profiles: profiles.list().map((p) => ({ ...p, open: shellsOf(p.id).length > 0 })),
+      profiles: profileRows(),
       presets: profiles.PRESETS,
       colors: profiles.COLORS,
       walletLabel: wallet ? `${wallet.name} installed` : "No wallet installed yet",
@@ -168,10 +170,30 @@ function openProfileBubble(s, rect) {
       } else if (action === "remove") {
         const ok = await deleteProfile(s, String(payload));
         if (ok) menus.buildMenuBar(actionsFor);
-        b.data = { ...b.data, profiles: profiles.list().map((p) => ({ ...p, open: shellsOf(p.id).length > 0 })) };
+        b.data = { ...b.data, profiles: profileRows() };
         return ok;
+      } else if (action === "choosePicture") {
+        const id = String(payload);
+        if (!profiles.get(id)) return null;
+        const { canceled, filePaths } = await dialog.showOpenDialog(s.win, {
+          title: "Choose a profile picture",
+          properties: ["openFile"],
+          filters: [{ name: "Images", extensions: ["png", "jpg", "jpeg"] }],
+        });
+        if (canceled || !filePaths?.[0]) return null;
+        const img = nativeImage.createFromPath(filePaths[0]);
+        if (img.isEmpty()) return { error: "That file isn't a picture STRATA can read. Try a PNG or JPG." };
+        // Center square, 128×128.
+        const { width, height } = img.getSize();
+        const side = Math.min(width, height);
+        const square = img.crop({ x: Math.floor((width - side) / 2), y: Math.floor((height - side) / 2), width: side, height: side }).resize({ width: 128, height: 128, quality: "best" });
+        profiles.setPicture(id, square.toPNG());
+        for (const w of shellsOf(id)) w.sendState();
+      } else if (action === "removePicture") {
+        profiles.clearPicture(String(payload));
+        for (const w of shellsOf(String(payload))) w.sendState();
       }
-      b.data = { ...b.data, profiles: profiles.list().map((p) => ({ ...p, open: shellsOf(p.id).length > 0 })) };
+      b.data = { ...b.data, profiles: profileRows() };
       return true;
     },
   });

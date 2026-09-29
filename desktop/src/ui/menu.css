@@ -55,7 +55,7 @@ body {
 .row .ic { width: 20px; height: 20px; flex: none; display: grid; place-items: center; color: var(--icon); }
 .row .ic svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .row .ic .check { stroke: var(--accent); stroke-width: 2.2; }
-.row .avatar { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 700; color: #0b0b12; }
+.row .avatar { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 700; color: #0b0b12; object-fit: cover; }
 .row .label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; padding-right: 8px; }
 .row .accel { color: var(--muted); font-size: 12.5px; margin-left: 24px; }
 .row .chev { width: 16px; height: 16px; color: var(--icon); flex: none; margin-left: 16px; }

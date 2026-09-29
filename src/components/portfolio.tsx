@@ -19,11 +19,13 @@ const LST_PROTOCOL: Record<string, string> = { JitoSOL: "jito", mSOL: "marinade"
 function HoldingsHistory({ p }: { p: Portfolio }) {
   const top = p.holdings.filter((h) => h.valueUsd && h.kind !== "stable").sort((a, b) => (b.valueUsd ?? 0) - (a.valueUsd ?? 0)).slice(0, 5);
   const stable = p.holdings.filter((h) => h.kind === "stable").reduce((s, h) => s + (h.valueUsd ?? 0), 0);
-  const h0 = useApi<Sourced<PricePoint[]>>(top[0] ? `/api/tokens/${top[0].mint}/history?range=30D` : null);
-  const h1 = useApi<Sourced<PricePoint[]>>(top[1] ? `/api/tokens/${top[1].mint}/history?range=30D` : null);
-  const h2 = useApi<Sourced<PricePoint[]>>(top[2] ? `/api/tokens/${top[2].mint}/history?range=30D` : null);
-  const h3 = useApi<Sourced<PricePoint[]>>(top[3] ? `/api/tokens/${top[3].mint}/history?range=30D` : null);
-  const h4 = useApi<Sourced<PricePoint[]>>(top[4] ? `/api/tokens/${top[4].mint}/history?range=30D` : null);
+  // Natively staked SOL follows SOL's price.
+  const hist = (h?: (typeof top)[number]) => (h ? `/api/tokens/${h.mint === "native-stake" ? "So11111111111111111111111111111111111111112" : h.mint}/history?range=30D` : null);
+  const h0 = useApi<Sourced<PricePoint[]>>(hist(top[0]));
+  const h1 = useApi<Sourced<PricePoint[]>>(hist(top[1]));
+  const h2 = useApi<Sourced<PricePoint[]>>(hist(top[2]));
+  const h3 = useApi<Sourced<PricePoint[]>>(hist(top[3]));
+  const h4 = useApi<Sourced<PricePoint[]>>(hist(top[4]));
   const hs = [h0, h1, h2, h3, h4].slice(0, top.length);
   const loading = hs.some((h) => h.loading);
   const series = useMemo(() => {

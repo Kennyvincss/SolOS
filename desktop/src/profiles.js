@@ -108,4 +108,46 @@ function partition(id) {
   return id === "default" ? "persist:solanaos" : `persist:strata-${id}`;
 }
 
-module.exports = { COLORS, PRESETS, list, get, create, update, remove, lastUsed, setLastUsed, dataDir, partition };
+/* ------------------------------------------------------------ profile picture */
+// A 128×128 PNG in the profile's own folder. Never synced or uploaded.
+const PICTURE = "profile-picture.png";
+const pictureCache = new Map(); // id -> { version, url }
+
+function setPicture(id, png) {
+  if (!get(id) || !Buffer.isBuffer(png) || !png.length || png.length > 512 * 1024) return false;
+  fs.mkdirSync(dataDir(id), { recursive: true });
+  fs.writeFileSync(path.join(dataDir(id), PICTURE), png);
+  const d = load();
+  const i = d.profiles.findIndex((x) => x.id === id);
+  d.profiles[i] = { ...d.profiles[i], picture: Date.now() };
+  save();
+  return true;
+}
+
+function clearPicture(id) {
+  if (!get(id)) return false;
+  fs.rmSync(path.join(dataDir(id), PICTURE), { force: true });
+  const d = load();
+  const i = d.profiles.findIndex((x) => x.id === id);
+  d.profiles[i] = { ...d.profiles[i], picture: 0 };
+  save();
+  pictureCache.delete(id);
+  return true;
+}
+
+/** The profile picture as a data: URL, or null. */
+function pictureUrl(id) {
+  const p = get(id);
+  if (!p?.picture) return null;
+  const hit = pictureCache.get(id);
+  if (hit && hit.version === p.picture) return hit.url;
+  try {
+    const url = `data:image/png;base64,${fs.readFileSync(path.join(dataDir(id), PICTURE)).toString("base64")}`;
+    pictureCache.set(id, { version: p.picture, url });
+    return url;
+  } catch {
+    return null;
+  }
+}
+
+module.exports = { COLORS, PRESETS, list, get, create, update, remove, lastUsed, setLastUsed, dataDir, partition, setPicture, clearPicture, pictureUrl };

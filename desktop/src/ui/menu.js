@@ -122,7 +122,13 @@ function render(data) {
       if (withIcons) {
         const ic = document.createElement("span");
         ic.className = "ic";
-        if (item.avatar) {
+        if (item.avatar && typeof item.avatar.image === "string" && item.avatar.image.startsWith("data:image/png;base64,")) {
+          const img = document.createElement("img");
+          img.className = "avatar";
+          img.src = item.avatar.image;
+          img.alt = "";
+          ic.append(img);
+        } else if (item.avatar) {
           const a = document.createElement("span");
           a.className = "avatar";
           a.style.background = /^#[0-9a-f]{3,8}$/i.test(item.avatar.color || "") ? item.avatar.color : "#9b9cff";

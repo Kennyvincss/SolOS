@@ -5,7 +5,10 @@
 let editing = null; // profile id being edited, or "new"
 let draft = { name: "", color: "" };
 
-const avatar = (p, size = 28) => h("span", { style: `width:${size}px;height:${size}px;border-radius:50%;background:${p.color};color:#0b0b12;display:grid;place-items:center;font-weight:700;font-size:${Math.round(size * 0.45)}px;flex:none` }, (p.name || "?").trim().charAt(0).toUpperCase());
+const avatar = (p, size = 28) =>
+  p.picture && /^data:image\/png;base64,/.test(p.picture)
+    ? h("img", { src: p.picture, alt: "", width: size, height: size, style: `width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;flex:none` })
+    : h("span", { style: `width:${size}px;height:${size}px;border-radius:50%;background:${p.color};color:#0b0b12;display:grid;place-items:center;font-weight:700;font-size:${Math.round(size * 0.45)}px;flex:none` }, (p.name || "?").trim().charAt(0).toUpperCase());
 
 async function render() {
   const d = await window.bubble.data();
@@ -19,9 +22,31 @@ async function render() {
       ? h("div", { class: "row", style: "flex-wrap:wrap;margin-top:8px" }, d.presets.map((p) => h("button", { class: "btn", style: "height:28px;padding:0 10px", onclick: () => ((draft = { name: p.name, color: p.color }), render()) }, p.name)))
       : null;
     const swatches = h("div", { class: "swatches" }, d.colors.map((c) => h("button", { class: `swatch${c === draft.color ? " on" : ""}`, style: `background:${c};color:${c}`, onclick: () => ((draft.color = c), render()) })));
+    const editingProfile = !isNew ? d.profiles.find((p) => p.id === editing) : null;
+    let pictureError = null;
+    const picture = editingProfile
+      ? h(
+          "div",
+          { class: "row", style: "gap:12px;margin:10px 0 2px" },
+          avatar({ ...editingProfile, color: draft.color || editingProfile.color, name: draft.name || editingProfile.name }, 56),
+          h(
+            "div",
+            { style: "display:flex;flex-direction:column;gap:6px;align-items:flex-start" },
+            h("button", { class: "btn", style: "height:28px;padding:0 10px", onclick: async () => {
+              const r = await window.bubble.action("choosePicture", editing);
+              if (r && r.error) pictureError = r.error;
+              render();
+            } }, editingProfile.picture ? "Change picture…" : "Choose picture…"),
+            editingProfile.picture ? h("button", { class: "btn", style: "height:28px;padding:0 10px", onclick: async () => (await window.bubble.action("removePicture", editing), render()) }, "Remove picture") : null,
+          ),
+        )
+      : null;
     root.replaceChildren(
+      ...[
       h("h1", {}, isNew ? "Add a profile" : "Edit profile"),
-      h("div", { class: "faint" }, isNew ? "Each profile has its own wallet, extensions, bookmarks, history, settings and tabs." : ""),
+      h("div", { class: "faint" }, isNew ? "Each profile has its own wallet, extensions, bookmarks, history, settings and tabs. You can add a picture after creating it." : ""),
+      picture,
+      pictureError ? h("div", { class: "faint", style: "color:var(--down)" }, pictureError) : null,
       h("label", {}, "Name"),
       name,
       presets,
@@ -42,6 +67,7 @@ async function render() {
           if (!isNew) render();
         } }, isNew ? "Create and open" : "Save"),
       ),
+      ].filter(Boolean), // optional rows are null
     );
     fit();
     name.focus();

@@ -931,7 +931,7 @@ class BrowserShell {
     const meta = this.profile.meta;
     const favorites = lib.bookmarks().filter((b) => b.favorite);
     this.win.webContents.send("shell:state", {
-      profile: { id: meta.id, name: meta.name, color: meta.color, initial: (meta.name || "?").trim().charAt(0).toUpperCase(), count: require("./profiles").list().length },
+      profile: { id: meta.id, name: meta.name, color: meta.color, picture: require("./profiles").pictureUrl(meta.id), initial: (meta.name || "?").trim().charAt(0).toUpperCase(), count: require("./profiles").list().length },
       tabs,
       groups: [...this.groups.values()].map((g) => ({ ...g, hex: GROUP_COLORS[g.color] ?? GROUP_COLORS.grey, saved: lib.isGroupSaved(g.id) })),
       splits: [...this.splits.values()],

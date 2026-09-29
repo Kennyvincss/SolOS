@@ -482,8 +482,9 @@ function renderToolbar() {
   ai.classList.toggle("on", state.panelOpen);
   ai.setAttribute("aria-pressed", String(state.panelOpen));
   const p = $("profile");
-  p.textContent = state.profile.initial;
-  p.style.background = state.profile.color;
+  const pic = typeof state.profile.picture === "string" && state.profile.picture.startsWith("data:image/png;base64,") ? state.profile.picture : null;
+  p.textContent = pic ? "" : state.profile.initial;
+  p.style.background = pic ? `center / cover no-repeat url("${pic}")` : state.profile.color;
   p.title = `${state.profile.name} — switch or add profiles`;
   // Extension icons for this profile's session.
   let list = document.querySelector("browser-action-list");

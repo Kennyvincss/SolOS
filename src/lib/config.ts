@@ -19,6 +19,18 @@ export function normalizeRpcUrl(value: string | undefined): string {
   return PUBLIC_RPC;
 }
 
+/** A Helius API key, from HELIUS_API_KEY or a Helius SOLANA_RPC_URL (enables the Enhanced Transactions API). */
+export function heliusKeyFrom(rpcUrl: string, explicit?: string): string | undefined {
+  if (explicit) return explicit;
+  try {
+    const u = new URL(rpcUrl);
+    if (/(^|\.)helius-rpc\.com$|(^|\.)helius\.xyz$/i.test(u.hostname)) return u.searchParams.get("api-key") ?? undefined;
+  } catch {
+    /* not a URL */
+  }
+  return undefined;
+}
+
 export type DataModeSetting = "auto" | "live" | "demo";
 
 function env(name: string): string | undefined {
@@ -30,6 +42,7 @@ export const config = {
   /** auto = live with labelled demo fallback; live = never fall back; demo = never call upstreams. */
   dataMode: (env("DATA_MODE") as DataModeSetting | undefined) ?? "auto",
   rpcUrl: normalizeRpcUrl(env("SOLANA_RPC_URL")),
+  heliusKey: heliusKeyFrom(normalizeRpcUrl(env("SOLANA_RPC_URL")), env("HELIUS_API_KEY")),
   jupiterApi: env("JUPITER_API_URL") ?? "https://lite-api.jup.ag",
   jupiterApiKey: env("JUPITER_API_KEY"),
   geckoTerminalApi: env("GECKOTERMINAL_API_URL") ?? "https://api.geckoterminal.com/api/v2",

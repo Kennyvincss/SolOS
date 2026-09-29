@@ -1,7 +1,7 @@
 import "server-only";
 import type { ActivityItem, Holding, HoldingKind, Portfolio, Sourced, Token } from "../types";
-import { getBalanceLamports, getSignatures, getTokenAccounts, getTransaction } from "../providers/rpc";
-import { jupTokensByMint } from "../providers/jupiter";
+import { getBalanceLamports, getSignatures, getTokenAccounts, getTransaction, rpc } from "../providers/rpc";
+import { jupPrices, jupTokensByMint } from "../providers/jupiter";
 import { demoActivity, demoPortfolio, isDemoWallet } from "../providers/demo";
 import { liveOnly } from "../providers/source";
 import { KNOWN_MINTS, LAMPORTS_PER_SOL, SOL_MINT, STABLE_SYMBOLS } from "../solana/constants";
@@ -19,12 +19,27 @@ function kindFor(mint: string, symbol: string | undefined, tags: string[] | unde
   return "token";
 }
 
+const STAKE_PROGRAM = "Stake11111111111111111111111111111111111111";
+/** SOL staked natively: stake accounts whose withdraw authority is this wallet. */
+async function nativeStakeLamports(address: string): Promise<number> {
+  try {
+    const accounts = await rpc<{ account: { lamports: number } }[]>(
+      "getProgramAccounts",
+      [STAKE_PROGRAM, { encoding: "base64", dataSlice: { offset: 0, length: 0 }, filters: [{ memcmp: { offset: 44, bytes: address } }] }],
+      8000,
+    );
+    return (accounts ?? []).reduce((s, a) => s + (a.account?.lamports ?? 0), 0);
+  } catch {
+    return 0; // some RPCs don't allow this query; staked SOL is then left out
+  }
+}
+
 export async function getPortfolio(address: string): Promise<Sourced<Portfolio>> {
   if (isDemoWallet(address)) {
     return { data: demoPortfolio(), meta: { provider: "Demo dataset", mode: "demo", fetchedAt: new Date().toISOString(), note: "Demo wallet" } };
   }
   const res = await liveOnly("Solana RPC", async () => {
-    const [lamports, accounts] = await Promise.all([getBalanceLamports(address), getTokenAccounts(address)]);
+    const [lamports, accounts, stakedLamports] = await Promise.all([getBalanceLamports(address), getTokenAccounts(address), nativeStakeLamports(address)]);
     const sol = lamports / LAMPORTS_PER_SOL;
 
     // Aggregate token accounts per mint (a wallet can hold several accounts of one mint).
@@ -40,10 +55,15 @@ export async function getPortfolio(address: string): Promise<Sourced<Portfolio>>
 
     let meta = new Map<string, Token>();
     let pricingNote: string | undefined;
-    try {
-      meta = await jupTokensByMint([SOL_MINT, ...[...byMint.keys()].filter((m) => byMint.get(m)!.decimals > 0)]);
-    } catch (e) {
-      pricingNote = `Prices unavailable (${e instanceof Error ? e.message : "error"})`;
+    const fungible = [SOL_MINT, ...[...byMint.keys()].filter((m) => byMint.get(m)!.decimals > 0)];
+    // Names and logos from token search; prices from the price API, which answers for every mint.
+    const [metaRes, priceRes] = await Promise.allSettled([jupTokensByMint(fungible), jupPrices(fungible)]);
+    if (metaRes.status === "fulfilled") meta = metaRes.value;
+    const prices = priceRes.status === "fulfilled" ? priceRes.value : new Map<string, { usdPrice: number; priceChange24h?: number }>();
+    if (metaRes.status === "rejected" && !prices.size) pricingNote = "Prices unavailable right now";
+    for (const [mint, p] of prices) {
+      const t = meta.get(mint);
+      meta.set(mint, { ...(t ?? { mint, symbol: KNOWN_MINTS[mint]?.symbol ?? "", name: KNOWN_MINTS[mint]?.name ?? "" }), priceUsd: p.usdPrice, change24h: p.priceChange24h ?? t?.change24h } as Token);
     }
 
     const holdings: Holding[] = [];
@@ -61,6 +81,21 @@ export async function getPortfolio(address: string): Promise<Sourced<Portfolio>>
       change24h: solMeta?.change24h,
       kind: "sol",
     });
+    if (stakedLamports > 0) {
+      const staked = stakedLamports / LAMPORTS_PER_SOL;
+      holdings.push({
+        mint: "native-stake",
+        symbol: "SOL",
+        name: "Staked SOL (native)",
+        icon: solMeta?.icon,
+        amount: staked,
+        decimals: 9,
+        priceUsd: solMeta?.priceUsd,
+        valueUsd: solMeta?.priceUsd !== undefined ? solMeta.priceUsd * staked : undefined,
+        change24h: solMeta?.change24h,
+        kind: "lst",
+      });
+    }
     for (const [mint, v] of byMint) {
       const t = meta.get(mint);
       const known = KNOWN_MINTS[mint];

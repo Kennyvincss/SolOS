@@ -94,13 +94,26 @@ export async function jupSearch(query: string): Promise<Token[]> {
 export async function jupTokensByMint(mints: string[]): Promise<Map<string, Token>> {
   const out = new Map<string, Token>();
   const unique = [...new Set(mints)];
-  for (let i = 0; i < unique.length; i += 100) {
-    const chunk = unique.slice(i, i + 100);
-    const res = await cached(`jup:mints:${chunk.join(",")}`, 60_000, () =>
-      fetchJson<JupToken[]>(`${config.jupiterApi}/tokens/v2/search?query=${chunk.join(",")}`, { headers: headers() }),
+  // Search returns a limited number of results per request, so ask for a few mints at a time.
+  const chunks: string[][] = [];
+  for (let i = 0; i < unique.length; i += 20) chunks.push(unique.slice(i, i + 20));
+  let failures = 0;
+  for (let i = 0; i < chunks.length; i += 5) {
+    await Promise.all(
+      chunks.slice(i, i + 5).map(async (chunk) => {
+        try {
+          const res = await cached(`jup:mints:${chunk.join(",")}`, 60_000, () =>
+            fetchJson<JupToken[]>(`${config.jupiterApi}/tokens/v2/search?query=${chunk.join(",")}`, { headers: headers() }),
+          );
+          for (const t of res) out.set(t.id, mapJupToken(t));
+        } catch (e) {
+          failures++;
+          if (failures === chunks.length) throw e;
+        }
+      }),
     );
-    for (const t of res) out.set(t.id, mapJupToken(t));
   }
+  if (failures && failures === chunks.length) throw new Error("token data unavailable");
   return out;
 }
 

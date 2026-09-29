@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computePnl, tradeFromTx, type Trade } from "@/lib/services/pnl-core";
+import { computePnl, tradeFromEnhanced, tradeFromTx, type EnhancedTx, type Trade } from "@/lib/services/pnl-core";
 import type { ParsedTransaction } from "@/lib/providers/rpc";
 
 const DAY = 86_400_000;
@@ -73,5 +73,38 @@ describe("tradeFromTx", () => {
     const other = "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN";
     expect(tradeFromTx(tx([1e9, 1e9 - 5000], [{ mint: BONK, pre: 10, post: 0 }, { mint: other, pre: 0, post: 5 }]), W, () => 150)).toBeNull();
     expect(SOL).toBeTruthy();
+  });
+});
+
+describe("tradeFromEnhanced (Helius)", () => {
+  const W = "Wallet1111111111111111111111111111111111111";
+  const BONK = "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263";
+  const USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+  const sol = () => 150;
+  it("reads a SOL → token buy, ignoring the fee", () => {
+    const tx: EnhancedTx = {
+      signature: "s1",
+      timestamp: 1_700_000_000,
+      fee: 5000,
+      feePayer: W,
+      accountData: [
+        { account: W, nativeBalanceChange: -1_000_005_000 },
+        { account: "BonkAta", tokenBalanceChanges: [{ userAccount: W, mint: BONK, rawTokenAmount: { tokenAmount: "5000000000", decimals: 5 } }] },
+      ],
+    };
+    expect(tradeFromEnhanced(tx, W, sol)).toEqual({ time: 1_700_000_000_000, mint: BONK, side: "buy", qty: 50_000, usd: 150 });
+  });
+  it("reads a token → USDC sell and skips failed transactions", () => {
+    const tx: EnhancedTx = {
+      signature: "s2",
+      timestamp: 1_700_000_100,
+      feePayer: "someone-else",
+      accountData: [
+        { account: "a", tokenBalanceChanges: [{ userAccount: W, mint: BONK, rawTokenAmount: { tokenAmount: "-2500000000", decimals: 5 } }] },
+        { account: "b", tokenBalanceChanges: [{ userAccount: W, mint: USDC, rawTokenAmount: { tokenAmount: "80000000", decimals: 6 } }] },
+      ],
+    };
+    expect(tradeFromEnhanced(tx, W, sol)).toMatchObject({ mint: BONK, side: "sell", qty: 25_000, usd: 80 });
+    expect(tradeFromEnhanced({ ...tx, transactionError: { InstructionError: [0, "x"] } }, W, sol)).toBeNull();
   });
 });

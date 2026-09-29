@@ -325,7 +325,7 @@ function appMenu(s, actions) {
     { type: "separator" },
     {
       label: s.profile.meta.name,
-      avatar: { color: s.profile.meta.color, letter: s.profile.meta.name },
+      avatar: { color: s.profile.meta.color, letter: s.profile.meta.name, image: profiles.pictureUrl(s.profile.id) },
       submenu: [
         ...profiles.list().map((p) => ({ label: p.name, type: "radio", checked: p.id === s.profile.id, click: () => require("./ipc").openProfile(p.id) })),
         { type: "separator" },
