@@ -69,9 +69,8 @@ export default function WalletPage({ params }: { params: Promise<{ address: stri
       {acct.loading && <Skeleton className="h-40 w-full rounded-2xl" />}
       {acct.error && <ErrorState message={acct.error} onRetry={acct.reload} />}
       {type === "missing" && (
-        <Card className="p-5">
-          <div className="text-[15px] font-medium">No on-chain account at this address</div>
-          <p className="mt-1 text-[13px] text-muted">It has never received SOL, or it was closed. Double-check the address before sending funds to it.</p>
+        <Card className="mb-4 p-4 text-[13px] text-muted">
+          This address holds no SOL right now, so it has no account of its own on Solana. Its tokens, activity and trading history are still shown below.
         </Card>
       )}
       {type === "program" && (
@@ -85,7 +84,7 @@ export default function WalletPage({ params }: { params: Promise<{ address: stri
           This account is owned by {acct.data?.ownerName ?? shortAddr(acct.data?.owner)} rather than being a regular wallet (for example a token account or protocol account). Balances below are what it holds directly.
         </Card>
       )}
-      {(type === "wallet" || type === "other") && <PortfolioView address={address} own={isMine} />}
+      {(type === "wallet" || type === "other" || type === "missing") && <PortfolioView address={address} own={isMine} />}
       <AlertModal address={address} open={alertOpen} onClose={() => setAlertOpen(false)} />
     </Page>
   );

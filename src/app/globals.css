@@ -564,3 +564,35 @@ html.mode-switching aside {
 @keyframes mode-progress {
   to { width: 100%; }
 }
+
+/* STRATA AI button (bottom right): a slowly turning gradient ring. */
+.ai-fab {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+.ai-fab::before {
+  content: "";
+  position: absolute;
+  inset: -40%;
+  z-index: -1;
+  background: conic-gradient(#7f6bff, #5aa2f5, #3de0c5, #b58cff, #ff7ab6, #7f6bff);
+  animation: ai-fab-spin 6s linear infinite;
+}
+.ai-fab-icon {
+  color: var(--purple);
+}
+@keyframes ai-fab-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+/* Above the Pro mobile tab bar; out of the way while the full AI panel is open. */
+@media (max-width: 767px) {
+  html.mode-pro .ai-bubble {
+    bottom: calc(76px + env(safe-area-inset-bottom));
+  }
+}
+html.ai-panel-open .ai-bubble {
+  display: none;
+}

@@ -8,6 +8,7 @@ import { CommandBar } from "@/components/shell/command-bar";
 import { WalletModal } from "@/components/shell/wallet-modal";
 import { ThemeSync, Watchers } from "@/components/shell/watchers";
 import { AiSidePanel } from "@/components/ai/side-panel";
+import { AiBubble } from "@/components/ai/ai-bubble";
 import { ModeTransition } from "@/components/mode-transition";
 import { HistoryRecorder } from "@/components/shell/history-recorder";
 import { DeviceSync } from "@/components/shell/device-sync";
@@ -53,6 +54,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </div>
           <MobileNav />
           <AiSidePanel />
+          <AiBubble />
           <DeviceSync />
           <Suspense>
             <HistoryRecorder />
