@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BarChart3, BookOpen, Code2, KeyRound, LayoutDashboard, Package, Plus, Send, UserRound } from "lucide-react";
 import { Card, cn } from "./ui";
+import { useSession } from "@/lib/client/session";
 
 export interface DevProject {
   id: string;
@@ -74,22 +75,78 @@ export function useDeveloper() {
   return { data, error, reload, call };
 }
 
-/** Sign-in / availability gate for developer pages. */
+/**
+ * Sign-in / availability gate for developer pages. With a wallet connected,
+ * there's no separate sign-in: the wallet is asked once to confirm it's yours
+ * (a signature, no transaction) and STRATA remembers it for 30 days.
+ */
 export function DevGate({ error, children }: { error: { status: number; message: string } | null; children: React.ReactNode }) {
+  const s = useSession();
+  const [state, setState] = useState<"idle" | "signing" | "declined">("idle");
+  const [problem, setProblem] = useState<string | null>(null);
+  const tried = useRef(false);
+  const wallet = s.wallet && !s.wallet.readOnly ? s.wallet : null;
+  const needsSignIn = error?.status === 401;
+
+  const confirm = useCallback(async () => {
+    setState("signing");
+    setProblem(null);
+    try {
+      await s.signInWithWallet();
+      window.location.reload();
+    } catch (e) {
+      setState("declined");
+      const m = e instanceof Error ? e.message : "";
+      setProblem(/reject|denied|cancel/i.test(m) ? null : m || "Couldn't confirm with your wallet.");
+    }
+  }, [s]);
+
+  // A connected wallet signs in by itself, once per visit.
+  useEffect(() => {
+    if (!needsSignIn || !wallet || tried.current) return;
+    tried.current = true;
+    confirm();
+  }, [needsSignIn, wallet, confirm]);
+
   if (!error) return <>{children}</>;
   return (
     <Card className="p-8 text-center">
       <Code2 size={26} className="mx-auto text-sol-green" />
-      <h2 className="mt-3 text-[18px] font-semibold">{error.status === 401 ? "Sign in to start building" : "Developer dashboard unavailable"}</h2>
-      <p className="mx-auto mt-1 max-w-md text-[13.5px] text-muted">{error.status === 401 ? "Your projects, API keys and submissions are tied to your STRATA account." : error.message}</p>
-      {error.status === 401 && (
-        <Link href="/login" className="btn btn-primary mt-4">
-          Sign in
-        </Link>
+      {error.status !== 401 ? (
+        <>
+          <h2 className="mt-3 text-[18px] font-semibold">Developer dashboard unavailable</h2>
+          <p className="mx-auto mt-1 max-w-md text-[13.5px] text-muted">{error.message}</p>
+        </>
+      ) : wallet ? (
+        <>
+          <h2 className="mt-3 text-[18px] font-semibold">{state === "signing" ? `Confirm in ${wallet.name}` : `Continue as ${shortAddress(wallet.address)}`}</h2>
+          <p className="mx-auto mt-1 max-w-md text-[13.5px] text-muted">
+            Your projects, API keys and submissions belong to your wallet. {wallet.name} asks you once to confirm it&apos;s yours (a signature — no transaction, no fees); STRATA remembers it for 30 days.
+          </p>
+          {problem && <p className="mx-auto mt-2 max-w-md text-[12.5px] text-down">{problem}</p>}
+          <button onClick={confirm} disabled={state === "signing"} className="btn btn-primary mt-4">
+            {state === "signing" ? "Waiting for your wallet…" : `Continue with ${wallet.name}`}
+          </button>
+        </>
+      ) : (
+        <>
+          <h2 className="mt-3 text-[18px] font-semibold">Connect your wallet to start building</h2>
+          <p className="mx-auto mt-1 max-w-md text-[13.5px] text-muted">Your projects, API keys and submissions belong to your wallet or STRATA account.</p>
+          <div className="mt-4 flex justify-center gap-2">
+            <button onClick={() => s.setWalletModal(true)} className="btn btn-primary">
+              Connect wallet
+            </button>
+            <Link href="/login" className="btn btn-ghost">
+              Other sign-in options
+            </Link>
+          </div>
+        </>
       )}
     </Card>
   );
 }
+
+const shortAddress = (a: string) => `${a.slice(0, 4)}…${a.slice(-4)}`;
 
 const NAV = [
   { href: "/developers", label: "Overview", icon: LayoutDashboard },
