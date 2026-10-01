@@ -73,6 +73,8 @@ function getRuntime(profileId) {
   const polyfillPath = path.join(__dirname, "extension-polyfills.js");
   ses.registerPreloadScript({ id: "solanaos-crx-polyfills-frame", type: "frame", filePath: polyfillPath });
   ses.registerPreloadScript({ id: "solanaos-crx-polyfills-worker", type: "service-worker", filePath: polyfillPath });
+  // No surprise "Windows Security: insert your security key" prompts (passkeys).
+  ses.registerPreloadScript({ id: "strata-webauthn", type: "frame", filePath: path.join(__dirname, "preload-webauthn.js") });
 
   const rt = {
     id: profileId,
