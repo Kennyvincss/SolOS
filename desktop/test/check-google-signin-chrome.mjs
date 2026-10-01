@@ -16,7 +16,7 @@ const send = (method, params = {}) => new Promise((r) => { const n = ++id; pendi
 const ev = async (e) => (await send("Runtime.evaluate", { expression: e, returnByValue: true }))?.result?.value;
 await send("Page.navigate", { url: "https://accounts.google.com/ServiceLogin?hl=en&continue=https://www.google.com/" });
 let ok = false;
-for (let i = 0; i < 20 && !ok; i++) { await wait(500); ok = await ev(`(() => { const e = document.querySelector('input[type=email]'); if (!e) return false; e.focus(); return true; })()`); }
+for (let i = 0; i < 40 && !ok; i++) { await wait(500); ok = await ev(`(() => { const e = document.querySelector('#identifierId, input[name=identifier], input[type=email]'); if (!e) return false; e.focus(); return true; })()`); }
 await send("Input.insertText", { text: `strata.signin.check.${Date.now()}@gmail.com` });
 await wait(300);
 await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13, text: "\r" });

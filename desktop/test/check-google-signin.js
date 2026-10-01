@@ -58,9 +58,9 @@ app.whenReady().then(async () => {
   if (process.env.BRAND) await brand(wc).catch((e) => console.log(tag, "brand failed", String(e)));
   await wc.loadURL("https://accounts.google.com/ServiceLogin?hl=en&continue=https://www.google.com/").catch(() => {});
   let ok = false;
-  for (let i = 0; i < 20 && !ok; i++) {
+  for (let i = 0; i < 40 && !ok; i++) {
     await wait(500);
-    ok = await wc.executeJavaScript(`(() => { const e = document.querySelector('input[type=email]'); if (!e) return false; e.focus(); return true; })()`).catch(() => false);
+    ok = await wc.executeJavaScript(`(() => { const e = document.querySelector('#identifierId, input[name=identifier], input[type=email]'); if (!e) return false; e.focus(); return true; })()`).catch(() => false);
   }
   if (!ok) {
     console.log(tag, "NO EMAIL FIELD", JSON.stringify(await wc.executeJavaScript("document.body.innerText.slice(0, 200)").catch(() => "")));
