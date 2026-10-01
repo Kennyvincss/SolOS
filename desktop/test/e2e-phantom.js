@@ -251,6 +251,19 @@ app.whenReady().then(async () => {
     await Promise.race([tab.executeJavaScript("window.result2 = null"), sleep(2000)]).catch(() => {});
   }
   log("after connect: browser window open", !shellWin.isDestroyed(), "tab alive", !tab.isDestroyed());
+  // From here on: a heartbeat (shows whether the main process stops responding),
+  // new windows, crashed processes and the extension library's own debug log.
+  setInterval(() => log("heartbeat"), 2000).unref();
+  app.on("browser-window-created", (_e, w) => log("window created", w.id, w.webContents.getURL() || "(no url yet)"));
+  app.on("child-process-gone", (_e, d) => log("child process gone", JSON.stringify(d)));
+  app.on("render-process-gone", (_e, _wc, d) => log("renderer gone", JSON.stringify(d)));
+  try {
+    const dbg = require(require.resolve("debug", { paths: [path.dirname(require.resolve("electron-chrome-extensions"))] }));
+    dbg.log = (...a) => log("[crx]", a.join(" ").slice(0, 300));
+    dbg.enable("electron-chrome-extensions:*");
+  } catch (e) {
+    log("debug log unavailable", String(e));
+  }
   if (result && result.ok) {
     await approveNext("sign message", `window.result2 = null; window.phantom.solana.signMessage(new TextEncoder().encode("Sign in to STRATA test"), "utf8").then((r) => (window.result2 = { ok: true, sigBytes: r.signature.length }), (e) => (window.result2 = { ok: false, error: String(e && e.message || e) }))`);
     await Promise.race([tab.executeJavaScript("window.phantom.solana.disconnect().then(() => true)").catch(() => {}), sleep(3000)]);
