@@ -222,9 +222,11 @@ app.whenReady().then(async () => {
   // the browser window (as when the popup opens without taking focus).
   async function approveNext(label, start) {
     const before = new Set(BrowserWindow.getAllWindows());
-    shellWin.focus();
+    if (!shellWin.isDestroyed()) shellWin.focus();
     const t1 = Date.now();
-    await tab.executeJavaScript(`${start}; true`, true); // start it, don't wait for the approval
+    log(`${label}: start`);
+    // Start it without waiting for the approval (executeJavaScript can wait on page work).
+    await Promise.race([tab.executeJavaScript(`setTimeout(() => { ${start} }, 0); true`, true), sleep(5000).then(() => log(`${label}: start call still pending after 5s`))]).catch((e) => log(`${label}: start failed`, String(e)));
     let pop = null;
     for (let i = 0; i < 80 && !pop; i++) {
       await sleep(250);
@@ -232,7 +234,7 @@ app.whenReady().then(async () => {
     }
     log(`${label}: popup`, pop ? `after ${Date.now() - t1}ms visible=${pop.isVisible()} focused=${pop.isFocused()} bounds=${JSON.stringify(pop.getBounds())}` : "none (may be auto-approved)");
     if (pop) {
-      shellWin.focus(); // the browser keeps focus
+      if (!shellWin.isDestroyed()) shellWin.focus(); // the browser keeps focus
       let clicked = false;
       for (let i = 0; i < 40 && !clicked && !pop.isDestroyed(); i++) {
         await sleep(500);
@@ -246,11 +248,12 @@ app.whenReady().then(async () => {
       out = await tab.executeJavaScript("window.result2").catch(() => null);
     }
     log(`${label}: result`, JSON.stringify(out), `${Date.now() - t1}ms`, "browser window open:", !shellWin.isDestroyed());
-    await tab.executeJavaScript("window.result2 = null");
+    await Promise.race([tab.executeJavaScript("window.result2 = null"), sleep(2000)]).catch(() => {});
   }
+  log("after connect: browser window open", !shellWin.isDestroyed(), "tab alive", !tab.isDestroyed());
   if (result && result.ok) {
     await approveNext("sign message", `window.result2 = null; window.phantom.solana.signMessage(new TextEncoder().encode("Sign in to STRATA test"), "utf8").then((r) => (window.result2 = { ok: true, sigBytes: r.signature.length }), (e) => (window.result2 = { ok: false, error: String(e && e.message || e) }))`);
-    await tab.executeJavaScript("window.phantom.solana.disconnect()").catch(() => {});
+    await Promise.race([tab.executeJavaScript("window.phantom.solana.disconnect().then(() => true)").catch(() => {}), sleep(3000)]);
     await sleep(500);
     await approveNext("reconnect", `window.result2 = null; window.phantom.solana.connect().then((r) => (window.result2 = { ok: true, address: r.publicKey.toString() }), (e) => (window.result2 = { ok: false, error: String(e && e.message || e) }))`);
     await approveNext("sign again", `window.result2 = null; window.phantom.solana.signMessage(new TextEncoder().encode("Second message"), "utf8").then((r) => (window.result2 = { ok: true, sigBytes: r.signature.length }), (e) => (window.result2 = { ok: false, error: String(e && e.message || e) }))`);
