@@ -36,7 +36,10 @@ app.whenReady().then(async () => {
   if (process.env.SHIM) ses.registerPreloadScript({ id: "shim", type: "frame", filePath: path.join(__dirname, "chrome-shim.js") });
   const win = new BrowserWindow({ width: 1280, height: 900, webPreferences: { session: ses, sandbox: true, contextIsolation: true, nodeIntegrationInSubFrames: Boolean(process.env.SHIM) } });
   const wc = win.webContents;
-  if (process.env.BRAND) await brandAsChrome(wc);
+  if (process.env.BRAND) {
+    await wc.loadURL("about:blank"); // the debugger answers only once a page is loaded
+    await brandAsChrome(wc);
+  }
   for (const url of PAGES) {
     await wc.loadURL(url).catch(() => {});
     if (url === PAGES[0]) console.log(tag, "ua", await wc.executeJavaScript("navigator.userAgent + ' | brands: ' + (navigator.userAgentData ? navigator.userAgentData.brands.map((b) => b.brand).join('/') : '') + ' | chrome keys: ' + Object.keys(window.chrome || {}).join(',')"));
