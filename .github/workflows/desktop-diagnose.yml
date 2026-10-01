@@ -135,7 +135,7 @@ jobs:
         if: contains(inputs.checks, 'google')
         run: |
           timeout 120 xvfb-run -a node test/check-google-signin-chrome.mjs 2>&1 | grep "^\[google" || true
-          for v in "MODE=strata" "MODE=strata POPUP=1" "MODE=strata" "MODE=strata POPUP=1" "MODE=strata" "MODE=strata POPUP=1"; do
+          for v in "MODE=bare UA=chrome SHIM=1" "MODE=bare UA=chrome" "MODE=bare UA=chrome SHIM=1" "MODE=bare UA=firefox" "MODE=bare UA=chrome SHIM=1" "MODE=bare UA=firefox" "MODE=bare UA=full SHIM=1"; do
             env $v timeout 120 xvfb-run -a npx electron test/check-google-signin.js 2>&1 | grep "^\[google" | cut -c1-300 || true
           done
       - name: Jupiter links

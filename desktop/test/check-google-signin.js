@@ -2,7 +2,7 @@
 // Types a made-up address on accounts.google.com and presses Next: Google then
 // either refuses the browser ("This browser or app may not be secure") or goes
 // on ("Couldn't find your Google Account", password, ...). No real account used.
-// Env: MODE=strata (the app) | bare (plain Electron window); UA=chrome|full|firefox|edge; BRAND=1.
+// Env: MODE=strata (the app) | bare (plain Electron window); UA=chrome|full|firefox|edge; BRAND=1; SHIM=1 (fill window.chrome like Chrome).
 const path = require("node:path");
 const { app, BrowserWindow, session } = require("electron");
 
@@ -15,7 +15,7 @@ const UAS = {
   firefox: `Mozilla/5.0 (${process.platform === "win32" ? "Windows NT 10.0; Win64; x64" : process.platform === "darwin" ? "Macintosh; Intel Mac OS X 10.15" : "X11; Linux x86_64"}; rv:140.0) Gecko/20100101 Firefox/140.0`,
   edge: `Mozilla/5.0 (${plat}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${major}.0.0.0 Safari/537.36 Edg/${major}.0.0.0`,
 };
-const tag = `[google MODE=${MODE} POPUP=${process.env.POPUP || 0} UA=${process.env.UA || "-"} BRAND=${process.env.BRAND || 0}]`;
+const tag = `[google MODE=${MODE} POPUP=${process.env.POPUP || 0} UA=${process.env.UA || "-"} BRAND=${process.env.BRAND || 0} SHIM=${process.env.SHIM || 0}]`;
 const SIGNIN = "https://accounts.google.com/ServiceLogin?hl=en&continue=https://www.google.com/";
 let opener = null;
 if (MODE === "bare" && process.env.UA) app.userAgentFallback = UAS[process.env.UA];
@@ -74,7 +74,9 @@ app.whenReady().then(async () => {
       await new Promise((r) => (wc.isLoading() ? wc.once("did-finish-load", r) : r()));
     } else wc = s.newTab("about:blank");
   } else {
-    const win = new BrowserWindow({ width: 1100, height: 900, webPreferences: { session: session.fromPartition("persist:g"), sandbox: true } });
+    const ses = session.fromPartition("persist:g");
+    if (process.env.SHIM) ses.registerPreloadScript({ type: "frame", filePath: path.join(__dirname, "chrome-shim.js") });
+    const win = new BrowserWindow({ width: 1100, height: 900, webPreferences: { session: ses, sandbox: true } });
     wc = win.webContents;
     await wc.loadURL("about:blank");
   }
@@ -89,7 +91,7 @@ app.whenReady().then(async () => {
     console.log(tag, "NO EMAIL FIELD", JSON.stringify(await wc.executeJavaScript("document.body.innerText.slice(0, 200)").catch(() => "")));
     return app.exit(0);
   }
-  console.log(tag, "ua", await wc.executeJavaScript("navigator.userAgent + ' | ' + (navigator.userAgentData ? navigator.userAgentData.brands.map((b) => b.brand).join('/') : 'no UA-CH') + ' | vendor=' + navigator.vendor"));
+  console.log(tag, "ua", await wc.executeJavaScript("navigator.userAgent + ' | ' + (navigator.userAgentData ? navigator.userAgentData.brands.map((b) => b.brand).join('/') : 'no UA-CH') + ' | vendor=' + navigator.vendor + ' | chrome=' + Object.keys(window.chrome || {}).join(',')"));
   await wc.insertText(`strata.signin.check.${Date.now()}@gmail.com`);
   await wait(300);
   wc.sendInputEvent({ type: "keyDown", keyCode: "Enter" });
