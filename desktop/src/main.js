@@ -14,7 +14,7 @@
 //   devices.js                 send tabs to your other devices
 
 const path = require("node:path");
-const { app, BrowserWindow, Menu, MenuItem, session, shell } = require("electron");
+const { app, BrowserWindow, Menu, MenuItem, session, shell, webFrameMain } = require("electron");
 const { ElectronChromeExtensions } = require("electron-chrome-extensions");
 
 // STRATA was called "Solana OS". Keep using the same data folder so installed
@@ -238,6 +238,21 @@ app.on("window-all-closed", () => {
 
 // Open solana: payment links in the system's wallet app.
 app.on("web-contents-created", (_e, wc) => {
+  // Google sign-in frames embedded in other sites get what preload-webauthn.js
+  // gives Google's sign-in pages, applied as the frame commits (preloads
+  // don't run in embedded frames).
+  wc.on("did-frame-navigate", (_ev, url, _code, _status, isMainFrame, pid, rid) => {
+    if (isMainFrame) return;
+    const g = require("./preload-webauthn");
+    let host = "";
+    try {
+      host = new URL(url).hostname;
+    } catch {
+      return;
+    }
+    if (!g.hosts.some((h) => host === h || host.endsWith(`.${h}`))) return;
+    webFrameMain.fromId(pid, rid)?.executeJavaScript(`(${g.install})(${JSON.stringify(g.hosts)})`).catch(() => {});
+  });
   wc.on("will-navigate", (ev, url) => {
     if (url.startsWith("solana:")) {
       ev.preventDefault();

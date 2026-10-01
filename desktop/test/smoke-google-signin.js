@@ -1,6 +1,6 @@
 // "Continue with Google": Google's sign-in pages (only) see window.chrome
 // filled in the way Chrome fills it, in a tab and in a sign-in popup, with
-// STRATA's normal Chrome user agent; other sites are left untouched. Google's
+// STRATA's normal Chrome user agent; other sites are left untouched. Also in Google frames embedded in a site. Google's
 // sign-in is mapped to a local server here.
 // Run: xvfb-run -a npx electron test/smoke-google-signin.js
 const http = require("node:http");
@@ -14,6 +14,7 @@ const google = http.createServer((_q, r) => {
 process.env.STRATA_NO_PASSKEY_HOSTS = "signin.test";
 const other = http.createServer((q, r) => {
   r.setHeader("content-type", "text/html");
+  if (q.url.startsWith("/embed")) return r.end(`<!doctype html><iframe src="http://signin.test/gsi/button"></iframe>`);
   if (q.url.startsWith("/site")) return r.end(`<!doctype html><button id="g" style="width:300px;height:100px">Continue with Google</button><script>document.getElementById("g").onclick = () => window.open("http://signin.test/popup", "g", "width=480,height=600");</script>`);
   r.end(page("other"));
 }).listen(0);
@@ -42,6 +43,16 @@ app.whenReady().then(async () => {
     await wait(300);
     const g = await tab.executeJavaScript("window.info");
     check("Google sign-in page: Chrome user agent and window.chrome like Chrome", chromeUA.test(g?.ua) && filled(g), g);
+
+    // "Sign in with Google" button / One Tap: a Google frame inside the site.
+    const emb = s.newTab(`http://localhost:${other.address().port}/embed`);
+    await loaded(emb);
+    await wait(500);
+    const f = emb.mainFrame.frames.find((x) => /signin\.test/.test(x.url));
+    // Applied when the frame commits, so it can land after the frame's first
+    // inline script; Google's checks run from scripts that load later.
+    const fi = f ? await f.executeJavaScript(`(() => { ${probe} return window.info; })()`).catch(() => null) : null;
+    check("Google sign-in frame inside a site: window.chrome like Chrome", filled(fi), fi);
 
     // "Continue with Google" opens the sign-in in a popup.
     const site = s.newTab(`http://localhost:${other.address().port}/site`);

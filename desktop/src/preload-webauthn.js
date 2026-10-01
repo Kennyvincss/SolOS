@@ -17,7 +17,7 @@
 // Turnstile treat modified built-ins as a sign of automation and fail.
 // SPDX-License-Identifier: GPL-3.0-only
 
-const { contextBridge } = require("electron");
+const { contextBridge } = require("electron"); // undefined when required from the main process
 
 const NO_PASSKEY_HOSTS = ["accounts.google.com", "accounts.youtube.com"];
 // Extra hosts for tests (comma-separated).
@@ -106,3 +106,8 @@ try {
 } catch {
   /* older Electron or a page without a main world */
 }
+
+// Preloads don't run in embedded frames (Google's "Sign in with Google" button
+// and One Tap prompt are accounts.google.com frames inside the site), so the
+// main process applies the same changes there.
+if (typeof module !== "undefined") module.exports = { install, hosts };
