@@ -6,6 +6,10 @@
 // Google sign-in pages see no passkey support and ask for the password
 // (passkeys saved in Chrome aren't reachable here anyway).
 //
+// Those pages also present as Firefox (see google-signin.js), so they don't
+// see Chromium-only properties (navigator.userAgentData, Google's vendor
+// string) that would contradict the Firefox user agent.
+//
 // Only those pages are changed: on every other site the browser's built-in
 // functions are left untouched, because bot checks such as Cloudflare
 // Turnstile treat modified built-ins as a sign of automation and fail.
@@ -19,12 +23,19 @@ const extra = (process.env.STRATA_NO_PASSKEY_HOSTS || "").split(",").filter(Bool
 
 function install(noPasskeyHosts) {
   if (typeof location === "undefined" || !/^https?:$/.test(location.protocol)) return;
-  const C = window.CredentialsContainer;
-  if (!C || !C.prototype || !window.PublicKeyCredential) return;
   const host = location.hostname;
   const noPasskeys = noPasskeyHosts.some((h) => host === h || host.endsWith(`.${h}`));
-  const declined = () => new DOMException("The operation either timed out or was not allowed.", "NotAllowedError");
   if (!noPasskeys) return; // leave every other site's built-ins untouched
+  try {
+    const N = Navigator.prototype;
+    if ("userAgentData" in N) delete N.userAgentData;
+    Object.defineProperty(N, "vendor", { get: () => "", configurable: true, enumerable: true });
+  } catch {
+    /* leave as is */
+  }
+  const C = window.CredentialsContainer;
+  if (!C || !C.prototype || !window.PublicKeyCredential) return;
+  const declined = () => new DOMException("The operation either timed out or was not allowed.", "NotAllowedError");
   const PKC = window.PublicKeyCredential;
   try {
     Object.defineProperty(PKC, "isConditionalMediationAvailable", { value: () => Promise.resolve(false), configurable: true, writable: true });

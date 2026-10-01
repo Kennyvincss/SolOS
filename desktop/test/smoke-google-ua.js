@@ -5,13 +5,14 @@
 const http = require("node:http");
 
 const seen = [];
-const page = (label) => `<!doctype html><title>${label}</title><body>${label}<script>window.ua = navigator.userAgent;</script></body>`;
+const page = (label) => `<!doctype html><title>${label}</title><body>${label}<script>window.ua = navigator.userAgent; window.uad = "userAgentData" in navigator; window.vendor = navigator.vendor;</script></body>`;
 const google = http.createServer((q, r) => {
   seen.push({ ua: q.headers["user-agent"], ch: q.headers["sec-ch-ua"] || null });
   r.setHeader("content-type", "text/html");
   r.end(page("google"));
 }).listen(0);
 process.env.STRATA_GOOGLE_SIGNIN_HOSTS = "signin.test";
+process.env.STRATA_NO_PASSKEY_HOSTS = "signin.test";
 const other = http.createServer((q, r) => {
   r.setHeader("content-type", "text/html");
   if (q.url.startsWith("/site")) return r.end(`<!doctype html><button id="g" style="width:300px;height:100px">Continue with Google</button><script>document.getElementById("g").onclick = () => window.open("http://signin.test/popup", "g", "width=480,height=600");</script>`);
@@ -62,6 +63,8 @@ app.whenReady().then(async () => {
       if (popUA && /Firefox/.test(popUA)) break;
     }
     check("Google sign-in in a popup sees Firefox", popUA && /Firefox\/\d+/.test(popUA), popUA);
+    const props = pop && !pop.isDestroyed() ? await pop.webContents.executeJavaScript("({ uad: window.uad, vendor: window.vendor })").catch(() => null) : null;
+    check("…without Chromium-only navigator properties", props && props.uad === false && props.vendor === "", props);
     const hasOpener = pop && !pop.isDestroyed() && (await pop.webContents.executeJavaScript("window.opener !== null").catch(() => false));
     check("the popup can still answer the site (window.opener)", hasOpener, hasOpener);
   } catch (e) {

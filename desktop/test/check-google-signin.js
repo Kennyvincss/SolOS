@@ -89,7 +89,7 @@ app.whenReady().then(async () => {
     console.log(tag, "NO EMAIL FIELD", JSON.stringify(await wc.executeJavaScript("document.body.innerText.slice(0, 200)").catch(() => "")));
     return app.exit(0);
   }
-  console.log(tag, "ua", await wc.executeJavaScript("navigator.userAgent + ' | ' + (navigator.userAgentData ? navigator.userAgentData.brands.map((b) => b.brand).join('/') : 'no UA-CH')"));
+  console.log(tag, "ua", await wc.executeJavaScript("navigator.userAgent + ' | ' + (navigator.userAgentData ? navigator.userAgentData.brands.map((b) => b.brand).join('/') : 'no UA-CH') + ' | vendor=' + navigator.vendor"));
   await wc.insertText(`strata.signin.check.${Date.now()}@gmail.com`);
   await wait(300);
   wc.sendInputEvent({ type: "keyDown", keyCode: "Enter" });
