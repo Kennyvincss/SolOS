@@ -218,7 +218,7 @@ app.whenReady().then(async () => {
   log("connect result", JSON.stringify(result), `total ${Date.now() - t}ms`);
 
   // Toolbar popup speed (click the Phantom icon).
-  const pt = await shell.webContents.executeJavaScript("(() => { const el = document.querySelector('browser-action-list'); const b = el && el.shadowRoot.querySelector('.action, [part~=action]'); if (!b) return null; const r = b.getBoundingClientRect(); return { x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2) }; })()");
+  const pt = await shellWin.webContents.executeJavaScript("(() => { const el = document.querySelector('browser-action-list'); const b = el && el.shadowRoot.querySelector('.action, [part~=action]'); if (!b) return null; const r = b.getBoundingClientRect(); return { x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2) }; })()");
   if (pt) {
     const before2 = new Set(BrowserWindow.getAllWindows());
     t = Date.now();
