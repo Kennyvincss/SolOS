@@ -28,7 +28,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const t0 = Date.now();
 const log = (...a) => console.log(`[perf +${((Date.now() - t0) / 1000).toFixed(1)}s]`, ...a);
 const results = {};
-const record = (name, ms) => (results[name] ??= []).push(ms);
+const record = (name, ms) => {
+  (results[name] ??= []).push(ms);
+  log(`${name}: ${ms}ms`);
+};
 const median = (a) => [...a].sort((x, y) => x - y)[Math.floor(a.length / 2)];
 
 // Main-process stalls: a 50 ms timer that should never be late.
@@ -61,7 +64,7 @@ const ready = (wc, re) => wc.executeJavaScript(PAGE_STATE).then((st) => st && st
 async function loadTimes(tab, label, n = 5) {
   for (let i = 0; i < n; i++) {
     const t = Date.now();
-    await tab.loadURL(`http://localhost:${PORT}/dapp?${label}${i}`);
+    await Promise.race([tab.loadURL(`http://localhost:${PORT}/dapp?${label}${i}`).catch(() => {}), sleep(15000)]);
     record(`page load (${label})`, Date.now() - t);
   }
 }
@@ -94,13 +97,15 @@ async function approval(name, tab, call, button) {
   await until(() => pop.isDestroyed(), 3000);
 }
 
-process.on("unhandledRejection", (e) => log("UNHANDLED", String(e?.stack || e)));
+const oneLine = (e) => String(e?.stack || e).replace(/\s*\n\s*/g, " | ");
+process.on("unhandledRejection", (e) => log("UNHANDLED", oneLine(e)));
+process.on("uncaughtException", (e) => log("UNCAUGHT", oneLine(e)));
 app.whenReady().then(async () => {
   try {
     await sleep(2500);
     const ses = session.fromPartition("persist:solanaos");
     const shell = [...require("../src/window").shells][0];
-    const tab = shell.activeTab.view.webContents;
+    let tab = shell.newTab(`http://localhost:${PORT}/`);
 
     phase = "page loads without extensions";
     await loadTimes(tab, "no extensions");
@@ -115,12 +120,14 @@ app.whenReady().then(async () => {
     log("onboarding", done ? "complete" : "INCOMPLETE");
     if (!done) throw new Error("onboarding failed");
     await sleep(2000);
+    tab = shell.newTab(`http://localhost:${PORT}/`);
+    await sleep(500);
 
     phase = "page loads with Phantom";
     await loadTimes(tab, "with Phantom");
     await until(() => tab.executeJavaScript("!!(window.phantom && window.phantom.solana)").catch(() => false), 5000);
     t = Date.now();
-    await tab.loadURL(`http://localhost:${PORT}/dapp?provider`);
+    await Promise.race([tab.loadURL(`http://localhost:${PORT}/dapp?provider`).catch(() => {}), sleep(15000)]);
     await until(() => tab.executeJavaScript("!!(window.phantom && window.phantom.solana)").catch(() => false), 10000, 10);
     record("page load → window.phantom ready", Date.now() - t);
 
@@ -146,17 +153,17 @@ app.whenReady().then(async () => {
     }
 
     // Approvals.
-    await tab.loadURL(`http://localhost:${PORT}/dapp?approvals`);
+    await Promise.race([tab.loadURL(`http://localhost:${PORT}/dapp?approvals`).catch(() => {}), sleep(15000)]);
     await until(() => tab.executeJavaScript("!!(window.phantom && window.phantom.solana)").catch(() => false), 10000);
     await approval("connect", tab, "window.phantom.solana.connect().then((r) => r.publicKey.toString())", /^connect$/i);
     for (let i = 0; i < 2; i++) await approval("sign message", tab, `window.phantom.solana.signMessage(new TextEncoder().encode("perf ${i}"), "utf8").then((r) => r.signature.length)`, /^(confirm|sign|approve)$/i);
     for (let i = 0; i < 3; i++) {
-      await tab.loadURL(`http://localhost:${PORT}/dapp?again${i}`);
+      await Promise.race([tab.loadURL(`http://localhost:${PORT}/dapp?again${i}`).catch(() => {}), sleep(15000)]);
       await until(() => tab.executeJavaScript("!!(window.phantom && window.phantom.solana)").catch(() => false), 10000, 10);
       await approval("reconnect (already approved)", tab, "window.phantom.solana.connect().then((r) => r.publicKey.toString())", /^connect$/i);
     }
   } catch (e) {
-    log("ERROR", String(e?.stack || e));
+    log("ERROR", oneLine(e));
   }
   phase = "done";
   console.log("[perf] ===== results (median of runs, ms) =====");

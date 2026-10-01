@@ -11,7 +11,7 @@ on:
         required: false
         default: "bfnaelmomeimhlpmgjnjophhpkkoljpa,bhhhlbepdkbapadjdnnojkbgioiodbic,aflkmfhebedbjioipglgcbcmnbpgliof"
       checks:
-        description: "Which checks to run: extensions, phantom, site, perf, jupiter, pnl, turnstile, google, phantomgoogle, websearch, engines, extperf (comma-separated)"
+        description: "Which checks to run: extensions, phantom, site, perf, jupiter, pnl, turnstile, google, phantomgoogle, websearch, engines, extspeed (comma-separated)"
         required: false
         default: "extensions,phantom,site"
       wallet:
@@ -197,7 +197,7 @@ jobs:
           " || true
           done
       - name: Extension speed
-        if: contains(inputs.checks, 'extperf')
+        if: contains(inputs.checks, 'extspeed')
         run: timeout 400 xvfb-run -a npx electron test/perf-extensions.js 2>&1 | grep "^\\[perf" || true
       - name: Phantom Google sign-in
         if: contains(inputs.checks, 'phantomgoogle')
