@@ -6,6 +6,7 @@ const path = require("node:path");
 const crypto = require("node:crypto");
 const { BrowserWindow, WebContentsView, net, shell } = require("electron");
 const appearance = require("./appearance");
+const popups = require("./popups");
 const { SOLANA_OS_URL, hostOf, riskFromReport, normalizeOrder, moveInOrder } = require("./lib");
 const { getRuntime } = require("./runtime");
 
@@ -1100,14 +1101,15 @@ function wireTab(tab) {
   const wc = tab.view.webContents;
   const owner = () => shellOfTab(wc.id);
   const push = () => owner()?.sendState();
-  wc.setWindowOpenHandler(({ url, disposition }) => {
-    if (url.startsWith("chrome-extension://")) return { action: "allow" };
+  const openElsewhere = (url, disposition) => {
     const s = owner();
-    if (!s) return { action: "deny" };
+    if (!s) return;
     if (disposition === "new-window") new BrowserShell(s.profile.id, { url });
     else s.newTab(url, { background: disposition === "background-tab", openerId: wc.id });
-    return { action: "deny" };
-  });
+  };
+  // Sign-in popups (window.open with a size) stay linked to this page; other links open as tabs.
+  wc.setWindowOpenHandler((details) => (owner() ? popups.handleWindowOpen(details, owner()?.win, openElsewhere) : { action: "deny" }));
+  wc.on("did-create-window", (child) => popups.setupPopup(child, openElsewhere));
   for (const ev of ["did-start-loading", "did-stop-loading", "did-navigate-in-page", "audio-state-changed"]) wc.on(ev, push);
   wc.on("page-title-updated", (_e, title) => {
     const s = owner();

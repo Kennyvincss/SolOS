@@ -191,4 +191,26 @@ function mergeBookmarks(local = {}, remote = {}) {
   return out;
 }
 
-module.exports = { SOLANA_OS_URL, WALLETS, hostOf, normalizeInput, routeInput, classifyUrl, DEFAULT_FOLDERS, folderForType, normalizeOrder, moveInOrder, riskFromReport, mergeBookmarks, mergeRecords };
+/**
+ * window.open() feature string -> popup size/position, or null when the page
+ * didn't ask for a popup (no size or position, no "popup"). Sign-in flows
+ * ("Continue with Google", wallets) open popups like this.
+ */
+function popupFeatures(features) {
+  const f = {};
+  for (const part of String(features || "").split(",")) {
+    const [k, v] = part.split("=").map((x) => (x || "").trim().toLowerCase());
+    if (k) f[k] = v === undefined || v === "" ? "yes" : v;
+  }
+  const num = (k) => (f[k] !== undefined && Number.isFinite(Number.parseInt(f[k], 10)) ? Number.parseInt(f[k], 10) : undefined);
+  const width = num("width") ?? num("innerwidth");
+  const height = num("height") ?? num("innerheight");
+  const left = num("left") ?? num("screenx");
+  const top = num("top") ?? num("screeny");
+  const popup = f.popup !== undefined && !["0", "no", "false"].includes(f.popup);
+  if (width === undefined && height === undefined && left === undefined && top === undefined && !popup) return null;
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  return { width: clamp(width ?? 500, 320, 1400), height: clamp(height ?? 640, 360, 1100), left, top };
+}
+
+module.exports = { popupFeatures, SOLANA_OS_URL, WALLETS, hostOf, normalizeInput, routeInput, classifyUrl, DEFAULT_FOLDERS, folderForType, normalizeOrder, moveInOrder, riskFromReport, mergeBookmarks, mergeRecords };

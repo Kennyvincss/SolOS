@@ -89,3 +89,14 @@ test("hostOf ignores non-web URLs", () => {
 test("wallet extension IDs look like Chrome Web Store IDs", () => {
   for (const w of WALLETS) assert.match(w.id, /^[a-p]{32}$/);
 });
+
+test("popupFeatures: sign-in popups vs plain new windows", () => {
+  const { popupFeatures } = require("../src/lib");
+  assert.deepEqual(popupFeatures("width=500,height=600,left=100,top=50"), { width: 500, height: 600, left: 100, top: 50 });
+  assert.deepEqual(popupFeatures("popup"), { width: 500, height: 640, left: undefined, top: undefined });
+  assert.equal(popupFeatures(""), null);
+  assert.equal(popupFeatures("noopener,noreferrer"), null);
+  assert.equal(popupFeatures("popup=0"), null);
+  assert.equal(popupFeatures("width=10,height=99999").width, 320);
+  assert.equal(popupFeatures("width=10,height=99999").height, 1100);
+});
