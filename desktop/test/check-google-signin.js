@@ -76,9 +76,9 @@ app.whenReady().then(async () => {
   for (let i = 0; i < 24; i++) {
     await wait(500);
     text = await wc.executeJavaScript("document.body.innerText.replace(/\\s+/g, ' ')").catch(() => "");
-    if (/may not be secure|Couldn.t find your Google Account|Enter your password|Verify it.s you|Try again|couldn.t sign you in/i.test(text)) break;
+    if (/may not be secure|Couldn.t find (your Google Account|this account)|Enter your password|Verify it.s you|Try again|couldn.t sign you in/i.test(text)) break;
   }
-  const verdict = /may not be secure|couldn.t sign you in/i.test(text) ? "BLOCKED (browser refused)" : /Couldn.t find your Google Account|Enter your password|Verify it.s you/i.test(text) ? "ALLOWED" : "UNCLEAR";
+  const verdict = /may not be secure|couldn.t sign you in/i.test(text) ? "BLOCKED (browser refused)" : /Couldn.t find (your Google Account|this account)|Enter your password|Verify it.s you/i.test(text) ? "ALLOWED" : "UNCLEAR";
   console.log(tag, verdict, JSON.stringify(text.slice(0, 160)));
   app.exit(0);
 });

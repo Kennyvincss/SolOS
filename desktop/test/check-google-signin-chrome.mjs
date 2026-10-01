@@ -22,8 +22,8 @@ await wait(300);
 await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13, text: "\r" });
 await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13 });
 let text = "";
-for (let i = 0; i < 24; i++) { await wait(500); text = (await ev("document.body.innerText.replace(/\\s+/g, ' ')")) || ""; if (/may not be secure|Couldn.t find your Google Account|Enter your password|Verify it.s you|couldn.t sign you in/i.test(text)) break; }
-const verdict = /may not be secure|couldn.t sign you in/i.test(text) ? "BLOCKED (browser refused)" : /Couldn.t find your Google Account|Enter your password|Verify it.s you/i.test(text) ? "ALLOWED" : "UNCLEAR";
+for (let i = 0; i < 24; i++) { await wait(500); text = (await ev("document.body.innerText.replace(/\\s+/g, ' ')")) || ""; if (/may not be secure|Couldn.t find (your Google Account|this account)|Enter your password|Verify it.s you|couldn.t sign you in/i.test(text)) break; }
+const verdict = /may not be secure|couldn.t sign you in/i.test(text) ? "BLOCKED (browser refused)" : /Couldn.t find (your Google Account|this account)|Enter your password|Verify it.s you/i.test(text) ? "ALLOWED" : "UNCLEAR";
 console.log("[google CHROME]", verdict, JSON.stringify(text.slice(0, 160)));
 proc.kill();
 process.exit(0);
