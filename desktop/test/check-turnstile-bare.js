@@ -66,7 +66,7 @@ function brandAsChrome(wc) {
     frames.set(p.sessionId, p.targetInfo.targetId);
     const go = async () => {
       if (process.env.DIAG) for (const m of ["Network.enable", "Runtime.enable", "Log.enable"]) await dbg.sendCommand(m, {}, p.sessionId).catch(() => {});
-      if (process.env.DIAG) await dbg.sendCommand("Target.setAutoAttach", { autoAttach: true, waitForDebuggerOnStart: false, flatten: true }, p.sessionId).catch(() => {});
+      if (process.env.DIAG) await dbg.sendCommand("Target.setAutoAttach", { autoAttach: true, waitForDebuggerOnStart: true, flatten: true }, p.sessionId).catch(() => {});
       if (process.env.BRAND) setup(p.sessionId);
       else dbg.sendCommand("Runtime.runIfWaitingForDebugger", {}, p.sessionId).catch(() => {});
     };
@@ -74,7 +74,7 @@ function brandAsChrome(wc) {
   });
   dbg.sendCommand("Target.setDiscoverTargets", { discover: true }).catch(() => {});
   if (process.env.DIAG) for (const m of ["Network.enable", "Runtime.enable", "Log.enable"]) dbg.sendCommand(m, {}).catch(() => {});
-  if (!process.env.BRAND) return dbg.sendCommand("Target.setAutoAttach", { autoAttach: true, waitForDebuggerOnStart: false, flatten: true }).catch(() => {});
+  if (!process.env.BRAND) return dbg.sendCommand("Target.setAutoAttach", { autoAttach: true, waitForDebuggerOnStart: Boolean(process.env.DIAG), flatten: true }).catch(() => {});
   return setup();
 }
 
