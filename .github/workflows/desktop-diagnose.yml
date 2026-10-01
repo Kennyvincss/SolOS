@@ -69,6 +69,7 @@ jobs:
                 if [ -z "$best" ] || [ "$score" -gt "${bscore:-0}" ]; then best="$line"; fi
               done
               echo "[perf] $form $u score fcp_ms lcp_ms tbt_ms cls si_ms ttfb_ms total_kb js_kb: $best"
+              [ "$form" = mobile ] && jq -r '[.audits["network-requests"].details.items[] | {kb: ((.transferSize // 0)/1024|round), t: .resourceType, u: .url[0:140]}] | sort_by(-.kb) | .[0:6][] | "[perf]    \(.kb)KB \(.t) \(.u)"' /tmp/lh.json || true
             done
           done
       - name: PnL
