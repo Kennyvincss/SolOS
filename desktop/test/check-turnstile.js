@@ -39,17 +39,35 @@ app.whenReady().then(async () => {
       log("fingerprint", JSON.stringify(await tab.executeJavaScript(FINGERPRINT).catch((e) => String(e))));
       printed = true;
     }
+    const consoleLines = [];
+    const onConsole = (d) => { const m = String(d.message || ""); if (/turnstile|cloudflare|challenge|600\d{3}|300\d{3}|110\d{3}/i.test(m)) consoleLines.push(m.slice(0, 160)); };
+    tab.on("console-message", onConsole);
     let state = null;
+    let clicked = false;
     for (let i = 0; i < 30; i++) {
       await wait(1000);
       const token = await tab.executeJavaScript(`(() => { const i = document.querySelector('[name="cf-turnstile-response"]'); return i ? i.value.length : -1; })()`).catch(() => -2);
       const frames = tab.mainFrame.framesInSubtree.filter((f) => /challenges\.cloudflare\.com/.test(f.url));
       let text = "";
       for (const f of frames) text += await f.executeJavaScript("document.body ? document.body.innerText.replace(/\\s+/g, ' ').slice(0, 120) : ''").catch(() => "");
-      state = { token, widgetFrames: frames.length, widget: text };
-      if (token > 0 || /fail|error/i.test(text)) break;
+      state = { token, widgetFrames: frames.length, widget: text, clicked };
+      if (token > 0) break;
+      // After a few seconds, click the checkbox (left side of the widget), like a person.
+      if (!clicked && i >= 6) {
+        const r = await tab.executeJavaScript(`(() => { const i = document.querySelector('[name="cf-turnstile-response"]'); const box = i && (i.closest('.cf-turnstile, [class*="turnstile"]') || i.parentElement); if (!box) return null; const b = box.getBoundingClientRect(); return { x: Math.round(b.x + 30), y: Math.round(b.y + Math.min(b.height, 65) / 2) }; })()`).catch(() => null);
+        if (r) {
+          tab.sendInputEvent({ type: "mouseMove", x: r.x - 40, y: r.y + 10 });
+          await wait(120);
+          tab.sendInputEvent({ type: "mouseMove", x: r.x, y: r.y });
+          tab.sendInputEvent({ type: "mouseDown", x: r.x, y: r.y, button: "left", clickCount: 1 });
+          await wait(90);
+          tab.sendInputEvent({ type: "mouseUp", x: r.x, y: r.y, button: "left", clickCount: 1 });
+          clicked = r;
+        }
+      }
     }
-    log(url, state && state.token > 0 ? "PASSED" : "NOT PASSED", JSON.stringify(state));
+    tab.off("console-message", onConsole);
+    log(url, state && state.token > 0 ? "PASSED" : "NOT PASSED", JSON.stringify({ ...state, console: consoleLines.slice(0, 6) }));
   }
   app.exit(0);
 });
