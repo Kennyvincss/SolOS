@@ -46,19 +46,36 @@ function installSession(ses) {
   });
 }
 
-/** The page's own navigator.userAgent follows: Firefox while on Google sign-in, the session's otherwise. */
+/**
+ * The page's own navigator.userAgent follows: Firefox while on Google sign-in,
+ * the session's otherwise. A popup's first page starts loading before we can
+ * switch (window.open), so a Google sign-in page that still committed with
+ * the Chrome user agent is loaded again, once, with Firefox's.
+ */
 function watchWebContents(wc) {
   if (wc.getType?.() === "backgroundPage") return;
+  const firefox = firefoxUserAgent();
   let onGoogle = false;
   const apply = (url) => {
     const want = isGoogleSignIn(url);
     if (want === onGoogle || wc.isDestroyed()) return;
     onGoogle = want;
-    wc.setUserAgent(want ? firefoxUserAgent() : wc.session.getUserAgent());
+    wc.setUserAgent(want ? firefox : wc.session.getUserAgent());
   };
   wc.on("did-start-navigation", (details) => {
     if (details?.isMainFrame === false) return;
     apply(details?.url ?? "");
+  });
+  // A reload would keep the page's "no user agent override" flag (popups start
+  // with it off), so the page is loaded afresh, once.
+  let reloaded = false;
+  wc.on("did-navigate", async (_e, url) => {
+    if (!isGoogleSignIn(url) || wc.isDestroyed()) return;
+    apply(url);
+    const seen = await wc.executeJavaScript("navigator.userAgent", false).catch(() => firefox);
+    if (seen === firefox || reloaded || wc.isDestroyed()) return;
+    reloaded = true;
+    wc.loadURL(url, { userAgent: firefox }).catch(() => {});
   });
 }
 
