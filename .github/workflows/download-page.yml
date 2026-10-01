@@ -1,0 +1,35 @@
+# Deploys the standalone STRATA download page (download-page/) to its own
+# Vercel project, "strata-download". It isn't part of the STRATA website or
+# desktop app; this only uploads that one folder.
+# Needs a VERCEL_TOKEN repository secret (vercel.com/account/tokens).
+name: Download page
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["download-page/**"]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to Vercel
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_SCOPE: ${{ vars.VERCEL_SCOPE }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "::error::Add a VERCEL_TOKEN repository secret (vercel.com/account/tokens) to deploy the download page."
+            exit 1
+          fi
+          # The folder name becomes the Vercel project name.
+          mkdir -p /tmp/strata-download && cp download-page/index.html /tmp/strata-download/
+          cd /tmp/strata-download
+          url=$(npx --yes vercel@latest deploy --prod --yes --token "$VERCEL_TOKEN" ${VERCEL_SCOPE:+--scope "$VERCEL_SCOPE"})
+          echo "Deployed: $url"
+          echo "### Download page deployed: $url" >> "$GITHUB_STEP_SUMMARY"
