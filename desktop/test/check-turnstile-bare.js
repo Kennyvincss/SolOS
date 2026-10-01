@@ -89,6 +89,13 @@ app.whenReady().then(async () => {
     for (let i = 0; i < 26 && !(token > 0); i++) {
       await wait(1000);
       if ([2, 6, 12, 20, 25].includes(i)) seen.push(`${i}s: ${await widgetText(wc)}`);
+      if (process.env.DIAG && i === 10) {
+        for (const [sid, t] of frames) {
+          if (!/challenges\.cloudflare\.com/.test(urls.get(t) || "")) continue;
+          const r = await wc.debugger.sendCommand("Runtime.evaluate", { returnByValue: true, expression: `JSON.stringify({ ready: document.readyState, resources: performance.getEntriesByType("resource").map((e) => e.initiatorType + " " + e.name.replace(/^https:\\/\\/challenges\\.cloudflare\\.com/, "").slice(0, 90) + " " + Math.round(e.duration) + "ms " + (e.responseStatus || "")), scripts: document.scripts.length, perm: Notification.permission })` }, sid).catch((e) => ({ result: { value: String(e) } }));
+          console.log(tag, "challenge frame state", r.result && r.result.value);
+        }
+      }
       token = await wc.executeJavaScript(`(() => { const i = document.querySelector('[name="cf-turnstile-response"]'); return i ? i.value.length : -1; })()`).catch(() => -2);
       if (!(token > 0) && !clicked && i >= 3) {
         const r = await wc.executeJavaScript(`(() => { const i = document.querySelector('[name="cf-turnstile-response"]'); const box = i && (i.closest('.cf-turnstile, [class*="turnstile"]') || i.parentElement); if (!box) return null; const b = box.getBoundingClientRect(); return { x: Math.round(b.x + 30), y: Math.round(b.y + Math.min(b.height, 65) / 2) }; })()`).catch(() => null);
