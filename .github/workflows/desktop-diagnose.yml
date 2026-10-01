@@ -51,6 +51,11 @@ jobs:
         working-directory: .
         run: |
           npm i -g lighthouse@12 >/dev/null 2>&1
+          # Logo thumbnails: original vs /api/img copy.
+          for img in https://static.jup.ag/jup/icon.png https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png; do
+            curl -s -o /dev/null -w "[perf] logo original %{http_code} %{size_download}B $img\n" "$img"
+            curl -s -o /dev/null -w "[perf] logo /api/img %{http_code} %{content_type} %{size_download}B\n" "https://solos-rho.vercel.app/api/img?u=$(jq -rn --arg u "$img" '$u|@uri')&s=40" -L
+          done
           for u in / /tokens /wallets /apps /ai /search?q=jup; do
             for form in mobile desktop; do
               extra=""; [ "$form" = desktop ] && extra="--preset=desktop"
