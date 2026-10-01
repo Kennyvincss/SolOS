@@ -27,7 +27,7 @@ app.whenReady().then(() => {
       await new Promise((r) => tab.once("did-finish-load", r));
       await new Promise((r) => setTimeout(r, 1500));
       result.contentScript = await tab.executeJavaScript("document.documentElement.dataset.fakeWallet || null");
-      result.desktopUA = await tab.executeJavaScript("/SolanaOSDesktop\\//.test(navigator.userAgent)");
+      result.desktopUA = await tab.executeJavaScript("/Chrome\\/\\d+\\.0\\.0\\.0 Safari\\/537\\.36$/.test(navigator.userAgent) && !/Electron|SolanaOS/.test(navigator.userAgent)");
       result.toolbarActions = await win.webContents.executeJavaScript(
         "(() => { const el = document.querySelector('browser-action-list'); return el && el.shadowRoot ? el.shadowRoot.querySelectorAll('.action, [part~=action]').length : -1 })()",
       );

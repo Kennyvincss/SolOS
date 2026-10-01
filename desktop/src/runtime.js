@@ -11,7 +11,13 @@ const { createLibrary } = require("./library");
 const { createPasswords } = require("./passwords");
 const extWindows = require("./extension-windows");
 
-const DESKTOP_UA_TOKEN = "SolanaOSDesktop/" + app.getVersion();
+/** Electron's user agent -> the one Chrome of the same version sends. */
+function chromeUserAgent(ua) {
+  return String(ua)
+    .replace(/\s(Electron|solana-os-desktop|Solana\s?OS|STRATA|SolanaOSDesktop)\/\S+/gi, "")
+    .replace(/Chrome\/(\d+)\.[\d.]+/, "Chrome/$1.0.0.0")
+    .trim();
+}
 
 /** Set by main: how to reach windows (avoids a require cycle). */
 let hooks = {
@@ -63,10 +69,13 @@ function getRuntime(profileId) {
   const partition = profiles.partition(profileId);
   const ses = session.fromPartition(partition);
 
-  // Present as Chrome (without the Electron token) so sites and the Chrome Web
-  // Store treat this like a regular Chromium browser, plus a STRATA marker.
-  const ua = ses.getUserAgent().replace(/\s(Electron|solana-os-desktop|Solana\s?OS|STRATA)\/\S+/gi, "");
-  ses.setUserAgent(process.env.STRATA_TEST_UA || `${ua} ${DESKTOP_UA_TOKEN}`); // STRATA_TEST_UA: diagnostics only
+  // Present exactly as Chrome does: no Electron or STRATA tokens and the
+  // shortened version ("Chrome/152.0.0.0", as Chrome has sent since 2023).
+  // Bot checks such as Cloudflare Turnstile ("Verify you are human") compare
+  // the user agent with the real browser; a full build number or extra tokens
+  // look like an automated browser. The STRATA site recognises the app through
+  // its bridge (window.solanaOSDesktop), not the user agent.
+  ses.setUserAgent(process.env.STRATA_TEST_UA || chromeUserAgent(ses.getUserAgent()));
 
   // Chrome APIs Electron lacks (chrome.identity, chrome.sidePanel, ...). Must be
   // registered before ElectronChromeExtensions, which freezes `chrome`.
@@ -251,4 +260,4 @@ function watchExtensionWorkers(rt) {
   });
 }
 
-module.exports = { setHooks, getRuntime, dropRuntime, runtimeBySession, runtimes, slug };
+module.exports = { chromeUserAgent, setHooks, getRuntime, dropRuntime, runtimeBySession, runtimes, slug };

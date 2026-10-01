@@ -100,3 +100,14 @@ test("popupFeatures: sign-in popups vs plain new windows", () => {
   assert.equal(popupFeatures("width=10,height=99999").width, 320);
   assert.equal(popupFeatures("width=10,height=99999").height, 1100);
 });
+
+test("chromeUserAgent: exactly what Chrome sends", () => {
+  // runtime.js needs Electron; test the same transformation on a sample.
+  const src = require("node:fs").readFileSync(require("node:path").join(__dirname, "..", "src", "runtime.js"), "utf8");
+  const body = src.slice(src.indexOf("function chromeUserAgent"), src.indexOf("\n}\n", src.indexOf("function chromeUserAgent")) + 2);
+  const chromeUserAgent = new Function(`${body}; return chromeUserAgent;`)();
+  assert.equal(
+    chromeUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) solana-os-desktop/0.9.3 Chrome/152.0.7977.130 Electron/44.4.5 Safari/537.36"),
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+  );
+});

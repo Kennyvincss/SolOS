@@ -2,8 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 
-/** True inside the STRATA desktop app (it adds "SolanaOSDesktop/x.y.z" to its user agent). */
+/**
+ * True inside the STRATA desktop app: it exposes window.solanaOSDesktop on
+ * STRATA pages (versions before 0.9.4 also added "SolanaOSDesktop/x.y.z" to
+ * the user agent; newer ones send Chrome's exact user agent).
+ */
 export function isDesktopApp(): boolean {
+  if (typeof window !== "undefined" && (window as unknown as { solanaOSDesktop?: unknown }).solanaOSDesktop) return true;
   return typeof navigator !== "undefined" && /\bSolanaOSDesktop\//.test(navigator.userAgent);
 }
 
