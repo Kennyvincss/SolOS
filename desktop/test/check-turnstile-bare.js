@@ -7,12 +7,14 @@ const chromeUA = (ua) => ua.replace(/\s(Electron|[\w-]+)\/\d[\w.]*(?=\s|$)/g, (m
 // CI machines have no GPU: Chrome falls back to software WebGL there, Electron
 // needs to be told to (otherwise WebGL is missing, which fails any bot check).
 if (process.env.SWGL) for (const [k, v] of [["ignore-gpu-blocklist"], ["enable-unsafe-swiftshader"], ["use-angle", "swiftshader"]]) app.commandLine.appendSwitch(k, v);
+// AUTOPLAY=1: like Chrome, audio waits for a click.
+if (process.env.AUTOPLAY) app.commandLine.appendSwitch("autoplay-policy", "document-user-activation-required");
 // PS=1: turn off the ad/Privacy Sandbox APIs Chrome ships disabled.
 if (process.env.PS) app.commandLine.appendSwitch("disable-features", "SharedStorageAPI,FledgeInterestGroups,InterestGroupStorage,PrivateAggregationApi,Fledge,AdInterestGroupAPI,PrivacySandboxAdsAPIs,BrowsingTopics,AttributionReportingCrossAppWeb,FencedFrames");
 if (process.env.UA === "chrome") app.userAgentFallback = chromeUA(app.userAgentFallback);
 const PAGES = (process.env.TURNSTILE_PAGES || "https://2captcha.com/demo/cloudflare-turnstile,https://seleniumbase.io/apps/turnstile").split(",");
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-const tag = `[bare UA=${process.env.UA || "default"} PERM=${process.env.PERM || 0} PS=${process.env.PS || 0} SHIM=${process.env.SHIM || 0} BRAND=${process.env.BRAND || 0}]`;
+const tag = `[bare AUTOPLAY=${process.env.AUTOPLAY || 0} UA=${process.env.UA || "default"} PERM=${process.env.PERM || 0} PS=${process.env.PS || 0} SHIM=${process.env.SHIM || 0} BRAND=${process.env.BRAND || 0}]`;
 
 const frames = new Map(); // DevTools session -> target id
 const urls = new Map(); // target id -> current URL
