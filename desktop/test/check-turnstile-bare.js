@@ -7,16 +7,39 @@ const chromeUA = (ua) => ua.replace(/\s(Electron|[\w-]+)\/\d[\w.]*(?=\s|$)/g, (m
 if (process.env.UA === "chrome") app.userAgentFallback = chromeUA(app.userAgentFallback);
 const PAGES = (process.env.TURNSTILE_PAGES || "https://2captcha.com/demo/cloudflare-turnstile,https://seleniumbase.io/apps/turnstile").split(",");
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-const tag = `[bare UA=${process.env.UA || "default"} SHIM=${process.env.SHIM || 0}]`;
+const tag = `[bare UA=${process.env.UA || "default"} SHIM=${process.env.SHIM || 0} BRAND=${process.env.BRAND || 0}]`;
+
+/** Chrome's client hints (brands incl. "Google Chrome") via the DevTools protocol, for the page and every frame/worker. */
+function brandAsChrome(wc) {
+  const major = process.versions.chrome.split(".")[0];
+  const full = process.versions.chrome;
+  const plat = { linux: "Linux", win32: "Windows", darwin: "macOS" }[process.platform];
+  const meta = {
+    brands: [{ brand: "Chromium", version: major }, { brand: "Google Chrome", version: major }, { brand: "Not A(Brand", version: "99" }],
+    fullVersionList: [{ brand: "Chromium", version: full }, { brand: "Google Chrome", version: full }, { brand: "Not A(Brand", version: "99.0.0.0" }],
+    fullVersion: full, platform: plat, platformVersion: "", architecture: "x86", model: "", mobile: false, bitness: "64", wow64: false,
+  };
+  const params = { userAgent: app.userAgentFallback, userAgentMetadata: meta };
+  const dbg = wc.debugger;
+  dbg.attach("1.3");
+  const setup = async (sessionId) => {
+    await dbg.sendCommand("Emulation.setUserAgentOverride", params, sessionId).catch((e) => console.log(tag, "override failed", String(e)));
+    await dbg.sendCommand("Target.setAutoAttach", { autoAttach: true, waitForDebuggerOnStart: true, flatten: true }, sessionId).catch(() => {});
+    if (sessionId) await dbg.sendCommand("Runtime.runIfWaitingForDebugger", {}, sessionId).catch(() => {});
+  };
+  dbg.on("message", (_e, method, p) => { if (method === "Target.attachedToTarget") setup(p.sessionId); });
+  return setup();
+}
 
 app.whenReady().then(async () => {
   const ses = session.fromPartition("persist:bare");
   if (process.env.SHIM) ses.registerPreloadScript({ id: "shim", type: "frame", filePath: path.join(__dirname, "chrome-shim.js") });
   const win = new BrowserWindow({ width: 1280, height: 900, webPreferences: { session: ses, sandbox: true, contextIsolation: true, nodeIntegrationInSubFrames: Boolean(process.env.SHIM) } });
   const wc = win.webContents;
+  if (process.env.BRAND) await brandAsChrome(wc);
   for (const url of PAGES) {
     await wc.loadURL(url).catch(() => {});
-    if (url === PAGES[0]) console.log(tag, "ua", await wc.executeJavaScript("navigator.userAgent + ' | chrome keys: ' + Object.keys(window.chrome || {}).join(',')"));
+    if (url === PAGES[0]) console.log(tag, "ua", await wc.executeJavaScript("navigator.userAgent + ' | brands: ' + (navigator.userAgentData ? navigator.userAgentData.brands.map((b) => b.brand).join('/') : '') + ' | chrome keys: ' + Object.keys(window.chrome || {}).join(',')"));
     let token = -1, clicked = false;
     for (let i = 0; i < 26 && !(token > 0); i++) {
       await wait(1000);

@@ -105,9 +105,10 @@ jobs:
           echo "--- real Google Chrome on this machine (baseline)"
           timeout 200 xvfb-run -a node test/check-turnstile-chrome.mjs 2>&1 | grep "^\[turnstile" || true
           echo "--- bare Electron window (no STRATA code)"
-          timeout 150 xvfb-run -a npx electron test/check-turnstile-bare.js 2>&1 | grep "^\[bare" || true
           UA=chrome timeout 150 xvfb-run -a npx electron test/check-turnstile-bare.js 2>&1 | grep "^\[bare" || true
           UA=chrome SHIM=1 timeout 150 xvfb-run -a npx electron test/check-turnstile-bare.js 2>&1 | grep "^\[bare" || true
+          UA=chrome BRAND=1 timeout 150 xvfb-run -a npx electron test/check-turnstile-bare.js 2>&1 | grep "^\[bare" || true
+          UA=chrome BRAND=1 SHIM=1 timeout 150 xvfb-run -a npx electron test/check-turnstile-bare.js 2>&1 | grep "^\[bare" || true
           echo "--- STRATA as released"
           timeout 200 xvfb-run -a npx electron test/check-turnstile.js 2>&1 | grep "^\[turnstile" || true
       - name: Jupiter links
