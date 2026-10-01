@@ -184,9 +184,12 @@ app.whenReady().then(async () => {
     }, 500);
     popup.webContents.on("console-message", (d) => log("approval console", d.level, String(d.message).slice(0, 200)));
     popup.webContents.on("did-fail-load", (_e, code, desc, url) => log("approval did-fail-load", code, desc, url));
-    popup.webContents.session.webRequest.onCompleted({ urls: ["<all_urls>"] }, (d) => {
-      if (d.webContentsId === popup.webContents.id) log("approval request", d.statusCode, d.url.slice(0, 100));
+    const popupId = popup.webContents.id;
+    const ses = popup.webContents.session;
+    ses.webRequest.onCompleted({ urls: ["<all_urls>"] }, (d) => {
+      if (d.webContentsId === popupId) log("approval request", d.statusCode, d.url.slice(0, 100));
     });
+    popup.once("closed", () => ses.webRequest.onCompleted(null));
     for (let i = 0; i < 40; i++) {
       await sleep(500);
       if (popup.isDestroyed()) break;

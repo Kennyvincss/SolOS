@@ -25,6 +25,13 @@ if (path.basename(app.getPath("userData")) === "STRATA" || path.basename(app.get
 }
 app.setName("STRATA");
 
+// An unexpected error in the main process must not freeze the browser:
+// Electron's default shows a blocking "JavaScript error" dialog, which stops
+// every window (and any wallet popup that is waiting) until it's dismissed.
+// Log it instead. Tests can still install their own handler.
+process.on("uncaughtException", (err) => console.error("[main] uncaught error:", err));
+process.on("unhandledRejection", (err) => console.error("[main] unhandled rejection:", err));
+
 const { SOLANA_OS_URL } = require("./lib");
 const profiles = require("./profiles");
 const runtime = require("./runtime");
