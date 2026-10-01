@@ -38,6 +38,19 @@ app.userAgentFallback = process.env.STRATA_TEST_UA || require("./lib").chromeUse
 app.commandLine.appendSwitch("autoplay-policy", "document-user-activation-required");
 app.commandLine.appendSwitch("disable-features", "SharedStorageAPI,FledgeInterestGroups,InterestGroupStorage,PrivateAggregationApi,Fledge,AdInterestGroupAPI,PrivacySandboxAdsAPIs,BrowsingTopics,FencedFrames");
 
+// Extensions open fast: like Chrome, keep V8's compiled code for extension
+// pages (chrome-extension://), so a wallet's popup or approval window doesn't
+// compile its whole bundle again every time it opens. Only one call to
+// registerSchemesAsPrivileged takes effect, so this repeats the crx: scheme the
+// extensions library registers when it loads. STRATA_EXT_CODECACHE=0 turns
+// the cache off (speed comparisons).
+if (process.env.STRATA_EXT_CODECACHE !== "0") {
+  require("electron").protocol.registerSchemesAsPrivileged([
+    { scheme: "crx", privileges: { bypassCSP: true } },
+    { scheme: "chrome-extension", privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, allowServiceWorkers: true, codeCache: true } },
+  ]);
+}
+
 // An unexpected error in the main process must not freeze the browser:
 // Electron's default shows a blocking "JavaScript error" dialog, which stops
 // every window (and any wallet popup that is waiting) until it's dismissed.

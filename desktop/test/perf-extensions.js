@@ -69,30 +69,32 @@ async function loadTimes(tab, label, n = 5) {
   }
 }
 
-/** Ask the dApp for something that needs an approval; time each stage. */
+/** Ask the dApp for something that may need an approval; time each stage. */
 async function approval(name, tab, call, button) {
   phase = name;
   const before = new Set(BrowserWindow.getAllWindows());
+  const answer = () => tab.executeJavaScript("window.r").catch(() => null);
   const t = Date.now();
   await tab.executeJavaScript(`window.r = null; setTimeout(() => (${call}).then((v) => (window.r = { ok: true, v: String(v) }), (e) => (window.r = { ok: false, e: String(e && e.message || e) })), 0); true`, true);
-  const pop = await until(() => newWindow(before), 15000);
-  if (!pop) {
-    // No window: answered without asking (already approved).
-    const r = await until(() => tab.executeJavaScript("window.r").catch(() => null), 15000);
+  // An approval window, or an answer straight away (already approved).
+  const first = await until(async () => newWindow(before) ?? ((await answer()) ? "answer" : null), 15000);
+  if (!first) return record(`${name}: NOTHING after 15s`, Date.now() - t);
+  if (first === "answer") {
     record(`${name}: answer (no window)`, Date.now() - t);
-    log(name, "no approval window; answer", JSON.stringify(r), `${Date.now() - t}ms`);
     return;
   }
+  const pop = first;
   record(`${name}: window appears`, Date.now() - t);
-  const shown = await until(() => pop.isDestroyed() || pop.isVisible(), 10000);
-  if (shown) record(`${name}: window visible`, Date.now() - t);
   const ok = await until(() => !pop.isDestroyed() && ready(pop.webContents, button), 20000);
   record(`${name}: ${ok ? "ready to approve" : "NEVER ready (20s)"}`, Date.now() - t);
   if (!ok) return log(name, "not ready", JSON.stringify(await pop.webContents.executeJavaScript(PAGE_STATE).catch(() => null)));
+  // The button can be disabled for a moment after it appears: click until the window goes.
   const tc = Date.now();
-  await pop.webContents.executeJavaScript(clickText(button.toString())).catch(() => {});
-  const r = await until(() => tab.executeJavaScript("window.r").catch(() => null), 15000);
-  record(`${name}: answer after click`, Date.now() - tc);
+  const r = await until(async () => {
+    if (!pop.isDestroyed()) await pop.webContents.executeJavaScript(clickText(button.toString())).catch(() => {});
+    return answer();
+  }, 15000, 100);
+  record(`${name}: ${r ? "answer after click" : "NO answer 15s after click"}`, Date.now() - tc);
   log(name, JSON.stringify(r).slice(0, 120));
   await until(() => pop.isDestroyed(), 3000);
 }
