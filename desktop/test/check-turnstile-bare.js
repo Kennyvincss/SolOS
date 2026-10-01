@@ -50,6 +50,7 @@ function brandAsChrome(wc) {
   };
   dbg.on("message", (_e, method, p, sid) => {
     if (method === "Target.targetInfoChanged") urls.set(p.targetInfo.targetId, p.targetInfo.url);
+    if (process.env.DIAG) sid = sid || "main";
     if (process.env.DIAG && sid) {
       if (method === "Network.responseReceived") note(sid, `${p.response.status} ${p.type} ${p.response.url.slice(0, 110)}`);
       else if (method === "Network.loadingFailed") note(sid, `FAILED ${p.type} ${p.errorText} ${p.blockedReason || ""} ${p.corsErrorStatus ? JSON.stringify(p.corsErrorStatus) : ""}`);
@@ -70,6 +71,7 @@ function brandAsChrome(wc) {
     go();
   });
   dbg.sendCommand("Target.setDiscoverTargets", { discover: true }).catch(() => {});
+  if (process.env.DIAG) for (const m of ["Network.enable", "Runtime.enable", "Log.enable"]) dbg.sendCommand(m, {}).catch(() => {});
   if (!process.env.BRAND) return dbg.sendCommand("Target.setAutoAttach", { autoAttach: true, waitForDebuggerOnStart: false, flatten: true }).catch(() => {});
   return setup();
 }
@@ -83,7 +85,7 @@ app.whenReady().then(async () => {
   await brandAsChrome(wc); // BRAND=1: override; otherwise only watch frames
   for (const url of PAGES) {
     await wc.loadURL(url).catch(() => {});
-    if (url === PAGES[0]) console.log(tag, "ua", await wc.executeJavaScript("navigator.userAgent + ' | brands: ' + (navigator.userAgentData ? navigator.userAgentData.brands.map((b) => b.brand).join('/') : '') + ' | chrome keys: ' + Object.keys(window.chrome || {}).join(',') + ' | webgl: ' + (() => { try { const g = document.createElement('canvas').getContext('webgl'); const d = g && g.getExtension('WEBGL_debug_renderer_info'); return g ? (d ? g.getParameter(d.UNMASKED_RENDERER_WEBGL) : 'yes') : 'NONE'; } catch (e) { return 'err'; } })()"));
+    if (url === PAGES[0]) console.log(tag, "ua", await wc.executeJavaScript("navigator.userAgent + ' | brands: ' + (navigator.userAgentData ? navigator.userAgentData.brands.map((b) => b.brand).join('/') : '') + ' | chrome keys: ' + Object.keys(window.chrome || {}).join(',') + ' | visibility: ' + document.visibilityState + ' focus: ' + document.hasFocus() + ' | webgl: ' + (() => { try { const g = document.createElement('canvas').getContext('webgl'); const d = g && g.getExtension('WEBGL_debug_renderer_info'); return g ? (d ? g.getParameter(d.UNMASKED_RENDERER_WEBGL) : 'yes') : 'NONE'; } catch (e) { return 'err'; } })()"));
     let token = -1, clicked = false;
     const seen = [];
     for (let i = 0; i < 26 && !(token > 0); i++) {
@@ -115,9 +117,9 @@ app.whenReady().then(async () => {
       console.log(tag, "sessions", JSON.stringify([...frames].map(([sid, t]) => `${(urls.get(t) || "?").slice(0, 70)} events=${(events.get(sid) || []).length}`)));
       for (const [sid, lines] of events) {
         const u = urls.get(frames.get(sid)) || sid;
-        if (/seleniumbase|2captcha|nopecha/.test(u) && !lines.some((l) => /cloudflare|challenge/.test(l))) continue;
-        console.log(tag, "frame", u.slice(0, 90), "events", lines.length);
-        for (const l of lines.filter((l) => !/^200 (Image|Font|Stylesheet)/.test(l)).slice(-40)) console.log(tag, "   ", l);
+        console.log(tag, "frame", sid === "main" ? "MAIN PAGE" : u.slice(0, 90), "events", lines.length);
+        const keep = sid === "main" ? lines.filter((l) => /cloudflare|turnstile|challenge|EXCEPTION|FAILED|console\.(error|warn)|log\.(error|warning)/i.test(l)) : lines.filter((l) => !/^200 (Image|Font|Stylesheet)/.test(l));
+        for (const l of keep.slice(-40)) console.log(tag, "   ", l);
       }
       events.clear();
     }
