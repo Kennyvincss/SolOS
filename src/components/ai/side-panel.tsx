@@ -2,8 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { ChatPanel, desktopPanelBridge, webPageContext } from "./chat-panel";
+import dynamic from "next/dynamic";
+import { desktopPanelBridge, webPageContext } from "./page-context";
+import { ChatLoading } from "./chat-loading";
 import { cn } from "../ui";
+
+// The chat UI loads the first time STRATA AI is opened.
+const ChatPanel = dynamic(() => import("./chat-panel").then((m) => m.ChatPanel), { ssr: false, loading: () => <ChatLoading /> });
 
 const EVENT = "strata:ai-panel";
 

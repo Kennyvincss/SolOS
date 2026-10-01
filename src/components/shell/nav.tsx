@@ -11,7 +11,7 @@ import { Icon } from "../icon";
 import { cn } from "../ui";
 import { Wordmark, LogoMark } from "./logo";
 import { shortAddr } from "@/lib/format";
-import { openCommandBar } from "./command-bar";
+import { openCommandBar } from "./command-bar-host";
 import { openAiPanel } from "../ai/side-panel";
 import { ModeSwitch } from "../mode-switch";
 import { LiteSearchInput } from "../lite/search-input";

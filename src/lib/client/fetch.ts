@@ -21,7 +21,8 @@ export class ApiError extends Error {
 }
 
 export async function apiGet<T>(url: string): Promise<T> {
-  const res = await fetch(url, { headers: { accept: "application/json" } });
+  // Plain GET (no extra headers) so it can reuse a <link rel="preload" as="fetch">.
+  const res = await fetch(url);
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw new ApiError((body as { error?: string }).error ?? `Request failed (${res.status})`, res.status);
   return body as T;

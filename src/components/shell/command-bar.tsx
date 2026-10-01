@@ -15,10 +15,6 @@ import { shortAddr } from "@/lib/format";
 import { Icon } from "../icon";
 import { Monogram, cn } from "../ui";
 
-export function openCommandBar() {
-  window.dispatchEvent(new Event("sos:command"));
-}
-
 interface Item {
   id: string;
   group: string;
@@ -28,8 +24,8 @@ interface Item {
   icon: React.ReactNode;
 }
 
-export function CommandBar() {
-  const [open, setOpen] = useState(false);
+/** The ⌘K dialog. Loaded the first time it opens (see command-bar-host). */
+export function CommandBarDialog({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => void }) {
   const [q, setQ] = useState("");
   const [sel, setSel] = useState(0);
   const [remote, setRemote] = useState<SearchResponse | null>(null);
@@ -38,25 +34,6 @@ export function CommandBar() {
   const listRef = useRef<HTMLDivElement>(null);
   const recent = useStore((s) => s.recentSearches);
   const { pushRecentSearch } = useActions();
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        setOpen((o) => !o);
-      } else if (e.key === "/" && !/input|textarea|select/i.test((e.target as HTMLElement)?.tagName) && !(e.target as HTMLElement)?.isContentEditable) {
-        e.preventDefault();
-        setOpen(true);
-      }
-    };
-    const onOpen = () => setOpen(true);
-    window.addEventListener("keydown", onKey);
-    window.addEventListener("sos:command", onOpen);
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      window.removeEventListener("sos:command", onOpen);
-    };
-  }, []);
 
   useEffect(() => {
     if (open) {

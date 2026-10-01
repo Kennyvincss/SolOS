@@ -1,11 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { GeistSans } from "geist/font/sans";
-import { GeistMono } from "geist/font/mono";
+import { GeistMono, GeistSans } from "./fonts";
 import "./globals.css";
 import { SessionProvider } from "@/lib/client/session";
 import { DesktopHeader, LiteTopBar, MobileNav, Sidebar, TopBar } from "@/components/shell/nav";
-import { CommandBar } from "@/components/shell/command-bar";
-import { WalletModal } from "@/components/shell/wallet-modal";
+import { CommandBar } from "@/components/shell/command-bar-host";
+import { WalletModal } from "@/components/shell/wallet-modal-host";
 import { ThemeSync, Watchers } from "@/components/shell/watchers";
 import { AiSidePanel } from "@/components/ai/side-panel";
 import { AiBubble } from "@/components/ai/ai-bubble";
@@ -18,7 +17,7 @@ export const metadata: Metadata = {
   title: { default: "STRATA — The browser for the onchain world.", template: "%s · STRATA" },
   description: "Search, discover, use and understand the entire Solana ecosystem. Apps, tokens, wallets, transactions, DeFi and STRATA AI in one place.",
   applicationName: "STRATA",
-  icons: { icon: [{ url: "/favicon.ico", sizes: "any" }, { url: "/brand/icon-192.png", type: "image/png", sizes: "192x192" }], apple: "/apple-touch-icon.png" },
+  icons: { icon: [{ url: "/favicon.ico", sizes: "any" }], apple: "/apple-touch-icon.png" },
   manifest: "/manifest.webmanifest",
   openGraph: { title: "STRATA", description: "The browser for the onchain world.", type: "website" },
 };

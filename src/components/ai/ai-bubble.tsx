@@ -3,8 +3,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Sparkles } from "lucide-react";
-import { ChatPanel, webPageContext } from "./chat-panel";
+import dynamic from "next/dynamic";
+import { webPageContext } from "./page-context";
+import { ChatLoading } from "./chat-loading";
 import { cn } from "../ui";
+
+// The chat UI loads the first time STRATA AI is opened.
+const ChatPanel = dynamic(() => import("./chat-panel").then((m) => m.ChatPanel), { ssr: false, loading: () => <ChatLoading /> });
 
 /**
  * STRATA AI in the bottom-right corner: a small round button that opens a

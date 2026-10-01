@@ -8,8 +8,8 @@ export function LogoMark({ size = 26 }: { size?: number }) {
   const big = size > 48;
   return (
     <span className="relative inline-block shrink-0" style={{ width: size, height: size }} aria-hidden>
-      <img src={big ? "/brand/mark.png" : "/brand/mark-96.png"} alt="" width={size} height={size} className="hidden h-full w-full object-contain dark:block" />
-      <img src={big ? "/brand/icon-192.png" : "/brand/tile-64.png"} alt="" width={size} height={size} className="block h-full w-full rounded-[22%] object-contain dark:hidden" />
+      <img src={big ? "/brand/mark.webp" : "/brand/mark-96.webp"} alt="" width={size} height={size} className="hidden h-full w-full object-contain dark:block" />
+      <img src={big ? "/brand/icon-192.webp" : "/brand/tile-64.webp"} alt="" width={size} height={size} className="block h-full w-full rounded-[22%] object-contain dark:hidden" />
     </span>
   );
 }

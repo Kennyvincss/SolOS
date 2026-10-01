@@ -315,12 +315,20 @@ export function Select<T extends string>({ value, onChange, options, className, 
   );
 }
 
+/**
+ * Remote logos go through /api/img, which serves a small cached WebP copy
+ * (token logos are often several hundred KB for a 24px icon).
+ */
+export function smallImage(src: string, size: number): string {
+  return /^https:\/\//i.test(src) ? `/api/img?u=${encodeURIComponent(src)}&s=${size}` : src;
+}
+
 export function Monogram({ name, color, size = 40, src, rounded = "xl" }: { name: string; color?: string; size?: number; src?: string; rounded?: "full" | "xl" }) {
   const [err, setErr] = useState(false);
   const r = rounded === "full" ? "rounded-full" : size >= 56 ? "rounded-[22%]" : "rounded-[28%]";
   if (src && !err) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={src} alt="" width={size} height={size} loading="lazy" onError={() => setErr(true)} className={cn("shrink-0 bg-surface-2 object-cover", r)} style={{ width: size, height: size }} />;
+    return <img src={smallImage(src, size)} alt="" width={size} height={size} loading="lazy" decoding="async" onError={() => setErr(true)} className={cn("shrink-0 bg-surface-2 object-cover", r)} style={{ width: size, height: size }} />;
   }
   const c = color ?? "#888";
   return (

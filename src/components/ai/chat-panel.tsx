@@ -7,21 +7,12 @@ import { AssistantBubble, reduceEvent, type AssistantMsg } from "./message";
 import { streamChat, useAiContext } from "@/lib/client/ai";
 import { useSession } from "@/lib/client/session";
 import { useLibrary } from "@/lib/client/library";
-import { classifyUrl } from "@/lib/library/classify";
 import type { ChatTurn, UserContext } from "@/lib/ai/protocol";
-import type { PageType } from "@/lib/library/types";
 import { cn } from "../ui";
+import type { PageContext } from "./page-context";
 
-/** What STRATA AI knows about the page being viewed. */
-export interface PageContext {
-  url: string;
-  title: string;
-  type: PageType | string;
-  text?: string;
-  description?: string;
-  selection?: string;
-  openTabs?: { title: string; url: string; active?: boolean }[];
-}
+export { desktopPanelBridge, webPageContext, type PageContext } from "./page-context";
+
 
 type Msg = { role: "user"; text: string } | AssistantMsg;
 interface Thread {
@@ -406,32 +397,4 @@ export function ChatPanel({ variant = "panel", getContext, subscribe, openLink, 
       </div>
     </div>
   );
-}
-
-/* ------------------------------------------------------------ page context sources */
-
-type DesktopPanelBridge = {
-  pageContext: (opts?: { text?: boolean }) => Promise<(PageContext & { inPanel?: boolean }) | null>;
-  panel: (action: string, arg?: unknown) => Promise<unknown>;
-  onPageChanged: (cb: () => void) => () => void;
-  onPanelPrompt: (cb: (p: { prompt: string }) => void) => () => void;
-};
-
-export function desktopPanelBridge(): DesktopPanelBridge | null {
-  if (typeof window === "undefined") return null;
-  const b = (window as unknown as { solanaOSDesktop?: Partial<DesktopPanelBridge> }).solanaOSDesktop;
-  return b && typeof b.pageContext === "function" ? (b as DesktopPanelBridge) : null;
-}
-
-/** Context of the STRATA page behind the website's slide-over panel. */
-export function webPageContext(): PageContext {
-  const main = document.querySelector("main");
-  return {
-    url: window.location.href,
-    title: document.title,
-    type: classifyUrl(window.location.href, window.location.origin),
-    text: (main?.innerText ?? "").replace(/\n{3,}/g, "\n\n").slice(0, 6000),
-    description: document.querySelector<HTMLMetaElement>('meta[name="description"]')?.content?.slice(0, 300),
-    selection: String(window.getSelection() ?? "").slice(0, 2000),
-  };
 }

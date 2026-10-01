@@ -1,6 +1,7 @@
 import { getApp } from "@/lib/catalog/apps";
 import { solanaProtocols } from "@/lib/providers/defillama";
 import { fetchLogo, logoCandidates } from "@/lib/services/logos";
+import { thumbnail } from "@/lib/services/thumbnail";
 
 /**
  * GET /api/logo/{slug}: the app's logo image, proxied and cached on the CDN for
@@ -26,9 +27,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
   if (!logo) {
     return new Response("No logo", { status: 404, headers: { "Cache-Control": "public, s-maxage=86400" } });
   }
-  return new Response(logo.body, {
+  // App logos are shown at up to 88px: send a 192px WebP instead of the original.
+  const small = logo.contentType.includes("svg") ? null : await thumbnail(logo.body, 96);
+  const body = small && small.byteLength < logo.body.byteLength ? small : null;
+  return new Response((body ?? logo.body) as BodyInit, {
     headers: {
-      "Content-Type": logo.contentType,
+      "Content-Type": body ? "image/webp" : logo.contentType,
       "Cache-Control": "public, max-age=86400, s-maxage=604800, stale-while-revalidate=2592000",
       "X-Logo-Source": new URL(logo.source).hostname,
     },
