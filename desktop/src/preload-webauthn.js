@@ -6,9 +6,11 @@
 // Google sign-in pages see no passkey support and ask for the password
 // (passkeys saved in Chrome aren't reachable here anyway).
 //
-// Those pages also present as Firefox (see google-signin.js), so they don't
-// see Chromium-only properties (navigator.userAgentData, Google's vendor
-// string) that would contradict the Firefox user agent.
+// Google's sign-in also refuses a browser whose window.chrome is empty
+// ("Couldn't sign you in — This browser or app may not be secure"); Electron
+// leaves it empty, so there it's filled in the way Chrome does (chrome.app,
+// chrome.csi, chrome.loadTimes). Checked against accounts.google.com:
+// test/check-google-signin.js.
 //
 // Only those pages are changed: on every other site the browser's built-in
 // functions are left untouched, because bot checks such as Cloudflare
@@ -27,9 +29,48 @@ function install(noPasskeyHosts) {
   const noPasskeys = noPasskeyHosts.some((h) => host === h || host.endsWith(`.${h}`));
   if (!noPasskeys) return; // leave every other site's built-ins untouched
   try {
-    const N = Navigator.prototype;
-    if ("userAgentData" in N) delete N.userAgentData;
-    Object.defineProperty(N, "vendor", { get: () => "", configurable: true, enumerable: true });
+    const c = window.chrome || (window.chrome = {});
+    const def = (k, v) => {
+      if (!(k in c)) Object.defineProperty(c, k, { value: v, writable: true, enumerable: true, configurable: true });
+    };
+    def("app", {
+      isInstalled: false,
+      InstallState: { DISABLED: "disabled", INSTALLED: "installed", NOT_INSTALLED: "not_installed" },
+      RunningState: { CANNOT_RUN: "cannot_run", READY_TO_RUN: "ready_to_run", RUNNING: "running" },
+      getDetails() {
+        return null;
+      },
+      getIsInstalled() {
+        return false;
+      },
+      runningState() {
+        return "cannot_run";
+      },
+    });
+    def("csi", function csi() {
+      const t = performance.timing;
+      return { startE: t.navigationStart, onloadT: t.domContentLoadedEventEnd, pageT: performance.now(), tran: 15 };
+    });
+    def("loadTimes", function loadTimes() {
+      const t = performance.timing;
+      const nav = performance.getEntriesByType("navigation")[0] || {};
+      const proto = nav.nextHopProtocol || "unknown";
+      return {
+        requestTime: t.navigationStart / 1000,
+        startLoadTime: t.navigationStart / 1000,
+        commitLoadTime: t.responseStart / 1000,
+        finishDocumentLoadTime: t.domContentLoadedEventEnd / 1000,
+        finishLoadTime: t.loadEventEnd / 1000,
+        firstPaintTime: t.responseEnd / 1000,
+        firstPaintAfterLoadTime: 0,
+        navigationType: "Other",
+        wasFetchedViaSpdy: proto === "h2",
+        wasNpnNegotiated: true,
+        npnNegotiatedProtocol: proto,
+        wasAlternateProtocolAvailable: false,
+        connectionInfo: proto,
+      };
+    });
   } catch {
     /* leave as is */
   }

@@ -11,7 +11,6 @@ const { createLibrary } = require("./library");
 const { createPasswords } = require("./passwords");
 const extWindows = require("./extension-windows");
 const permissions = require("./permissions");
-const googleSignin = require("./google-signin");
 
 
 /** Set by main: how to reach windows (avoids a require cycle). */
@@ -146,9 +145,6 @@ function getRuntime(profileId) {
   });
 
   extWindows.install(rt.extensions, () => hooks.focusedShell(profileId)?.win ?? null);
-
-  // "Continue with Google": Google's sign-in pages get a user agent Google accepts.
-  googleSignin.installSession(ses);
 
   // Camera, microphone, location, notifications, ...: ask first, like Chrome.
   rt.permissions = permissions.install(ses, dir, (wc) => (wc ? hooks.shellForWebContents(wc)?.win : null) ?? hooks.focusedShell(profileId)?.win ?? null);

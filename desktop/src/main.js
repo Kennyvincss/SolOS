@@ -238,7 +238,6 @@ app.on("window-all-closed", () => {
 
 // Open solana: payment links in the system's wallet app.
 app.on("web-contents-created", (_e, wc) => {
-  require("./google-signin").watchWebContents(wc);
   wc.on("will-navigate", (ev, url) => {
     if (url.startsWith("solana:")) {
       ev.preventDefault();
