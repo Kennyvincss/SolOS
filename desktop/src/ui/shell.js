@@ -32,13 +32,17 @@ const TYPE_ICON = {
   market: '<svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 15l3-4 3 2 5-6"/></svg>',
 };
 
+// STRATA's own pages never show the website's domain: the home page is an empty
+// address bar, searches show what you typed, other pages show strata://page.
 function displayUrl(url) {
-  if (!url || url === "about:blank") return "";
-  if (state?.home && url.startsWith(state.home)) {
-    const rest = url.slice(state.home.length);
+  if (!url || url === "about:blank" || url.startsWith("file:")) return "";
+  const home = (state?.home || "").replace(/\/$/, "");
+  if (home && (url === home || url.startsWith(`${home}/`) || url.startsWith(`${home}?`) || url.startsWith(`${home}#`))) {
+    const rest = url.slice(home.length);
     const q = rest.match(/^\/(search|open)\?q=([^&]+)/);
     if (q) return decodeURIComponent(q[2].replace(/\+/g, " "));
-    if (rest === "" || rest === "/") return "";
+    if (rest === "" || rest === "/" || /^\/?[?#]/.test(rest)) return "";
+    return `strata://${rest.replace(/^\//, "")}`;
   }
   return url.replace(/^https:\/\//, "");
 }

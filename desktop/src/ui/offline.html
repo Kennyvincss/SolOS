@@ -1,0 +1,22 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self'; style-src 'self'; script-src 'self'" />
+    <title>No internet connection</title>
+    <link rel="stylesheet" href="offline.css" />
+  </head>
+  <body>
+    <main>
+      <img src="brand-mark.png" class="mark" alt="" />
+      <div class="status"><span class="pulse" aria-hidden="true"></span><span id="status-text">Waiting for a connection…</span></div>
+      <h1>Please check your internet connection</h1>
+      <p class="sub">STRATA will reconnect and reload this page automatically. While you wait, learn a little about Solana.</p>
+      <section class="carousel" aria-roledescription="carousel" aria-label="Solana questions and answers">
+        <div class="track" id="track"></div>
+      </section>
+      <div class="dots" id="dots" role="tablist" aria-label="Choose a question"></div>
+    </main>
+    <script src="offline.js"></script>
+  </body>
+</html>

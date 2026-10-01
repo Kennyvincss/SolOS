@@ -1,0 +1,51 @@
+:root {
+  --bg: #ffffff;
+  --card: #f6f6f8;
+  --line: #e6e6ea;
+  --text: #16171a;
+  --muted: #5f636b;
+  --accent: #6a4ff0;
+  --accent-2: #2f6bff;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b0b0e;
+    --card: #15151a;
+    --line: rgba(255, 255, 255, 0.08);
+    --text: #f3f4f6;
+    --muted: #9ba1ab;
+    --accent: #9b8cff;
+    --accent-2: #7fa2ff;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 15px/1.5 "Segoe UI Variable Text", "Segoe UI", -apple-system, BlinkMacSystemFont, Inter, sans-serif; }
+body { display: grid; place-items: center; padding: 32px 20px; overflow-x: hidden; }
+main { width: 100%; max-width: 640px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.mark { width: 56px; height: 56px; object-fit: contain; filter: drop-shadow(0 10px 24px rgba(106, 79, 240, 0.35)); animation: float 4s ease-in-out infinite; }
+.status { margin-top: 22px; display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); font-size: 12.5px; }
+.pulse { width: 8px; height: 8px; border-radius: 50%; background: #e0a32e; animation: pulse 1.4s ease-in-out infinite; }
+.status.back .pulse { background: #12a150; animation: none; }
+h1 { margin: 18px 0 0; font-size: 26px; line-height: 1.2; letter-spacing: -0.02em; font-weight: 650; }
+.sub { margin: 10px 0 0; color: var(--muted); max-width: 460px; font-size: 14.5px; }
+
+.carousel { position: relative; width: 100%; margin-top: 34px; overflow: hidden; border-radius: 20px; }
+.track { display: flex; transition: transform 0.7s cubic-bezier(0.65, 0, 0.25, 1); }
+.card { flex: 0 0 100%; padding: 26px 28px 28px; text-align: left; background: var(--card); border: 1px solid var(--line); border-radius: 20px; min-height: 190px; }
+.card .q { display: flex; align-items: center; gap: 10px; font-weight: 650; font-size: 17px; letter-spacing: -0.01em; }
+.card .q::before { content: "Q"; flex: none; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 8px; font-size: 12.5px; font-weight: 700; color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
+.card .a { margin: 12px 0 0; color: var(--muted); font-size: 14.5px; line-height: 1.65; }
+.card .n { margin-top: 16px; font-size: 12px; color: var(--muted); opacity: 0.8; }
+
+.dots { display: flex; gap: 6px; margin-top: 18px; flex-wrap: wrap; justify-content: center; }
+.dots button { width: 8px; height: 8px; padding: 0; border: 0; border-radius: 999px; background: var(--line); cursor: pointer; transition: width 0.3s, background 0.3s; }
+.dots button[aria-selected="true"] { width: 22px; background: var(--accent); }
+
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes pulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .track { transition: none; }
+  .mark, .pulse { animation: none; }
+}

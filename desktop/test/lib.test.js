@@ -42,6 +42,7 @@ test("address bar: universal STRATA search", () => {
   assert.deepEqual(routeInput("Analyze this wallet", base), { kind: "ai", prompt: "Analyze this wallet" });
   assert.deepEqual(routeInput("explain this transaction", base), { kind: "ai", prompt: "explain this transaction" });
   assert.equal(routeInput("what is trending", base).kind, "url");
+  assert.deepEqual(routeInput("strata://tokens", base), { kind: "url", url: `${base}/tokens` });
   // Not domains: words with dots but no real TLD.
   assert.equal(normalizeInput("v1.2", base), `${base}/search?q=v1.2`);
 });

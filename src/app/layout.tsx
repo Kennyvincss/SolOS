@@ -31,7 +31,7 @@ export const viewport: Viewport = {
 };
 
 // Apply the saved theme before paint to avoid a flash.
-const themeScript = `try{var k=Object.keys(localStorage).find(function(x){return x.indexOf('sos:v1:')===0});var s=k&&JSON.parse(localStorage.getItem(k));var t=s&&s.themeChosen?s.theme:'light';if(t==='system'){t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'}document.documentElement.dataset.theme=t||'light';if(localStorage.getItem('strata:sidebar')==='collapsed')document.documentElement.classList.add('sb-collapsed');if(localStorage.getItem('strata:mode')==='pro'){document.documentElement.classList.remove('mode-lite');document.documentElement.classList.add('mode-pro')}}catch(e){document.documentElement.dataset.theme='light'}`;
+const themeScript = `try{var k=Object.keys(localStorage).find(function(x){return x.indexOf('sos:v1:')===0});var s=k&&JSON.parse(localStorage.getItem(k));var t=s&&s.themeChosen?s.theme:'light';if(t==='system'){t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'}document.documentElement.dataset.theme=t||'light';if(localStorage.getItem('strata:sidebar')==='collapsed')document.documentElement.classList.add('sb-collapsed');var tm=null;try{tm=sessionStorage.getItem('strata:mode')}catch(e){}var md=tm||(window.solanaOSDesktop?'lite':localStorage.getItem('strata:mode'));if(md==='pro'){document.documentElement.classList.remove('mode-lite');document.documentElement.classList.add('mode-pro')}}catch(e){document.documentElement.dataset.theme='light'}`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

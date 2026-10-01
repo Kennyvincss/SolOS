@@ -23,6 +23,56 @@ const GROUP_COLORS = { grey: "#9aa0a6", blue: "#8ab4f8", red: "#f28b82", yellow:
 
 const shells = new Set();
 
+/**
+ * A tab's title. Chromium uses the URL as the title until the page sets one;
+ * show a name instead of a raw address (STRATA pages never show the domain).
+ */
+function tabTitle(t, url) {
+  if (isNewTabUrl(url)) return "New tab";
+  const wc = t.view.webContents;
+  if (t.offlineFor) return "No internet connection";
+  const title = wc.getTitle() || t.placeholderTitle || "";
+  const bare = (u) => String(u || "").replace(/^https?:\/\//, "").replace(/\/$/, "");
+  if (title && bare(title) !== bare(url) && !/^https?:\/\//.test(title)) return title;
+  if (url.startsWith(SOLANA_OS_URL)) return "STRATA";
+  return hostOf(url) || url;
+}
+
+/* ------------------------------------------------------------ offline */
+
+// Chromium network errors that mean "no connection" (not a broken site).
+const OFFLINE_ERRORS = new Set([-106 /* INTERNET_DISCONNECTED */, -105 /* NAME_NOT_RESOLVED */, -137 /* NAME_RESOLUTION_FAILED */, -109 /* ADDRESS_UNREACHABLE */, -118 /* CONNECTION_TIMED_OUT */, -21 /* NETWORK_CHANGED */, -130 /* PROXY_CONNECTION_FAILED */, -7 /* TIMED_OUT */, -15 /* SOCKET_NOT_CONNECTED */]);
+
+async function connectionWorks() {
+  if (!net.isOnline()) return false;
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 4000);
+    const res = await net.fetch(`${SOLANA_OS_URL}/api/status`, { signal: ctrl.signal, cache: "no-store" }).finally(() => clearTimeout(timer));
+    return res.status > 0;
+  } catch {
+    return false;
+  }
+}
+
+function watchConnection(tab) {
+  stopWatching(tab);
+  tab.offlineTimer = setInterval(async () => {
+    const wc = tab.view.webContents;
+    if (wc.isDestroyed() || !tab.offlineFor) return stopWatching(tab);
+    if (!(await connectionWorks()) || !tab.offlineFor || wc.isDestroyed()) return;
+    const url = tab.offlineFor;
+    stopWatching(tab);
+    tab.offlineFor = null;
+    wc.loadURL(url).catch(() => {});
+  }, 3000);
+}
+
+function stopWatching(tab) {
+  if (tab.offlineTimer) clearInterval(tab.offlineTimer);
+  tab.offlineTimer = null;
+}
+
 /** The STRATA home page, which is what a new tab shows. */
 function isNewTabUrl(url) {
   if (!url) return true;
@@ -921,10 +971,10 @@ class BrowserShell {
     const tabs = this.order.map((id) => {
       const t = this.tabs.get(id);
       const wc = t.view.webContents;
-      const url = t.pending?.url ?? wc.getURL();
+      const url = t.offlineFor ?? t.pending?.url ?? wc.getURL();
       return {
         id,
-        title: isNewTabUrl(url) ? "New tab" : wc.getTitle() || t.placeholderTitle || url,
+        title: tabTitle(t, url),
         url,
         favicon: t.favicon,
         loading: !t.pending && wc.isLoading(),
@@ -938,7 +988,7 @@ class BrowserShell {
     });
     const t = this.activeTab;
     const wc = t?.view.webContents;
-    const url = t ? t.pending?.url ?? wc.getURL() : "";
+    const url = t ? t.offlineFor ?? t.pending?.url ?? wc.getURL() : "";
     const meta = this.profile.meta;
     const favorites = lib.bookmarks().filter((b) => b.favorite);
     this.win.webContents.send("shell:state", {
@@ -989,7 +1039,7 @@ class BrowserShell {
         .map((id) => {
           const t = this.tabs.get(id);
           const wc = t.view.webContents;
-          const url = t.pending?.url ?? wc.getURL();
+          const url = t.offlineFor ?? t.pending?.url ?? wc.getURL();
           const fav = t.faviconUrl ?? t.favicon;
           return { url, title: wc.getTitle() || t.placeholderTitle || "", pinned: t.pinned, groupId: t.groupId, splitId: t.splitId, favicon: typeof fav === "string" && fav.length < 2048 ? fav : null };
         })
@@ -1101,6 +1151,25 @@ function wireTab(tab) {
       }
     }
   });
+  // No internet: show STRATA's offline page (Solana Q&A) and reload the page once the connection is back.
+  wc.on("did-fail-load", async (_e, code, _desc, failedUrl, isMainFrame) => {
+    if (!isMainFrame || !OFFLINE_ERRORS.has(code) || !/^https?:/.test(failedUrl || "")) return;
+    if (await connectionWorks()) return; // the site is down or misspelled, not the connection
+    if (wc.isDestroyed()) return;
+    tab.offlineFor = failedUrl;
+    wc.loadFile(path.join(__dirname, "ui", "offline.html")).catch(() => {});
+    watchConnection(tab);
+    owner()?.sendState();
+  });
+  wc.on("did-start-navigation", (details) => {
+    // Going somewhere else (typed URL, back, etc.) ends the offline wait.
+    const url = details?.url ?? "";
+    if (tab.offlineFor && details?.isMainFrame !== false && /^https?:/.test(url) && !details?.isSameDocument) {
+      tab.offlineFor = null;
+      stopWatching(tab);
+    }
+  });
+  wc.on("destroyed", () => stopWatching(tab));
   wc.on("did-navigate", async (_e, navUrl) => {
     const s = owner();
     if (!s) return;
