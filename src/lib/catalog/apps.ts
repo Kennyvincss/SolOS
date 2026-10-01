@@ -116,6 +116,39 @@ export function domainOf(url: string): string {
 
 export const KNOWN_DOMAINS = [...new Set(APPS.flatMap((x) => [x.website, x.appUrl].filter(Boolean).map((u) => domainOf(u!))))];
 
+/**
+ * Other official domains of apps, wallets and ecosystem sites, so the address
+ * bar doesn't warn on them (Phantom also runs phantom.app, Backpack
+ * backpack.exchange, Magic Eden magiceden.us, ...).
+ */
+export const OFFICIAL_DOMAINS = [
+  ...new Set([
+    ...KNOWN_DOMAINS,
+    "phantom.app",
+    "phantom.com",
+    "backpack.app",
+    "backpack.exchange",
+    "solflare.com",
+    "glow.app",
+    "nightly.app",
+    "magiceden.io",
+    "magiceden.us",
+    "solana.com",
+    "solana.org",
+    "solana.fm",
+    "solanacompass.com",
+    "solanabeach.io",
+    "solscan.io",
+    "explorer.solana.com",
+    "jup.ag",
+    "jupresear.ch",
+    "ledger.com",
+    "metamask.io",
+    "trustwallet.com",
+    "coinbase.com",
+  ]),
+];
+
 /** Logo URL for an app (served and cached by /api/logo). */
 export function appLogo(slug: string) {
   return `/api/logo/${slug}`;

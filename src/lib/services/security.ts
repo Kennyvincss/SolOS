@@ -2,7 +2,7 @@ import "server-only";
 import type { RiskIndicator, RiskLevel, RiskReport, Token } from "../types";
 import { getAccountInfo, getLargestAccounts, getSignatures, getTokenSupply } from "../providers/rpc";
 import { jupTokensByMint } from "../providers/jupiter";
-import { KNOWN_DOMAINS, domainOf, appForProgram } from "../catalog/apps";
+import { KNOWN_DOMAINS, OFFICIAL_DOMAINS, domainOf, appForProgram } from "../catalog/apps";
 import { KNOWN_MINTS, KNOWN_PROGRAMS, TOKEN_2022_PROGRAM } from "../solana/constants";
 import { fmtNum, fmtPct, fmtUsd, shortAddr } from "../format";
 import { levenshtein } from "../search/fuzzy";
@@ -186,6 +186,14 @@ export async function addressRisk(address: string): Promise<RiskReport> {
   return { subject: address, subjectType: "wallet", indicators: ind, counts: counts(ind), methodology: "On-chain account type and recent transaction history. We do not label wallets as scams without verifiable evidence.", meta: { provider: "Solana RPC", mode: "live", fetchedAt: now() } };
 }
 
+/** Brand names too generic to signal impersonation ("solana" is in half the ecosystem's domains). */
+const GENERIC_NAMES = new Set(["solana", "sol", "app", "web3", "crypto", "wallet", "chain"]);
+/** Words drainer sites pair with a brand name: phantom-wallet-connect.com, jup-claim.xyz. */
+const PHISHING_WORDS = /(claim|airdrop|reward|bonus|giveaway|connect|verify|validate|sync|rectify|support|recover|restore|unlock|secure|official|login|wallet)/i;
+/** Look-alike characters: phant0m → phantom, raydiurn → raydium. */
+const unconfuse = (s: string) => s.replace(/0/g, "o").replace(/1/g, "l").replace(/rn/g, "m").replace(/vv/g, "w").replace(/3/g, "e");
+const isLocal = (host: string) => host === "localhost" || host.endsWith(".localhost") || /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host) || host === "[::1]";
+
 export function domainRisk(input: string): RiskReport {
   const ind: RiskIndicator[] = [];
   let url: URL | null = null;
@@ -198,22 +206,39 @@ export function domainRisk(input: string): RiskReport {
     ind.push({ id: "invalid", label: "URL", level: "unknown", explanation: "That doesn't look like a valid web address." });
   } else {
     const host = url.hostname.replace(/^www\./, "");
-    const known = KNOWN_DOMAINS.find((d) => host === d || host.endsWith(`.${d}`));
-    if (url.protocol !== "https:") ind.push({ id: "https", label: "Connection", level: "high", value: "Not HTTPS", explanation: "The site does not use HTTPS, so traffic can be intercepted or altered." });
-    if (known) {
-      ind.push({ id: "registry", label: "App registry", level: "low", value: known, explanation: `${host} belongs to an app in the STRATA registry. Always check the address bar for exact spelling.` });
-    } else {
-      const base = host.split(".").slice(-2).join(".");
-      const close = KNOWN_DOMAINS.map((d) => ({ d, dist: levenshtein(base, d) })).filter((x) => x.dist > 0 && x.dist <= 2).sort((a, b) => a.dist - b.dist)[0];
-      const brand = KNOWN_DOMAINS.find((d) => {
-        const name = d.split(".")[0];
-        // "jup.ag" is also impersonated as "jup-ag" / "jupag" inside other domains.
-        return (name.length >= 4 && host.includes(name)) || host.includes(d.replace(/\./g, "-")) || (d.length >= 6 && host.replace(/[.-]/g, "").includes(d.replace(/\./g, "")));
+    const official = OFFICIAL_DOMAINS.find((d) => host === d || host.endsWith(`.${d}`));
+    const registered = KNOWN_DOMAINS.find((d) => host === d || host.endsWith(`.${d}`));
+    if (url.protocol !== "https:" && !isLocal(host)) ind.push({ id: "https", label: "Connection", level: "high", value: "Not HTTPS", explanation: "The site does not use HTTPS, so traffic can be intercepted or altered." });
+    if (official) {
+      ind.push({ id: "registry", label: "App registry", level: "low", value: registered ?? official, explanation: `${host} is an official domain in the STRATA registry. Always check the address bar for exact spelling.` });
+    } else if (!isLocal(host)) {
+      const labels = host.split(".");
+      const base = labels.slice(-2).join(".");
+      const name = labels.length >= 2 ? labels[labels.length - 2] : host;
+      const words = host.split(/[.-]/);
+      // A typosquat: one character off (phanton.app), or look-alike characters (phant0m.app, raydiurn.io).
+      const close = OFFICIAL_DOMAINS.find((d) => {
+        const dName = d.split(".")[0];
+        if (dName.length < 4) return levenshtein(base, d) === 1;
+        return (levenshtein(name, dName) === 1 && name.length >= 5) || (unconfuse(name) === dName && name !== dName);
       });
+      // A brand name as its own word in the domain (phantom-wallet.com, jup-ag.xyz), not inside another word (tensorflow.org).
+      const brand = OFFICIAL_DOMAINS.find((d) => {
+        const dName = d.split(".")[0];
+        if (GENERIC_NAMES.has(dName)) return false;
+        return (dName.length >= 4 && words.includes(dName)) || host.includes(d.replace(/\./g, "-"));
+      });
+      const phishy = PHISHING_WORDS.test(host);
       if (close) {
-        ind.push({ id: "lookalike", label: "Lookalike domain", level: "high", value: `looks like ${close.d}`, explanation: `${host} is one or two characters away from ${close.d}. Phishing sites use near-identical domains to steal wallet approvals.` });
+        ind.push({ id: "lookalike", label: "Lookalike domain", level: "high", value: `looks like ${close}`, explanation: `${host} is almost the same as ${close}. Phishing sites use near-identical domains to steal wallet approvals.` });
       } else if (brand) {
-        ind.push({ id: "brand", label: "Uses a known brand name", level: "high", value: brand, explanation: `The domain contains the name of ${brand} but is not its official domain.` });
+        ind.push({
+          id: "brand",
+          label: phishy ? "Impersonates a known brand" : "Mentions a known brand",
+          level: phishy ? "high" : "medium",
+          value: brand,
+          explanation: phishy ? `The domain uses the name of ${brand} with words drainer sites use, but it is not ${brand}'s official domain.` : `The domain uses the name of ${brand} but is not its official domain. Check it's really ${brand} before connecting a wallet.`,
+        });
       } else {
         ind.push({ id: "registry", label: "App registry", level: "medium", value: "Not listed", explanation: "This domain is not in the STRATA app registry. That does not make it malicious, but be careful before connecting your wallet or signing." });
       }
