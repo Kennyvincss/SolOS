@@ -15,6 +15,7 @@ const tag = `[bare UA=${process.env.UA || "default"} SHIM=${process.env.SHIM || 
 const frames = new Map(); // DevTools session -> target id
 const urls = new Map(); // target id -> current URL
 const events = new Map(); // session -> [lines] (DIAG=1)
+const reqs = new Map(); // request id -> "METHOD url (initiator)"
 const note = (sid, line) => { if (!events.has(sid)) events.set(sid, []); const a = events.get(sid); if (a.length < 400) a.push(line); };
 
 /** Visible text of Cloudflare's widget (inside its closed shadow DOM), read through the DevTools protocol. */
@@ -52,8 +53,9 @@ function brandAsChrome(wc) {
     if (method === "Target.targetInfoChanged") urls.set(p.targetInfo.targetId, p.targetInfo.url);
     if (process.env.DIAG) sid = sid || "main";
     if (process.env.DIAG && sid) {
+      if (method === "Network.requestWillBeSent") { reqs.set(p.requestId, `${p.request.method} ${p.request.url.slice(0, 140)} (by ${p.initiator && p.initiator.type}${p.initiator && p.initiator.stack && p.initiator.stack.callFrames && p.initiator.stack.callFrames[0] ? " " + p.initiator.stack.callFrames[0].url.slice(-60) : ""})`); }
       if (method === "Network.responseReceived") note(sid, `${p.response.status} ${p.type} ${p.response.url.slice(0, 110)}`);
-      else if (method === "Network.loadingFailed") note(sid, `FAILED ${p.type} ${p.errorText} ${p.blockedReason || ""} ${p.corsErrorStatus ? JSON.stringify(p.corsErrorStatus) : ""}`);
+      else if (method === "Network.loadingFailed") note(sid, `FAILED ${p.type} ${p.errorText} ${p.canceled ? "canceled" : ""} ${p.blockedReason || ""} ${p.corsErrorStatus ? JSON.stringify(p.corsErrorStatus) : ""} :: ${reqs.get(p.requestId) || p.requestId}`);
       else if (method === "Runtime.consoleAPICalled") note(sid, `console.${p.type} ${(p.args || []).map((a) => a.value ?? a.description ?? "").join(" ").slice(0, 160)}`);
       else if (method === "Runtime.exceptionThrown") note(sid, `EXCEPTION ${(p.exceptionDetails.exception && p.exceptionDetails.exception.description || p.exceptionDetails.text || "").slice(0, 200)}`);
       else if (method === "Log.entryAdded") note(sid, `log.${p.entry.level} ${p.entry.source} ${p.entry.text.slice(0, 160)}`);
