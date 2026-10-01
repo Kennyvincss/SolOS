@@ -11,7 +11,7 @@ on:
         required: false
         default: "bfnaelmomeimhlpmgjnjophhpkkoljpa,bhhhlbepdkbapadjdnnojkbgioiodbic,aflkmfhebedbjioipglgcbcmnbpgliof"
       checks:
-        description: "Which checks to run: extensions, phantom, site, perf, jupiter, pnl (comma-separated)"
+        description: "Which checks to run: extensions, phantom, site, perf, jupiter, pnl, turnstile (comma-separated)"
         required: false
         default: "extensions,phantom,site"
       wallet:
@@ -97,6 +97,13 @@ jobs:
             echo "[pnl] again after 35 s (should be the saved full result):"
             curl -s -m 90 -w "\n[pnl] http=%{http_code} total=%{time_total}s\n" "https://solos-rho.vercel.app/api/wallets/$w/pnl" | head -c 1500; echo || true
           done
+      - name: Cloudflare Turnstile
+        if: contains(inputs.checks, 'turnstile')
+        run: |
+          echo "--- current build"
+          timeout 200 xvfb-run -a npx electron test/check-turnstile.js 2>&1 | grep "^\[turnstile" || true
+          echo "--- with built-ins modified on these pages (what v0.9.2 did on every site)"
+          STRATA_NO_PASSKEY_HOSTS=nopecha.com,2captcha.com,seleniumbase.io timeout 200 xvfb-run -a npx electron test/check-turnstile.js 2>&1 | grep "^\[turnstile" || true
       - name: Jupiter links
         if: contains(inputs.checks, 'jupiter')
         run: timeout 200 xvfb-run -a npx electron test/check-jupiter.js 2>&1 | grep "^\\[jup" || true
