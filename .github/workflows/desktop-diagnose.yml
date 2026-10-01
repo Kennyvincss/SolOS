@@ -100,12 +100,34 @@ jobs:
       - name: Cloudflare Turnstile
         if: contains(inputs.checks, 'turnstile')
         env:
-          TURNSTILE_PAGES: https://2captcha.com/demo/cloudflare-turnstile,https://seleniumbase.io/apps/turnstile
+          TURNSTILE_PAGES: https://seleniumbase.io/apps/turnstile
+          SNAPSHOT: https://example.com/
         run: |
           echo "--- real Google Chrome on this machine (baseline)"
-          timeout 200 xvfb-run -a node test/check-turnstile-chrome.mjs 2>&1 | grep "^\[turnstile" || true
+          timeout 200 xvfb-run -a node test/check-turnstile-chrome.mjs > chrome.log 2>&1 || true
+          grep "^\[turnstile" chrome.log || true
           echo "--- bare Electron window (no STRATA code)"
-          UA=chrome DIAG=1 TURNSTILE_PAGES=https://seleniumbase.io/apps/turnstile timeout 150 xvfb-run -a npx electron test/check-turnstile-bare.js 2>&1 | grep "^\[bare" || true
+          UA=chrome timeout 150 xvfb-run -a npx electron test/check-turnstile-bare.js > electron.log 2>&1 || true
+          grep "^\[bare" electron.log | cut -c1-400 || true
+          echo "--- what a page can see: Chrome vs Electron (differences only)"
+          python3 - <<'PY'
+          import json, re
+          def snap(f, tag):
+              for l in open(f, errors="ignore"):
+                  if l.startswith(tag):
+                      return json.loads(l[len(tag):].strip())
+              return {}
+          c, e = snap("chrome.log", "[snapshot-chrome] "), snap("electron.log", "[snapshot-electron] ")
+          print("chrome keys", len(c), "electron keys", len(e))
+          for k in sorted(set(c) | set(e)):
+              if c.get(k) != e.get(k):
+                  cv, ev = str(c.get(k)), str(e.get(k))
+                  if k in ("navigatorProps", "featurePolicy"):
+                      cs, es = set(cv.split(",")), set(ev.split(","))
+                      print(f"[diff] {k}: only Chrome: {sorted(cs - es)} | only Electron: {sorted(es - cs)}")
+                  else:
+                      print(f"[diff] {k}: Chrome={cv[:150]} | Electron={ev[:150]}")
+          PY
       - name: Jupiter links
         if: contains(inputs.checks, 'jupiter')
         run: timeout 200 xvfb-run -a npx electron test/check-jupiter.js 2>&1 | grep "^\\[jup" || true

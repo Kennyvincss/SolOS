@@ -1,0 +1,36 @@
+// Shared by the Turnstile diagnostics: what a page can observe about the
+// browser, as one JSON string (evaluate this expression in a page).
+module.exports = `(async () => {
+  const out = {};
+  const t = (k, f) => { try { out[k] = f(); } catch (e) { out[k] = "ERR " + e.name; } };
+  const ta = async (k, f) => { try { out[k] = await Promise.race([f(), new Promise((r) => setTimeout(() => r("TIMEOUT"), 1500))]); } catch (e) { out[k] = "ERR " + e.name; } };
+  t("plugins", () => [...navigator.plugins].map((p) => p.name).join("|"));
+  t("mimeTypes", () => [...navigator.mimeTypes].map((m) => m.type).join("|"));
+  t("pdfViewerEnabled", () => navigator.pdfViewerEnabled);
+  t("chromeKeys", () => (window.chrome ? Object.keys(window.chrome).join(",") : "none"));
+  t("Notification.permission", () => typeof Notification === "undefined" ? "none" : Notification.permission);
+  for (const name of ["notifications", "geolocation", "camera", "microphone", "clipboard-read", "clipboard-write", "persistent-storage", "storage-access", "midi", "background-sync", "local-fonts", "window-management", "screen-wake-lock", "payment-handler", "idle-detection"]) await ta("perm:" + name, () => navigator.permissions.query({ name }).then((s) => s.state));
+  t("featurePolicy", () => document.featurePolicy ? document.featurePolicy.allowedFeatures().sort().join(",") : "none");
+  t("navigatorProps", () => { const ks = []; for (const k in navigator) ks.push(k); return ks.sort().join(","); });
+  t("windowPropCount", () => Object.getOwnPropertyNames(window).length);
+  for (const api of ["showOpenFilePicker", "showSaveFilePicker", "showDirectoryPicker", "getScreenDetails", "queryLocalFonts", "documentPictureInPicture", "launchQueue", "cookieStore", "scheduler", "trustedTypes", "Sanitizer", "SharedStorage", "sharedStorage", "fence", "Fence", "HTMLFencedFrameElement", "PaymentRequest", "IdentityCredential", "OTPCredential", "BarcodeDetector", "FaceDetector", "TextDetector", "EyeDropper", "WebTransport", "GPU", "XRSystem", "Serial", "HID", "USB", "Bluetooth", "NavigatorUAData", "SpeechRecognition", "webkitSpeechRecognition", "ContentIndex", "PeriodicSyncManager", "BackgroundFetchManager", "PushManager", "ServiceWorkerContainer", "BatteryManager", "NetworkInformation", "Ink", "Presentation", "Keyboard", "WakeLock", "VirtualKeyboard", "WindowControlsOverlay", "Translator", "Summarizer", "LanguageModel", "Writer", "Rewriter", "ProofreaderV2"]) t("api:" + api, () => typeof window[api]);
+  for (const k of ["getInstalledRelatedApps", "getBattery", "share", "canShare", "setAppBadge", "registerProtocolHandler", "requestMIDIAccess", "requestMediaKeySystemAccess", "getGamepads", "vibrate", "contacts", "login", "storageBuckets", "protectedAudience", "joinAdInterestGroup", "runAdAuction", "deprecatedReplaceInURN", "getInterestGroupAdAuctionData"]) t("nav:" + k, () => typeof navigator[k]);
+  t("connection", () => navigator.connection ? [navigator.connection.effectiveType, navigator.connection.rtt, navigator.connection.downlink, navigator.connection.saveData].join("/") : "none");
+  t("hardwareConcurrency", () => navigator.hardwareConcurrency);
+  t("deviceMemory", () => navigator.deviceMemory);
+  t("languages", () => navigator.languages.join(","));
+  t("doNotTrack", () => navigator.doNotTrack);
+  t("maxTouchPoints", () => navigator.maxTouchPoints);
+  t("screen", () => [screen.width, screen.height, screen.availWidth, screen.availHeight, screen.colorDepth, devicePixelRatio, outerWidth - innerWidth, outerHeight - innerHeight].join("/"));
+  t("timezone", () => Intl.DateTimeFormat().resolvedOptions().timeZone);
+  await ta("mediaKeys", () => navigator.requestMediaKeySystemAccess("com.widevine.alpha", [{ initDataTypes: ["cenc"], videoCapabilities: [{ contentType: 'video/mp4; codecs="avc1.42E01E"' }] }]).then(() => "widevine", () => "no widevine"));
+  t("codecs", () => ['video/mp4; codecs="avc1.42E01E"', 'audio/mp4; codecs="mp4a.40.2"', 'video/webm; codecs="vp9"', "audio/mpeg", 'video/mp4; codecs="hev1.1.6.L93.B0"'].map((c) => document.createElement("video").canPlayType(c) || "-").join("|"));
+  await ta("voices", () => new Promise((r) => { const v = speechSynthesis.getVoices(); if (v.length) return r(v.length); speechSynthesis.onvoiceschanged = () => r(speechSynthesis.getVoices().length); setTimeout(() => r(speechSynthesis.getVoices().length), 1000); }));
+  await ta("uaHigh", () => navigator.userAgentData.getHighEntropyValues(["architecture", "bitness", "model", "platformVersion", "uaFullVersion", "fullVersionList", "wow64", "formFactors"]).then((h) => JSON.stringify(h)));
+  t("errStack", () => { try { null.x; } catch (e) { return e.stack.split("\\n")[0]; } });
+  t("fnToString", () => Function.prototype.toString.call(navigator.permissions.query));
+  t("webdriver", () => navigator.webdriver);
+  t("isSecureContext", () => isSecureContext);
+  t("crossOriginIsolated", () => crossOriginIsolated);
+  return JSON.stringify(out);
+})()`;

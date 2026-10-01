@@ -6,6 +6,8 @@ import { spawn } from "node:child_process";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createRequire } from "node:module";
+const SNAP = createRequire(import.meta.url)("./env-snapshot.js");
 
 const PAGES = (process.env.TURNSTILE_PAGES || "https://nopecha.com/demo/cloudflare,https://2captcha.com/demo/cloudflare-turnstile,https://seleniumbase.io/apps/turnstile").split(",");
 const CHROME = process.env.CHROME_BIN || "google-chrome";
@@ -37,6 +39,11 @@ const send = (method, params = {}) => new Promise((r) => { const n = ++id; pendi
 const evalJs = async (expr) => (await send("Runtime.evaluate", { expression: expr, awaitPromise: true, returnByValue: true }))?.result?.value;
 
 await send("Runtime.enable");
+if (process.env.SNAPSHOT) {
+  await send("Page.navigate", { url: process.env.SNAPSHOT });
+  await wait(3000);
+  console.log("[snapshot-chrome]", await evalJs(SNAP));
+}
 let printed = false;
 for (const url of PAGES) {
   await send("Page.navigate", { url });

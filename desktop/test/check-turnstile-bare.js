@@ -85,6 +85,11 @@ app.whenReady().then(async () => {
   const wc = win.webContents;
   await wc.loadURL("about:blank"); // the debugger answers only once a page is loaded
   await brandAsChrome(wc); // BRAND=1: override; otherwise only watch frames
+  if (process.env.SNAPSHOT) {
+    await wc.loadURL(process.env.SNAPSHOT).catch(() => {});
+    await wait(1500);
+    console.log("[snapshot-electron]", await wc.executeJavaScript(require("./env-snapshot.js")).catch((e) => String(e)));
+  }
   for (const url of PAGES) {
     await wc.loadURL(url).catch(() => {});
     if (url === PAGES[0]) console.log(tag, "ua", await wc.executeJavaScript("navigator.userAgent + ' | brands: ' + (navigator.userAgentData ? navigator.userAgentData.brands.map((b) => b.brand).join('/') : '') + ' | chrome keys: ' + Object.keys(window.chrome || {}).join(',') + ' | visibility: ' + document.visibilityState + ' focus: ' + document.hasFocus() + ' | webgl: ' + (() => { try { const g = document.createElement('canvas').getContext('webgl'); const d = g && g.getExtension('WEBGL_debug_renderer_info'); return g ? (d ? g.getParameter(d.UNMASKED_RENDERER_WEBGL) : 'yes') : 'NONE'; } catch (e) { return 'err'; } })()"));
