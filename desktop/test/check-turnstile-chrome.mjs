@@ -43,7 +43,7 @@ for (const url of PAGES) {
   await wait(4000);
   if (!printed) {
     printed = true;
-    log("fingerprint", JSON.stringify(await evalJs(`(async () => ({ ua: navigator.userAgent, brands: navigator.userAgentData?.brands.map((b) => b.brand + " " + b.version), chrome: typeof window.chrome, chromeKeys: window.chrome ? Object.keys(window.chrome) : null, webdriver: navigator.webdriver }))()`)));
+    log("fingerprint", JSON.stringify(await evalJs(`(async () => ({ ua: navigator.userAgent, brands: navigator.userAgentData?.brands.map((b) => b.brand + " " + b.version), chrome: typeof window.chrome, chromeKeys: window.chrome ? Object.keys(window.chrome) : null, webdriver: navigator.webdriver, webgl: (() => { try { const g = document.createElement('canvas').getContext('webgl'); const d = g && g.getExtension('WEBGL_debug_renderer_info'); return g ? (d ? g.getParameter(d.UNMASKED_RENDERER_WEBGL) : 'yes') : 'NONE'; } catch (e) { return 'err'; } })() }))()`)));
   }
   consoleLines.length = 0;
   let token = -1;

@@ -4,17 +4,22 @@
 const path = require("node:path");
 const { app, BrowserWindow, session } = require("electron");
 const chromeUA = (ua) => ua.replace(/\s(Electron|[\w-]+)\/\d[\w.]*(?=\s|$)/g, (m) => (/Chrome|Safari|AppleWebKit|Mozilla/.test(m) ? m : "")).replace(/Chrome\/(\d+)\.[\d.]+/, "Chrome/$1.0.0.0").trim();
+// CI machines have no GPU: Chrome falls back to software WebGL there, Electron
+// needs to be told to (otherwise WebGL is missing, which fails any bot check).
+if (process.env.SWGL) for (const [k, v] of [["ignore-gpu-blocklist"], ["enable-unsafe-swiftshader"], ["use-angle", "swiftshader"]]) app.commandLine.appendSwitch(k, v);
 if (process.env.UA === "chrome") app.userAgentFallback = chromeUA(app.userAgentFallback);
 const PAGES = (process.env.TURNSTILE_PAGES || "https://2captcha.com/demo/cloudflare-turnstile,https://seleniumbase.io/apps/turnstile").split(",");
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-const tag = `[bare UA=${process.env.UA || "default"} SHIM=${process.env.SHIM || 0} BRAND=${process.env.BRAND || 0}]`;
+const tag = `[bare UA=${process.env.UA || "default"} SHIM=${process.env.SHIM || 0} BRAND=${process.env.BRAND || 0} SWGL=${process.env.SWGL || 0}]`;
 
-const frames = new Map(); // DevTools session -> frame URL
+const frames = new Map(); // DevTools session -> target id
+const urls = new Map(); // target id -> current URL
 
 /** Visible text of Cloudflare's widget (inside its closed shadow DOM), read through the DevTools protocol. */
 async function widgetText(wc) {
   const out = [];
-  for (const [sid, url] of frames) {
+  for (const [sid, targetId] of frames) {
+    const url = urls.get(targetId) || "";
     if (!/challenges\.cloudflare\.com/.test(url)) continue;
     const doc = await wc.debugger.sendCommand("DOM.getDocument", { depth: -1, pierce: true }, sid).catch(() => null);
     const walk = (n) => { if (!n) return; if (n.nodeType === 3 && n.nodeValue.trim()) out.push(n.nodeValue.trim()); for (const c of [...(n.children || []), ...(n.shadowRoots || []), ...(n.contentDocument ? [n.contentDocument] : [])]) walk(c); };
@@ -34,6 +39,7 @@ function brandAsChrome(wc) {
     fullVersion: full, platform: plat, platformVersion: "", architecture: "x86", model: "", mobile: false, bitness: "64", wow64: false,
   };
   const params = { userAgent: app.userAgentFallback, userAgentMetadata: meta };
+  dbg.sendCommand("Target.setDiscoverTargets", { discover: true }).catch(() => {});
   if (!process.env.BRAND) return dbg.sendCommand("Target.setAutoAttach", { autoAttach: true, waitForDebuggerOnStart: false, flatten: true }).catch(() => {});
   const dbg = wc.debugger;
   if (!dbg.isAttached()) dbg.attach("1.3");
@@ -43,8 +49,10 @@ function brandAsChrome(wc) {
     if (sessionId) await dbg.sendCommand("Runtime.runIfWaitingForDebugger", {}, sessionId).catch(() => {});
   };
   dbg.on("message", (_e, method, p) => {
+    if (method === "Target.targetInfoChanged") urls.set(p.targetInfo.targetId, p.targetInfo.url);
     if (method !== "Target.attachedToTarget") return;
-    frames.set(p.sessionId, p.targetInfo.url);
+    urls.set(p.targetInfo.targetId, p.targetInfo.url);
+    frames.set(p.sessionId, p.targetInfo.targetId);
     if (process.env.BRAND) setup(p.sessionId);
     else dbg.sendCommand("Runtime.runIfWaitingForDebugger", {}, p.sessionId).catch(() => {});
   });
@@ -60,7 +68,7 @@ app.whenReady().then(async () => {
   await brandAsChrome(wc); // BRAND=1: override; otherwise only watch frames
   for (const url of PAGES) {
     await wc.loadURL(url).catch(() => {});
-    if (url === PAGES[0]) console.log(tag, "ua", await wc.executeJavaScript("navigator.userAgent + ' | brands: ' + (navigator.userAgentData ? navigator.userAgentData.brands.map((b) => b.brand).join('/') : '') + ' | chrome keys: ' + Object.keys(window.chrome || {}).join(',')"));
+    if (url === PAGES[0]) console.log(tag, "ua", await wc.executeJavaScript("navigator.userAgent + ' | brands: ' + (navigator.userAgentData ? navigator.userAgentData.brands.map((b) => b.brand).join('/') : '') + ' | chrome keys: ' + Object.keys(window.chrome || {}).join(',') + ' | webgl: ' + (() => { try { const g = document.createElement('canvas').getContext('webgl'); const d = g && g.getExtension('WEBGL_debug_renderer_info'); return g ? (d ? g.getParameter(d.UNMASKED_RENDERER_WEBGL) : 'yes') : 'NONE'; } catch (e) { return 'err'; } })()"));
     let token = -1, clicked = false;
     const seen = [];
     for (let i = 0; i < 26 && !(token > 0); i++) {
