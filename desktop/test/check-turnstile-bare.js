@@ -105,10 +105,11 @@ app.whenReady().then(async () => {
     }
     console.log(tag, url, token > 0 ? "PASSED" : "NOT PASSED", JSON.stringify({ token, widget: seen.map((x) => x.slice(0, 40)) }));
     if (process.env.DIAG) {
+      console.log(tag, "sessions", JSON.stringify([...frames].map(([sid, t]) => `${(urls.get(t) || "?").slice(0, 70)} events=${(events.get(sid) || []).length}`)));
       for (const [sid, lines] of events) {
         const u = urls.get(frames.get(sid)) || sid;
-        if (!/cloudflare/.test(u) && !lines.some((l) => /cloudflare/.test(l))) continue;
-        console.log(tag, "frame", u.slice(0, 90));
+        if (/seleniumbase|2captcha|nopecha/.test(u) && !lines.some((l) => /cloudflare|challenge/.test(l))) continue;
+        console.log(tag, "frame", u.slice(0, 90), "events", lines.length);
         for (const l of lines.filter((l) => !/^200 (Image|Font|Stylesheet)/.test(l)).slice(-40)) console.log(tag, "   ", l);
       }
       events.clear();
