@@ -224,7 +224,7 @@ app.whenReady().then(async () => {
     const before = new Set(BrowserWindow.getAllWindows());
     shellWin.focus();
     const t1 = Date.now();
-    await tab.executeJavaScript(start, true);
+    await tab.executeJavaScript(`${start}; true`, true); // start it, don't wait for the approval
     let pop = null;
     for (let i = 0; i < 80 && !pop; i++) {
       await sleep(250);
