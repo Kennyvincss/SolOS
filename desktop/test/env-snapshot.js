@@ -29,6 +29,11 @@ module.exports = `(async () => {
   await ta("uaHigh", () => navigator.userAgentData.getHighEntropyValues(["architecture", "bitness", "model", "platformVersion", "uaFullVersion", "fullVersionList", "wow64", "formFactors"]).then((h) => JSON.stringify(h)));
   t("errStack", () => { try { null.x; } catch (e) { return e.stack.split("\\n")[0]; } });
   t("fnToString", () => Function.prototype.toString.call(navigator.permissions.query));
+  await ta("offlineAudio", () => { const c = new OfflineAudioContext(1, 4410, 44100); const o = c.createOscillator(); o.connect(c.destination); o.start(); return c.startRendering().then((b) => "rendered " + b.length); });
+  await ta("audioContext", () => { const c = new AudioContext(); return Promise.resolve(c.state + " " + c.sampleRate + " " + c.baseLatency); });
+  await ta("wasm", () => WebAssembly.instantiate(new Uint8Array([0,97,115,109,1,0,0,0])).then(() => "ok"));
+  await ta("subtle", () => crypto.subtle.digest("SHA-256", new Uint8Array([1])).then((d) => d.byteLength));
+  await ta("worker", () => new Promise((r) => { const w = new Worker(URL.createObjectURL(new Blob(["postMessage(1)"]))); w.onmessage = () => r("ok"); }));
   t("webdriver", () => navigator.webdriver);
   t("isSecureContext", () => isSecureContext);
   t("crossOriginIsolated", () => crossOriginIsolated);
