@@ -11,7 +11,7 @@ on:
         required: false
         default: "bfnaelmomeimhlpmgjnjophhpkkoljpa,bhhhlbepdkbapadjdnnojkbgioiodbic,aflkmfhebedbjioipglgcbcmnbpgliof"
       checks:
-        description: "Which checks to run: extensions, phantom, site, perf, jupiter, pnl, turnstile (comma-separated)"
+        description: "Which checks to run: extensions, phantom, site, perf, jupiter, pnl, turnstile, google (comma-separated)"
         required: false
         default: "extensions,phantom,site"
       wallet:
@@ -131,6 +131,13 @@ jobs:
                   else:
                       print(f"[diff] {k}: Chrome={cv[:150]} | Electron={ev[:150]}")
           PY
+      - name: Google sign-in
+        if: contains(inputs.checks, 'google')
+        run: |
+          timeout 120 xvfb-run -a node test/check-google-signin-chrome.mjs 2>&1 | grep "^\[google" || true
+          for v in "MODE=strata" "MODE=strata UA=full" "MODE=strata UA=firefox" "MODE=bare UA=chrome" "MODE=bare UA=full" "MODE=bare UA=firefox" "MODE=bare UA=edge" "MODE=bare UA=chrome BRAND=1"; do
+            env $v timeout 120 xvfb-run -a npx electron test/check-google-signin.js 2>&1 | grep "^\[google" | cut -c1-300 || true
+          done
       - name: Jupiter links
         if: contains(inputs.checks, 'jupiter')
         run: timeout 200 xvfb-run -a npx electron test/check-jupiter.js 2>&1 | grep "^\\[jup" || true
