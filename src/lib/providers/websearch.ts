@@ -5,7 +5,8 @@ import { cached, fetchJson, UpstreamError } from "./http";
 /**
  * Web search: results from the whole internet for any query, with results
  * about Solana first. Uses Brave Search when BRAVE_SEARCH_API_KEY is set;
- * otherwise DuckDuckGo and Wikipedia, which need no key.
+ * otherwise Bing (DuckDuckGo if Bing doesn't answer) and Wikipedia, which
+ * need no key. (DuckDuckGo, Mojeek and Yahoo refuse requests from servers.)
  */
 
 export interface WebResult {
@@ -14,7 +15,7 @@ export interface WebResult {
   snippet: string;
   /** About Solana (ranked first). */
   solana: boolean;
-  source: "brave" | "duckduckgo" | "wikipedia";
+  source: "brave" | "bing" | "duckduckgo" | "wikipedia";
 }
 
 export interface WebSearchResponse {
@@ -91,6 +92,58 @@ async function brave(q: string, key: string): Promise<Raw[]> {
   return (data.web?.results ?? []).map((r) => ({ title: decode(r.title), url: r.url, snippet: decode(r.description ?? ""), source: "brave" as const }));
 }
 
+/* ------------------------------------------------------------------- Bing */
+
+/** Bing wraps result links in bing.com/ck/a?...&u=a1<base64url of the address>. */
+function bingTarget(href: string): string {
+  const h = href.replace(/&amp;/g, "&");
+  const u = /[?&]u=a1([^&]+)/.exec(h);
+  if (/^https?:\/\/(www\.)?bing\.com\/ck\//.test(h) && u) {
+    try {
+      return Buffer.from(u[1].replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8");
+    } catch {
+      return "";
+    }
+  }
+  return h;
+}
+
+/** Results from Bing's result page. */
+export function parseBing(html: string): Raw[] {
+  const out: Raw[] = [];
+  for (const block of html.split(/<li class="b_algo"/).slice(1)) {
+    const a = /<h2[^>]*>\s*<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/.exec(block);
+    if (!a) continue;
+    const url = bingTarget(a[1]);
+    if (!/^https?:\/\//.test(url) || /^https?:\/\/(www\.)?bing\.com\//.test(url)) continue;
+    const snip = /<p class="b_lineclamp\d*"[^>]*>([\s\S]*?)<\/p>/.exec(block) ?? /<div class="b_caption"[^>]*>[\s\S]*?<p[^>]*>([\s\S]*?)<\/p>/.exec(block);
+    const snippet = snip ? decode(snip[1]).replace(/^(?:[A-Z][a-z]{2} \d{1,2}, \d{4}|\d+ (?:days?|hours?) ago) · /, "") : "";
+    out.push({ title: decode(a[2]), url, snippet, source: "bing" });
+  }
+  return out;
+}
+
+async function bing(q: string): Promise<Raw[]> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 4500);
+  try {
+    const res = await fetch(`https://www.bing.com/search?q=${encodeURIComponent(q)}&setlang=en&cc=us&count=20`, {
+      headers: { "user-agent": UA, accept: "text/html", "accept-language": "en-US,en;q=0.9" },
+      signal: ctrl.signal,
+      cache: "no-store",
+    });
+    if (!res.ok) throw new UpstreamError(`${res.status} ${res.statusText}`, res.status);
+    const results = parseBing(await res.text());
+    if (!results.length) throw new UpstreamError("no results");
+    return results;
+  } catch (err) {
+    if (err instanceof UpstreamError) throw err;
+    throw new UpstreamError(err instanceof Error && /abort/i.test(err.message) ? "timed out" : "unreachable");
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /* ------------------------------------------------------------- DuckDuckGo */
 
 /** Results from DuckDuckGo's HTML page (no key, no ads). */
@@ -123,8 +176,11 @@ async function duckduckgo(q: string): Promise<Raw[]> {
       signal: ctrl.signal,
       cache: "no-store",
     });
-    if (!res.ok) throw new UpstreamError(`${res.status} ${res.statusText}`, res.status);
-    return parseDuckDuckGo(await res.text());
+    // 202 is DuckDuckGo's "are you a robot" page.
+    if (res.status !== 200) throw new UpstreamError(`${res.status} ${res.statusText}`, res.status);
+    const results = parseDuckDuckGo(await res.text());
+    if (!results.length) throw new UpstreamError("no results");
+    return results;
   } catch (err) {
     if (err instanceof UpstreamError) throw err;
     throw new UpstreamError(err instanceof Error && /abort/i.test(err.message) ? "timed out" : "unreachable");
@@ -135,11 +191,18 @@ async function duckduckgo(q: string): Promise<Raw[]> {
 
 /* -------------------------------------------------------------- Wikipedia */
 
+/** Words of the query worth matching ("stonk launchpad" → ["stonk", "launchpad"]). */
+const queryWords = (q: string) => q.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((w) => w.length >= 3);
+
 async function wikipedia(q: string): Promise<Raw[]> {
   type R = { pages?: { key: string; title: string; excerpt?: string; description?: string | null }[] };
   const url = `https://en.wikipedia.org/w/rest.php/v1/search/page?q=${encodeURIComponent(q)}&limit=5`;
   const data = await fetchJson<R>(url, { headers: { "user-agent": WIKI_UA, "api-user-agent": WIKI_UA }, timeoutMs: 4000 });
-  return (data.pages ?? []).map((p) => ({
+  // Only articles whose title has a word of the query (Wikipedia's search
+  // otherwise answers "stonk launchpad" with Ubuntu).
+  const words = queryWords(q);
+  const relevant = (title: string) => !words.length || words.some((w) => title.toLowerCase().includes(w));
+  return (data.pages ?? []).filter((p) => relevant(p.title)).map((p) => ({
     title: `${p.title} — Wikipedia`,
     url: `https://en.wikipedia.org/wiki/${encodeURIComponent(p.key)}`,
     snippet: [p.description, p.excerpt ? `${decode(p.excerpt)}…` : ""].filter(Boolean).join(" · "),
@@ -164,11 +227,12 @@ export async function webSearch(query: string): Promise<WebSearchResponse> {
   return cached(`web:${q.toLowerCase()}`, 10 * 60_000, async () => {
     const withSolana = /\bsolana\b/i.test(q) ? null : `${q} solana`;
     const key = process.env.BRAVE_SEARCH_API_KEY;
-    const engine = key ? (s: string) => brave(s, key) : duckduckgo;
+    const engine = key ? (s: string) => brave(s, key) : (s: string) => bing(s).catch(() => duckduckgo(s));
     const [plain, sol, wiki] = await Promise.all([settle(engine(q)), withSolana ? settle(engine(withSolana)) : null, key ? null : settle(wikipedia(q))]);
 
     const sources: string[] = [];
-    if (plain.ok || sol?.ok) sources.push(key ? "Brave Search" : "DuckDuckGo");
+    const names = { brave: "Brave Search", bing: "Bing", duckduckgo: "DuckDuckGo", wikipedia: "Wikipedia" };
+    for (const r of [plain, sol]) if (r?.ok && r.v[0] && !sources.includes(names[r.v[0].source])) sources.push(names[r.v[0].source]);
     if (wiki?.ok && wiki.v.length) sources.push("Wikipedia");
     if (!sources.length && !plain.ok) throw new UpstreamError("web search unavailable");
 

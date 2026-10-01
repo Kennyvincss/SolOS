@@ -1,5 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { isSolanaRelated, parseDuckDuckGo, webSearch } from "@/lib/providers/websearch";
+import { isSolanaRelated, parseBing, parseDuckDuckGo, webSearch } from "@/lib/providers/websearch";
+
+const b64 = (u: string) => Buffer.from(u).toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+// Shaped like Bing's real result page (captured in CI).
+const bingPage = (items: { url: string; title: string; snippet: string }[]) =>
+  `<ol id="b_results" class="">${items
+    .map(
+      (i) => `<li class="b_algo" data-id iid=SERP.5349><div class="b_tpcn"><a class="tilk" href="https://www.bing.com/ck/a?!&amp;&amp;p=abc&amp;u=a1${b64(i.url)}&amp;ntb=1"><cite>${i.url}</cite></a></div><h2 class=""><a target="_blank" href="https://www.bing.com/ck/a?!&amp;&amp;p=abc&amp;ptn=3&amp;u=a1${b64(i.url)}&amp;ntb=1" h="ID=SERP,5146.2">${i.title}</a></h2><div class="b_caption"><p class="b_lineclamp2" data-rslinkclamp-iid="">${i.snippet}</p></div></li>`,
+    )
+    .join("")}</ol>`;
 
 const ddgPage = (items: { url: string; title: string; snippet: string; ad?: boolean }[]) =>
   `<html><body>${items
@@ -23,6 +32,19 @@ describe("parseDuckDuckGo", () => {
   });
 });
 
+describe("parseBing", () => {
+  it("reads titles, the real addresses behind Bing's links, and snippets", () => {
+    const r = parseBing(bingPage([
+      { url: "https://modrinth.com/mod/axiom", title: "<strong>Axiom</strong> - Minecraft Mod - Modrinth", snippet: "Mar 3, 2024 · A building mod" },
+      { url: "https://axiom.trade/", title: "Axiom", snippet: "Trade on <strong>Solana</strong>" },
+    ]));
+    expect(r).toEqual([
+      { title: "Axiom - Minecraft Mod - Modrinth", url: "https://modrinth.com/mod/axiom", snippet: "A building mod", source: "bing" },
+      { title: "Axiom", url: "https://axiom.trade/", snippet: "Trade on Solana", source: "bing" },
+    ]);
+  });
+});
+
 describe("isSolanaRelated", () => {
   it("recognises Solana sites and pages about Solana", () => {
     expect(isSolanaRelated({ title: "Swap", url: "https://jup.ag/swap", snippet: "" })).toBe(true);
@@ -35,35 +57,50 @@ describe("isSolanaRelated", () => {
 describe("webSearch", () => {
   afterEach(() => vi.unstubAllGlobals());
 
+  const wiki = (pages: { key: string; title: string }[]) => new Response(JSON.stringify({ pages: pages.map((p) => ({ ...p, description: "", excerpt: "" })) }), { status: 200 });
+
   it("returns results from the whole web with Solana results first", async () => {
-    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
-      if (url.includes("wikipedia.org")) {
-        return new Response(JSON.stringify({ pages: [{ key: "Axiom_(disambiguation)", title: "Axiom (disambiguation)", description: "Topics referred to by the same term", excerpt: "<span>Axiom</span> may refer to" }] }), { status: 200 });
-      }
-      const q = new URLSearchParams(String(init?.body)).get("q");
-      if (q === "axiom") {
-        return new Response(ddgPage([
-          { url: "https://en.wikipedia.org/wiki/Axiom", title: "Axiom - Wikipedia", snippet: "An axiom is a statement" },
-          { url: "https://www.axiomspace.com/", title: "Axiom Space", snippet: "Commercial space station" },
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url.includes("wikipedia.org")) return wiki([{ key: "Axiom", title: "Axiom" }, { key: "Ubuntu", title: "Ubuntu" }]);
+        const q = new URL(url).searchParams.get("q");
+        if (q === "axiom") {
+          return new Response(bingPage([
+            { url: "https://en.wikipedia.org/wiki/Axiom", title: "Axiom - Wikipedia", snippet: "An axiom is a statement" },
+            { url: "https://www.axiomspace.com/", title: "Axiom Space", snippet: "Commercial space station" },
+            { url: "https://axiom.trade/", title: "Axiom", snippet: "Trade on Solana" },
+          ]), { status: 200 });
+        }
+        return new Response(bingPage([
           { url: "https://axiom.trade/", title: "Axiom", snippet: "Trade on Solana" },
+          { url: "https://dexscreener.com/solana/axiom", title: "AXIOM price", snippet: "" },
+          { url: "https://example.com/unrelated", title: "Unrelated", snippet: "nothing here" },
         ]), { status: 200 });
-      }
-      return new Response(ddgPage([
-        { url: "https://axiom.trade/", title: "Axiom", snippet: "Trade on Solana" },
-        { url: "https://dexscreener.com/solana/axiom", title: "AXIOM price", snippet: "" },
-        { url: "https://example.com/unrelated", title: "Unrelated", snippet: "nothing here" },
-      ]), { status: 200 });
-    });
-    vi.stubGlobal("fetch", fetchMock);
+      }),
+    );
     const r = await webSearch("axiom");
-    expect(r.sources).toEqual(["DuckDuckGo", "Wikipedia"]);
+    expect(r.sources).toEqual(["Bing", "Wikipedia"]);
     expect(r.results.map((x) => [x.url, x.solana])).toEqual([
       ["https://axiom.trade/", true],
       ["https://dexscreener.com/solana/axiom", true],
       ["https://en.wikipedia.org/wiki/Axiom", false],
       ["https://www.axiomspace.com/", false],
-      ["https://en.wikipedia.org/wiki/Axiom_(disambiguation)", false],
     ]);
+  });
+
+  it("uses DuckDuckGo when Bing doesn't answer, and drops unrelated Wikipedia articles", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url.includes("bing.com")) return new Response("blocked", { status: 429 });
+        if (url.includes("wikipedia.org")) return wiki([{ key: "Ubuntu", title: "Ubuntu" }]);
+        return new Response(ddgPage([{ url: "https://stonk.example/launchpad", title: "Stonk Launchpad", snippet: "Launch tokens on Solana" }]), { status: 200 });
+      }),
+    );
+    const r = await webSearch("stonk launchpad");
+    expect(r.sources).toEqual(["DuckDuckGo"]);
+    expect(r.results.map((x) => x.url)).toEqual(["https://stonk.example/launchpad"]);
   });
 
   it("fails cleanly when no search service answers", async () => {
