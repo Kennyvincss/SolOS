@@ -11,7 +11,7 @@ on:
         required: false
         default: "bfnaelmomeimhlpmgjnjophhpkkoljpa,bhhhlbepdkbapadjdnnojkbgioiodbic,aflkmfhebedbjioipglgcbcmnbpgliof"
       checks:
-        description: "Which checks to run: extensions, phantom, site, jupiter, pnl (comma-separated)"
+        description: "Which checks to run: extensions, phantom, site, perf, jupiter, pnl (comma-separated)"
         required: false
         default: "extensions,phantom,site"
       wallet:
@@ -44,6 +44,26 @@ jobs:
           for u in / /extensions /wallets /tokens /ai /apps /api/tokens?list=trending /api/apps /api/news /api/network /api/account/6UhUkSBc9RBB9gVJcjCWtcQv4t771rQF7bdn2qK7pump /api/wallets/5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1 /api/status /api/search?q=jup; do
             for i in 1 2; do
               curl -s -o /dev/null -w "[site] %{http_code} ttfb=%{time_starttransfer}s total=%{time_total}s size=%{size_download} $u\n" "https://solos-rho.vercel.app$u"
+            done
+          done
+      - name: Page speed (Lighthouse)
+        if: contains(inputs.checks, 'perf')
+        working-directory: .
+        run: |
+          npm i -g lighthouse@12 >/dev/null 2>&1
+          for u in / /tokens /wallets /apps /ai /search?q=jup; do
+            for form in mobile desktop; do
+              extra=""; [ "$form" = desktop ] && extra="--preset=desktop"
+              # Best of 2 runs (a cold serverless start can add a second to one run).
+              best=""
+              for run in 1 2; do
+                lighthouse "https://solos-rho.vercel.app$u" $extra --only-categories=performance --output=json --output-path=/tmp/lh.json --quiet --chrome-flags="--headless=new --no-sandbox" >/dev/null 2>&1 || continue
+                line=$(jq -r '[(.categories.performance.score*100|round), (.audits["first-contentful-paint"].numericValue|round), (.audits["largest-contentful-paint"].numericValue|round), (.audits["total-blocking-time"].numericValue|round), (.audits["cumulative-layout-shift"].numericValue*1000|round/1000), (.audits["speed-index"].numericValue|round), (.audits["server-response-time"].numericValue|round), ((.audits["total-byte-weight"].numericValue/1024)|round), ([.audits["network-requests"].details.items[] | select(.resourceType=="Script") | .transferSize] | add / 1024 | round)] | @tsv' /tmp/lh.json)
+                score=$(echo "$line" | cut -f1)
+                bscore=$(echo "$best" | cut -f1)
+                if [ -z "$best" ] || [ "$score" -gt "${bscore:-0}" ]; then best="$line"; fi
+              done
+              echo "[perf] $form $u score fcp_ms lcp_ms tbt_ms cls si_ms ttfb_ms total_kb js_kb: $best"
             done
           done
       - name: PnL
