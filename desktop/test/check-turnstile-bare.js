@@ -14,6 +14,8 @@ const tag = `[bare UA=${process.env.UA || "default"} SHIM=${process.env.SHIM || 
 
 const frames = new Map(); // DevTools session -> target id
 const urls = new Map(); // target id -> current URL
+const events = new Map(); // session -> [lines] (DIAG=1)
+const note = (sid, line) => { if (!events.has(sid)) events.set(sid, []); const a = events.get(sid); if (a.length < 400) a.push(line); };
 
 /** Visible text of Cloudflare's widget (inside its closed shadow DOM), read through the DevTools protocol. */
 async function widgetText(wc) {
@@ -46,13 +48,26 @@ function brandAsChrome(wc) {
     await dbg.sendCommand("Target.setAutoAttach", { autoAttach: true, waitForDebuggerOnStart: true, flatten: true }, sessionId).catch(() => {});
     if (sessionId) await dbg.sendCommand("Runtime.runIfWaitingForDebugger", {}, sessionId).catch(() => {});
   };
-  dbg.on("message", (_e, method, p) => {
+  dbg.on("message", (_e, method, p, sid) => {
     if (method === "Target.targetInfoChanged") urls.set(p.targetInfo.targetId, p.targetInfo.url);
+    if (process.env.DIAG && sid) {
+      if (method === "Network.responseReceived") note(sid, `${p.response.status} ${p.type} ${p.response.url.slice(0, 110)}`);
+      else if (method === "Network.loadingFailed") note(sid, `FAILED ${p.type} ${p.errorText} ${p.blockedReason || ""} ${p.corsErrorStatus ? JSON.stringify(p.corsErrorStatus) : ""}`);
+      else if (method === "Runtime.consoleAPICalled") note(sid, `console.${p.type} ${(p.args || []).map((a) => a.value ?? a.description ?? "").join(" ").slice(0, 160)}`);
+      else if (method === "Runtime.exceptionThrown") note(sid, `EXCEPTION ${(p.exceptionDetails.exception && p.exceptionDetails.exception.description || p.exceptionDetails.text || "").slice(0, 200)}`);
+      else if (method === "Log.entryAdded") note(sid, `log.${p.entry.level} ${p.entry.source} ${p.entry.text.slice(0, 160)}`);
+      else if (method === "Target.attachedToTarget") note(sid, `child ${p.targetInfo.type} ${p.targetInfo.url.slice(0, 80)}`);
+    }
     if (method !== "Target.attachedToTarget") return;
     urls.set(p.targetInfo.targetId, p.targetInfo.url);
     frames.set(p.sessionId, p.targetInfo.targetId);
-    if (process.env.BRAND) setup(p.sessionId);
-    else dbg.sendCommand("Runtime.runIfWaitingForDebugger", {}, p.sessionId).catch(() => {});
+    const go = async () => {
+      if (process.env.DIAG) for (const m of ["Network.enable", "Runtime.enable", "Log.enable"]) await dbg.sendCommand(m, {}, p.sessionId).catch(() => {});
+      if (process.env.DIAG) await dbg.sendCommand("Target.setAutoAttach", { autoAttach: true, waitForDebuggerOnStart: false, flatten: true }, p.sessionId).catch(() => {});
+      if (process.env.BRAND) setup(p.sessionId);
+      else dbg.sendCommand("Runtime.runIfWaitingForDebugger", {}, p.sessionId).catch(() => {});
+    };
+    go();
   });
   dbg.sendCommand("Target.setDiscoverTargets", { discover: true }).catch(() => {});
   if (!process.env.BRAND) return dbg.sendCommand("Target.setAutoAttach", { autoAttach: true, waitForDebuggerOnStart: false, flatten: true }).catch(() => {});
@@ -88,7 +103,16 @@ app.whenReady().then(async () => {
         }
       }
     }
-    console.log(tag, url, token > 0 ? "PASSED" : "NOT PASSED", JSON.stringify({ token, widget: seen }));
+    console.log(tag, url, token > 0 ? "PASSED" : "NOT PASSED", JSON.stringify({ token, widget: seen.map((x) => x.slice(0, 40)) }));
+    if (process.env.DIAG) {
+      for (const [sid, lines] of events) {
+        const u = urls.get(frames.get(sid)) || sid;
+        if (!/cloudflare/.test(u) && !lines.some((l) => /cloudflare/.test(l))) continue;
+        console.log(tag, "frame", u.slice(0, 90));
+        for (const l of lines.filter((l) => !/^200 (Image|Font|Stylesheet)/.test(l)).slice(-40)) console.log(tag, "   ", l);
+      }
+      events.clear();
+    }
   }
   app.exit(0);
 });
