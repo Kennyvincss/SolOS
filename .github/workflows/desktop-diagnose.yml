@@ -104,7 +104,20 @@ jobs:
         if: contains(inputs.checks, 'phantom')
         run: |
           set +e
-          timeout 300 xvfb-run -a npx electron test/e2e-phantom.js > e2e.log 2>&1
+          sudo apt-get install -y -qq gdb >/dev/null 2>&1 || true
+          timeout 300 xvfb-run -a npx electron test/e2e-phantom.js > e2e.log 2>&1 &
+          RUN=$!
+          # If the main process stops logging its heartbeat, print where it is stuck.
+          ( for i in $(seq 1 280); do
+              sleep 1
+              if grep -q "sign message: start" e2e.log && [ $(( $(date +%s) - $(stat -c %Y e2e.log) )) -gt 15 ]; then
+                PID=$(pgrep -f "electron/dist/electron test/e2e-phantom.js" | head -1)
+                echo "=== main process $PID looks stuck; native stack:" >> e2e.log
+                sudo gdb -p "$PID" -batch -ex "thread apply 1 bt 40" >> e2e.log 2>&1 || true
+                break
+              fi
+            done ) &
+          wait $RUN
           echo "exit code: $?"
           grep -v -E "dbus|Fontconfig|viz_main|gpu_|NOTREACHED|DEPRECATED|Datadog|zustand" e2e.log | tail -250
       - name: Check extensions

@@ -79,6 +79,27 @@ app.whenReady().then(async () => {
       const popup2 = BrowserWindow.getAllWindows().find((w) => !before2.has(w));
       check("second popup opens and has focus", popup2 && again?.id === popup2.id && popup2.isVisible(), { again, p2: popup2?.id });
       popup2?.close();
+      await wait(500);
+
+      // 6. Like a wallet: the request goes to the service worker, which opens the
+      //    popup while the browser window has focus. Twice in a row.
+      const beat = { last: Date.now(), worst: 0 };
+      const hb = setInterval(() => { const now = Date.now(); beat.worst = Math.max(beat.worst, now - beat.last); beat.last = now; }, 100);
+      for (const round of [1, 2]) {
+        browser.focus();
+        await wait(200);
+        const before3 = new Set(BrowserWindow.getAllWindows());
+        const resp = await run(`return await chrome.runtime.sendMessage({ type: "open-popup" });`);
+        await wait(800);
+        const p3 = BrowserWindow.getAllWindows().find((w) => !before3.has(w));
+        const opened = BrowserWindow.getAllWindows().find((w) => w.id === resp?.id);
+        check(`worker-opened popup ${round} shows`, opened && opened.isVisible() && !before3.has(opened), { resp, p3: p3?.id });
+        if (opened && opened !== p3) opened.close();
+        p3?.close();
+        await wait(500);
+      }
+      clearInterval(hb);
+      check("main process never stalls (> 1 s)", beat.worst < 1000, beat.worst);
     }
   } catch (e) {
     check("no exception", false, String(e?.stack || e));
