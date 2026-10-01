@@ -211,7 +211,10 @@ if (!process.env.SOLANA_OS_ALLOW_MULTIPLE && !app.requestSingleInstanceLock()) {
 } else {
   app.on("second-instance", (_e, argv) => {
     const url = argv.find((a) => a.startsWith(`${PROTOCOL}://`));
+    // A pinned profile icon on the taskbar starts STRATA with --profile=<id>.
+    const profile = require("./profile-icon").profileFromArgs(argv);
     if (url) app.whenReady().then(() => handleProtocolUrl(url));
+    else if (profile) app.whenReady().then(() => ipc.openProfile(profile));
     else win.focusedShell()?.win.focus();
   });
 }
@@ -232,7 +235,7 @@ app.whenReady().then(() => {
   menus.buildMenuBar(ipc.actionsFor());
   initUpdater();
 
-  const first = ipc.openProfile(profiles.lastUsed());
+  const first = ipc.openProfile(require("./profile-icon").profileFromArgs(process.argv) ?? profiles.lastUsed());
   // Have the Extensions page's list ready before it's opened.
   setTimeout(() => prefetchWebStore(first.profile.session), 8000);
   const launchUrl = process.argv.find((a) => a.startsWith(`${PROTOCOL}://`));

@@ -142,6 +142,11 @@ function openBookmarkEditor(s, url, rect) {
 
 const profileRows = () => profiles.list().map((p) => ({ ...p, open: shellsOf(p.id).length > 0, picture: profiles.pictureUrl(p.id) }));
 
+/** Taskbar icons follow profile changes (name, colour, picture, how many profiles there are). */
+function refreshTaskbarIcons() {
+  for (const w of require("./window").shells) if (w.ready) require("./profile-icon").apply(w.win, w.profile.id);
+}
+
 function openProfileBubble(s, rect) {
   const exts = s.profile.session.extensions.getAllExtensions();
   const wallet = WALLETS.find((w) => exts.some((x) => x.id === w.id));
@@ -162,14 +167,17 @@ function openProfileBubble(s, rect) {
         const p = profiles.create({ name: payload?.name, color: payload?.color });
         bubbles.close();
         openProfile(p.id);
+        refreshTaskbarIcons();
         return p;
       } else if (action === "update") {
         profiles.update(String(payload?.id), { name: payload?.name, color: payload?.color });
         for (const w of shellsOf(String(payload?.id))) w.sendState();
         menus.buildMenuBar(actionsFor);
+        refreshTaskbarIcons();
       } else if (action === "remove") {
         const ok = await deleteProfile(s, String(payload));
         if (ok) menus.buildMenuBar(actionsFor);
+        if (ok) refreshTaskbarIcons();
         b.data = { ...b.data, profiles: profileRows() };
         return ok;
       } else if (action === "choosePicture") {
@@ -189,9 +197,11 @@ function openProfileBubble(s, rect) {
         const square = img.crop({ x: Math.floor((width - side) / 2), y: Math.floor((height - side) / 2), width: side, height: side }).resize({ width: 128, height: 128, quality: "best" });
         profiles.setPicture(id, square.toPNG());
         for (const w of shellsOf(id)) w.sendState();
+        refreshTaskbarIcons();
       } else if (action === "removePicture") {
         profiles.clearPicture(String(payload));
         for (const w of shellsOf(String(payload))) w.sendState();
+        refreshTaskbarIcons();
       }
       b.data = { ...b.data, profiles: profileRows() };
       return true;

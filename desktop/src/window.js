@@ -208,6 +208,8 @@ class BrowserShell {
         sandbox: false,
       },
     });
+    // Each profile has its own taskbar entry and badged icon, like Chrome.
+    require("./profile-icon").setTaskbarGroup(this.win, this.profile.id);
     if (restore?.maximized) this.win.maximize();
     shells.add(this);
     // No menu bar on Windows/Linux: the ⋮ button opens the menu and shortcuts are handled in main.
@@ -228,6 +230,7 @@ class BrowserShell {
     });
     this.win.webContents.once("did-finish-load", () => {
       this.ready = true;
+      require("./profile-icon").apply(this.win, this.profile.id);
       if (adopt?.length) {
         for (const t of adopt) this.adoptTab(t);
         this.selectTab(adopt[0].id);
