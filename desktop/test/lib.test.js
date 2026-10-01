@@ -108,3 +108,10 @@ test("chromeUserAgent: exactly what Chrome sends", () => {
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
   );
 });
+
+test("acceptLanguages: Chrome-style list without repeats", () => {
+  const { acceptLanguages } = require("../src/lib");
+  assert.equal(acceptLanguages(["en-US", "en-US", "en", "en"]), "en-US,en");
+  assert.equal(acceptLanguages(["fr-FR", "en-GB"]), "fr-FR,fr,en-GB,en");
+  assert.equal(acceptLanguages([]), "en-US,en");
+});

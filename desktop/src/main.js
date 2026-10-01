@@ -25,6 +25,12 @@ if (path.basename(app.getPath("userData")) === "STRATA" || path.basename(app.get
 }
 app.setName("STRATA");
 
+// The same Chrome user agent everywhere: cross-site iframes (like Cloudflare's
+// "Verify you are human" widget) and shared workers use this fallback instead
+// of the profile's. If they said "Electron" while the page says "Chrome", bot
+// checks fail. (Profiles set it per session too: runtime.js.)
+app.userAgentFallback = process.env.STRATA_TEST_UA || require("./lib").chromeUserAgent(app.userAgentFallback);
+
 // An unexpected error in the main process must not freeze the browser:
 // Electron's default shows a blocking "JavaScript error" dialog, which stops
 // every window (and any wallet popup that is waiting) until it's dismissed.

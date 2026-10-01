@@ -5,7 +5,7 @@ const path = require("node:path");
 const { app, BrowserWindow, ipcMain, net, session } = require("electron");
 const { ElectronChromeExtensions } = require("electron-chrome-extensions");
 const { installChromeWebStore } = require("electron-chrome-web-store");
-const { SOLANA_OS_URL, chromeUserAgent } = require("./lib");
+const { SOLANA_OS_URL, acceptLanguages, chromeUserAgent } = require("./lib");
 const profiles = require("./profiles");
 const { createLibrary } = require("./library");
 const { createPasswords } = require("./passwords");
@@ -68,7 +68,7 @@ function getRuntime(profileId) {
   // the user agent with the real browser; a full build number or extra tokens
   // look like an automated browser. The STRATA site recognises the app through
   // its bridge (window.solanaOSDesktop), not the user agent.
-  ses.setUserAgent(process.env.STRATA_TEST_UA || chromeUserAgent(ses.getUserAgent()));
+  ses.setUserAgent(process.env.STRATA_TEST_UA || chromeUserAgent(ses.getUserAgent()), acceptLanguages(app.getPreferredSystemLanguages()));
 
   // Chrome APIs Electron lacks (chrome.identity, chrome.sidePanel, ...). Must be
   // registered before ElectronChromeExtensions, which freezes `chrome`.

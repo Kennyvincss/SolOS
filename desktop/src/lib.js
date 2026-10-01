@@ -221,4 +221,15 @@ function chromeUserAgent(ua) {
     .trim();
 }
 
-module.exports = { chromeUserAgent, popupFeatures, SOLANA_OS_URL, WALLETS, hostOf, normalizeInput, routeInput, classifyUrl, DEFAULT_FOLDERS, folderForType, normalizeOrder, moveInOrder, riskFromReport, mergeBookmarks, mergeRecords };
+/** System languages -> Accept-Language header like Chrome's ("en-US,en"): each tag then its base, no repeats. */
+function acceptLanguages(tags) {
+  const out = [];
+  for (const t of tags || []) {
+    const tag = String(t || "").trim();
+    if (!tag) continue;
+    for (const v of [tag, tag.split("-")[0]]) if (!out.some((x) => x.toLowerCase() === v.toLowerCase())) out.push(v);
+  }
+  return (out.length ? out : ["en-US", "en"]).join(",");
+}
+
+module.exports = { acceptLanguages, chromeUserAgent, popupFeatures, SOLANA_OS_URL, WALLETS, hostOf, normalizeInput, routeInput, classifyUrl, DEFAULT_FOLDERS, folderForType, normalizeOrder, moveInOrder, riskFromReport, mergeBookmarks, mergeRecords };
