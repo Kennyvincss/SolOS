@@ -213,4 +213,12 @@ function popupFeatures(features) {
   return { width: clamp(width ?? 500, 320, 1400), height: clamp(height ?? 640, 360, 1100), left, top };
 }
 
-module.exports = { popupFeatures, SOLANA_OS_URL, WALLETS, hostOf, normalizeInput, routeInput, classifyUrl, DEFAULT_FOLDERS, folderForType, normalizeOrder, moveInOrder, riskFromReport, mergeBookmarks, mergeRecords };
+/** Electron's user agent -> the one Chrome of the same version sends. */
+function chromeUserAgent(ua) {
+  return String(ua)
+    .replace(/\s(Electron|solana-os-desktop|Solana\s?OS|STRATA|SolanaOSDesktop)\/\S+/gi, "")
+    .replace(/Chrome\/(\d+)\.[\d.]+/, "Chrome/$1.0.0.0")
+    .trim();
+}
+
+module.exports = { chromeUserAgent, popupFeatures, SOLANA_OS_URL, WALLETS, hostOf, normalizeInput, routeInput, classifyUrl, DEFAULT_FOLDERS, folderForType, normalizeOrder, moveInOrder, riskFromReport, mergeBookmarks, mergeRecords };

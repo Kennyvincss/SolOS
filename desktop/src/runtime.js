@@ -5,19 +5,12 @@ const path = require("node:path");
 const { app, BrowserWindow, ipcMain, net, session } = require("electron");
 const { ElectronChromeExtensions } = require("electron-chrome-extensions");
 const { installChromeWebStore } = require("electron-chrome-web-store");
-const { SOLANA_OS_URL } = require("./lib");
+const { SOLANA_OS_URL, chromeUserAgent } = require("./lib");
 const profiles = require("./profiles");
 const { createLibrary } = require("./library");
 const { createPasswords } = require("./passwords");
 const extWindows = require("./extension-windows");
 
-/** Electron's user agent -> the one Chrome of the same version sends. */
-function chromeUserAgent(ua) {
-  return String(ua)
-    .replace(/\s(Electron|solana-os-desktop|Solana\s?OS|STRATA|SolanaOSDesktop)\/\S+/gi, "")
-    .replace(/Chrome\/(\d+)\.[\d.]+/, "Chrome/$1.0.0.0")
-    .trim();
-}
 
 /** Set by main: how to reach windows (avoids a require cycle). */
 let hooks = {
@@ -260,4 +253,4 @@ function watchExtensionWorkers(rt) {
   });
 }
 
-module.exports = { chromeUserAgent, setHooks, getRuntime, dropRuntime, runtimeBySession, runtimes, slug };
+module.exports = { setHooks, getRuntime, dropRuntime, runtimeBySession, runtimes, slug };
