@@ -15,6 +15,7 @@ import { useApi } from "@/lib/client/fetch";
 import { useSession } from "@/lib/client/session";
 import { useStore } from "@/lib/client/store";
 import type { SearchHit, SearchResponse } from "@/lib/types";
+import type { WebSearchResponse } from "@/lib/providers/websearch";
 import { inDesktopApp, useLibrary } from "@/lib/client/library";
 
 const AI_INTENTS = new Set(["question", "trending_tokens", "whales", "today", "compare", "yield", "new_apps", "portfolio"]);
@@ -52,6 +53,38 @@ function HitRow({ h }: { h: SearchHit }) {
   );
 }
 
+/** Results from the whole web; those about Solana first. */
+function WebResults({ q, empty }: { q: string; empty?: React.ReactNode }) {
+  const { data, loading } = useApi<WebSearchResponse>(`/api/search/web?q=${encodeURIComponent(q)}`, { staleMs: 5 * 60_000 });
+  const results = data?.results ?? [];
+  if (!loading && !results.length) return <>{empty ?? null}</>;
+  return (
+    <Card className="mt-4 p-3 sm:p-4">
+      <div className="mb-1 px-2 text-[12px] font-medium uppercase tracking-wider text-faint">From the web</div>
+      {loading && !results.length && (
+        <div className="space-y-2 p-2">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+      )}
+      {results.slice(0, 20).map((r) => (
+        <a key={r.url} href={r.url} target="_blank" rel="noopener noreferrer" className="flex items-start gap-3 rounded-xl px-2 py-2.5 transition-colors hover:bg-surface-2">
+          <Monogram name={new URL(r.url).hostname.replace(/^www\./, "")} size={36} color="#9ba1ab" />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span className="truncate text-[14px] font-medium">{r.title}</span>
+              {r.solana && <Badge tone="green">Solana</Badge>}
+            </div>
+            <div className="truncate text-[12px] text-faint">{new URL(r.url).hostname.replace(/^www\./, "")}</div>
+            {r.snippet && <div className="line-clamp-2 text-[12.5px] text-muted">{r.snippet}</div>}
+          </div>
+          <ExternalLink size={14} className="mt-1 text-faint" />
+        </a>
+      ))}
+    </Card>
+  );
+}
+
 function Results() {
   const params = useSearchParams();
   const q = params.get("q") ?? "";
@@ -76,8 +109,8 @@ function Results() {
       </div>
       {!q && (
         <div className="py-8">
-          <h1 className="mb-2 text-center text-[24px] font-semibold tracking-[-0.02em]">Search everything on Solana</h1>
-          <p className="mb-6 text-center text-[14px] text-muted">Tokens, wallets, transactions, apps, protocols, NFTs, news and more.</p>
+          <h1 className="mb-2 text-center text-[24px] font-semibold tracking-[-0.02em]">Search everything</h1>
+          <p className="mb-6 text-center text-[14px] text-muted">Solana tokens, wallets, transactions, apps and news first — and the rest of the web.</p>
           <SuggestionChips />
           {recent.length > 0 && (
             <div className="mx-auto mt-10 max-w-md">
@@ -125,19 +158,6 @@ function Results() {
             <span>{data.groups.reduce((s, g) => s + g.hits.length, 0)} results</span>
             {data.meta.some((m) => m.mode === "demo") && <DataBadge meta={data.meta.find((m) => m.mode === "demo")} />}
           </div>
-          {data.groups.length === 0 && !AI_INTENTS.has(data.intent.type) && (
-            <Card>
-              <EmptyState
-                title={`No results for “${q}”`}
-                body="Try a token symbol, an app name, a wallet address or a transaction signature — or ask STRATA AI."
-                action={
-                  <Link href={`/ai?q=${encodeURIComponent(q)}`} className="btn btn-primary btn-sm">
-                    <Sparkles size={14} /> Ask STRATA AI
-                  </Link>
-                }
-              />
-            </Card>
-          )}
           <div className="grid gap-4 lg:grid-cols-2">
             {data.groups.map((g) => (
               <Card key={g.kind} className="p-3 sm:p-4">
@@ -148,6 +168,24 @@ function Results() {
               </Card>
             ))}
           </div>
+          <WebResults
+            q={q}
+            empty={
+              data.groups.length === 0 && !AI_INTENTS.has(data.intent.type) ? (
+                <Card>
+                  <EmptyState
+                    title={`No results for “${q}”`}
+                    body="Try a token symbol, an app name, a wallet address or a transaction signature — or ask STRATA AI."
+                    action={
+                      <Link href={`/ai?q=${encodeURIComponent(q)}`} className="btn btn-primary btn-sm">
+                        <Sparkles size={14} /> Ask STRATA AI
+                      </Link>
+                    }
+                  />
+                </Card>
+              ) : null
+            }
+          />
         </>
       )}
     </Page>

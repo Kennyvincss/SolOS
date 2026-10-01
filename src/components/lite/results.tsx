@@ -17,13 +17,15 @@ import { inDesktopApp, useLibrary } from "@/lib/client/library";
 import { isQuestion, searchTerms } from "@/lib/search/lite";
 import { asWebUrl, goHref } from "@/lib/web-url";
 import type { AppEntry, SearchHit, SearchResponse } from "@/lib/types";
+import type { WebResult, WebSearchResponse } from "@/lib/providers/websearch";
 
-type Filter = "all" | "apps" | "tokens" | "news";
+type Filter = "all" | "apps" | "tokens" | "news" | "web";
 const FILTERS: { id: Filter; label: string }[] = [
   { id: "all", label: "All" },
   { id: "apps", label: "Apps" },
   { id: "tokens", label: "Tokens" },
   { id: "news", label: "News" },
+  { id: "web", label: "Web" },
 ];
 const AI_INTENTS = new Set(["question", "trending_tokens", "whales", "today", "compare", "yield", "new_apps"]);
 
@@ -92,6 +94,22 @@ function HitLine({ h }: { h: SearchHit }) {
   return <Row icon={icon} title={h.title} href={h.href} external={external} url={external ? domain(h.href) : undefined} description={h.subtitle} action={external ? undefined : <ArrowRight size={15} className="mt-2 shrink-0 text-faint opacity-0 transition-opacity group-hover:opacity-100" />} />;
 }
 
+/** A result from the web; results about Solana carry a badge. */
+function WebRow({ r }: { r: WebResult }) {
+  const d = domain(r.url);
+  const path = r.url.replace(/^https?:\/\/[^/]+/, "").replace(/\/$/, "");
+  return (
+    <Row
+      icon={<Monogram name={d} size={36} color="#9ba1ab" />}
+      title={r.title}
+      href={r.url}
+      external
+      url={`${d}${path && path.length < 60 ? ` › ${path.slice(1).replace(/\//g, " › ")}` : ""}${r.solana ? " · Solana" : ""}`}
+      description={r.snippet}
+    />
+  );
+}
+
 /** "Official" panel for the project the query is about. */
 function OfficialPanel({ app, className }: { app: AppEntry; className?: string }) {
   const links = [
@@ -152,6 +170,9 @@ function Results({ q, ask }: { q: string; ask: boolean }) {
   const terms = searchTerms(q);
   const question = ask || isQuestion(q);
   const { data, loading, error } = useApi<SearchResponse>(`/api/search?q=${encodeURIComponent(terms)}`, { staleMs: 30_000 });
+  // Results from the whole web load on their own, so STRATA's results never wait for them.
+  const web = useApi<WebSearchResponse>(`/api/search/web?q=${encodeURIComponent(question ? q : terms)}`, { staleMs: 5 * 60_000 });
+  const webResults = web.data?.results ?? [];
   const library = useLibrary();
   const recorded = useRef("");
   useEffect(() => {
@@ -193,8 +214,10 @@ function Results({ q, ask }: { q: string; ask: boolean }) {
     apps: !r.primary.length && !r.apps.length && !r.related.length && !r.relatedApps.length && !r.projects.length && !r.extensions.length,
     tokens: !r.tokens.length,
     news: !r.news.length,
+    web: !webResults.length,
   };
-  const nothing = Boolean(data) && (filter === "all" ? empty.apps && empty.tokens && empty.news && !r.direct.length && !r.pages.length : empty[filter]);
+  const webDone = !web.loading;
+  const nothing = Boolean(data) && webDone && (filter === "all" ? empty.apps && empty.tokens && empty.news && empty.web && !r.direct.length && !r.pages.length : empty[filter]);
   const showAnswer = filter === "all" && (question || (data && AI_INTENTS.has(data.intent.type)));
   const setFilter = (f: Filter) => {
     const u = new URLSearchParams(params.toString());
@@ -308,6 +331,32 @@ function Results({ q, ask }: { q: string; ask: boolean }) {
                   {r.news.map((h) => (
                     <HitLine key={h.id} h={h} />
                   ))}
+                </section>
+              )}
+              {show("web") && (webResults.length > 0 || web.loading) && (
+                <section>
+                  <Heading>From the web</Heading>
+                  {web.loading && !webResults.length && (
+                    <div className="space-y-5 py-2">
+                      {[0, 1, 2].map((i) => (
+                        <div key={i} className="flex gap-3">
+                          <Skeleton className="h-9 w-9 rounded-xl" />
+                          <div className="flex-1 space-y-2">
+                            <Skeleton className="h-3 w-32" />
+                            <Skeleton className="h-4 w-56" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {webResults.slice(0, filter === "web" ? 30 : 10).map((w) => (
+                    <WebRow key={w.url} r={w} />
+                  ))}
+                  {filter === "all" && webResults.length > 10 && (
+                    <button onClick={() => setFilter("web")} className="mt-2 flex items-center gap-1 text-[13px] text-muted hover:text-fg">
+                      More from the web <ArrowRight size={13} />
+                    </button>
+                  )}
                 </section>
               )}
               {filter === "all" && r.pages.length > 0 && (
