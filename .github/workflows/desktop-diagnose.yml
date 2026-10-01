@@ -100,10 +100,13 @@ jobs:
       - name: Cloudflare Turnstile
         if: contains(inputs.checks, 'turnstile')
         run: |
-          echo "--- current build"
+          echo "--- real Google Chrome on this machine (baseline)"
+          timeout 200 xvfb-run -a node test/check-turnstile-chrome.mjs 2>&1 | grep "^\[turnstile" || true
+          echo "--- STRATA as released"
           timeout 200 xvfb-run -a npx electron test/check-turnstile.js 2>&1 | grep "^\[turnstile" || true
-          echo "--- with built-ins modified on these pages (what v0.9.2 did on every site)"
-          STRATA_NO_PASSKEY_HOSTS=nopecha.com,2captcha.com,seleniumbase.io timeout 200 xvfb-run -a npx electron test/check-turnstile.js 2>&1 | grep "^\[turnstile" || true
+          V=$(npx electron -e "console.log(process.versions.chrome); process.exit(0)" 2>/dev/null | tail -1 | cut -d. -f1)
+          echo "--- STRATA with Chrome's short user agent (Chrome/$V.0.0.0, no STRATA token)"
+          STRATA_TEST_UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/$V.0.0.0 Safari/537.36" timeout 200 xvfb-run -a npx electron test/check-turnstile.js 2>&1 | grep "^\[turnstile" || true
       - name: Jupiter links
         if: contains(inputs.checks, 'jupiter')
         run: timeout 200 xvfb-run -a npx electron test/check-jupiter.js 2>&1 | grep "^\\[jup" || true

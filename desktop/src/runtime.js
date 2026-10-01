@@ -66,7 +66,7 @@ function getRuntime(profileId) {
   // Present as Chrome (without the Electron token) so sites and the Chrome Web
   // Store treat this like a regular Chromium browser, plus a STRATA marker.
   const ua = ses.getUserAgent().replace(/\s(Electron|solana-os-desktop|Solana\s?OS|STRATA)\/\S+/gi, "");
-  ses.setUserAgent(`${ua} ${DESKTOP_UA_TOKEN}`);
+  ses.setUserAgent(process.env.STRATA_TEST_UA || `${ua} ${DESKTOP_UA_TOKEN}`); // STRATA_TEST_UA: diagnostics only
 
   // Chrome APIs Electron lacks (chrome.identity, chrome.sidePanel, ...). Must be
   // registered before ElectronChromeExtensions, which freezes `chrome`.
