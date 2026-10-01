@@ -188,7 +188,7 @@ jobs:
         run: |
           for q in "axiom" "stonk launchpad" "jupiter"; do
             echo "== $q"
-            curl -s -m 30 "https://solos-rho.vercel.app/api/search/web?q=$(python3 -c 'import sys,urllib.parse;print(urllib.parse.quote(sys.argv[1]))' "$q")" | python3 -c "
+            curl -s -m 30 "https://solos-rho.vercel.app/api/search/web?q=$(python3 -c 'import sys,urllib.parse;print(urllib.parse.quote(sys.argv[1]))' "$q")&_=${GITHUB_RUN_ID}" | python3 -c "
           import json,sys
           d=json.load(sys.stdin)
           if 'results' not in d: print(d); sys.exit()
