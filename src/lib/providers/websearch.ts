@@ -236,16 +236,25 @@ export async function webSearch(query: string): Promise<WebSearchResponse> {
     if (wiki?.ok && wiki.v.length) sources.push("Wikipedia");
     if (!sources.length && !plain.ok) throw new UpstreamError("web search unavailable");
 
-    // Plain results keep their order; the Solana query adds what's about Solana.
-    const seen = new Set<string>();
+    // Plain results keep their order; the Solana query adds what's about
+    // Solana. A site that also comes up for "<query> solana" and matches the
+    // query's words counts as about Solana (launchpads rarely say "Solana").
+    const words = queryWords(q);
+    const matchesQuery = (r: Raw) => words.length > 0 && words.every((w) => `${r.title} ${r.url}`.toLowerCase().includes(w));
+    const byKey = new Map<string, WebResult>();
     const all: WebResult[] = [];
     const add = (r: Raw, solanaQuery: boolean) => {
       const k = canonical(r.url);
-      if (seen.has(k)) return;
-      const solana = isSolanaRelated(r);
+      const solana = isSolanaRelated(r) || (solanaQuery && matchesQuery(r));
+      const known = byKey.get(k);
+      if (known) {
+        if (solana) known.solana = true;
+        return;
+      }
       if (solanaQuery && !solana) return;
-      seen.add(k);
-      all.push({ ...r, solana });
+      const item = { ...r, solana };
+      byKey.set(k, item);
+      all.push(item);
     };
     for (const r of plain.ok ? plain.v : []) add(r, false);
     for (const r of sol?.ok ? sol.v : []) add(r, true);

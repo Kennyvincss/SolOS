@@ -89,6 +89,27 @@ describe("webSearch", () => {
     ]);
   });
 
+  it("counts a site that comes up for \"<query> solana\" and matches the query as about Solana", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url.includes("wikipedia.org")) return wiki([]);
+        const q = new URL(url).searchParams.get("q");
+        const page = [
+          { url: "https://www.stonkfun.xyz/", title: "StonkFun · Launch coins paired with anything", snippet: "Launch coins" },
+          { url: "https://stonks.example/", title: "Stonks meme", snippet: "A meme" },
+        ];
+        return new Response(bingPage(q === "stonk launchpad" ? page.reverse() : [{ url: "https://www.stonk.market/launchpad", title: "Stonk Market launchpad", snippet: "" }, page[0]]), { status: 200 });
+      }),
+    );
+    const r = await webSearch("stonk launchpad");
+    expect(r.results.map((x) => [x.url, x.solana])).toEqual([
+      ["https://www.stonk.market/launchpad", true],
+      ["https://stonks.example/", false],
+      ["https://www.stonkfun.xyz/", false],
+    ].sort((a, b) => Number(b[1]) - Number(a[1])));
+  });
+
   it("uses DuckDuckGo when Bing doesn't answer, and drops unrelated Wikipedia articles", async () => {
     vi.stubGlobal(
       "fetch",
@@ -98,7 +119,7 @@ describe("webSearch", () => {
         return new Response(ddgPage([{ url: "https://stonk.example/launchpad", title: "Stonk Launchpad", snippet: "Launch tokens on Solana" }]), { status: 200 });
       }),
     );
-    const r = await webSearch("stonk launchpad");
+    const r = await webSearch("stonkspawn");
     expect(r.sources).toEqual(["DuckDuckGo"]);
     expect(r.results.map((x) => x.url)).toEqual(["https://stonk.example/launchpad"]);
   });
