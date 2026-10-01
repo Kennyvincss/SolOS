@@ -31,6 +31,13 @@ app.setName("STRATA");
 // checks fail. (Profiles set it per session too: runtime.js.)
 app.userAgentFallback = process.env.STRATA_TEST_UA || require("./lib").chromeUserAgent(app.userAgentFallback);
 
+// Ad-targeting APIs (Shared Storage, Protected Audience / FLEDGE, ...) that
+// Chrome no longer offers sites: leave them off, so pages see what they'd see
+// in Chrome and can't use them to track you.
+// Like Chrome: a page's sound starts only after you interact with it.
+app.commandLine.appendSwitch("autoplay-policy", "document-user-activation-required");
+app.commandLine.appendSwitch("disable-features", "SharedStorageAPI,FledgeInterestGroups,InterestGroupStorage,PrivateAggregationApi,Fledge,AdInterestGroupAPI,PrivacySandboxAdsAPIs,BrowsingTopics,FencedFrames");
+
 // An unexpected error in the main process must not freeze the browser:
 // Electron's default shows a blocking "JavaScript error" dialog, which stops
 // every window (and any wallet popup that is waiting) until it's dismissed.

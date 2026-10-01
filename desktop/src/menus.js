@@ -406,6 +406,8 @@ function appMenu(s, actions) {
     { type: "separator" },
     { label: "STRATA AI side panel", ico: "ai", ...acc("CmdOrCtrl+Shift+A"), type: "checkbox", checked: Boolean(s.panel?.open), click: () => s.togglePanel() },
     { label: "Send to your devices", ico: "devices", enabled: /^https?:/.test(url), submenu: devicesSubmenu(s, url, wc?.getTitle() ?? url) },
+    // For the odd site that won't work here (some bot checks refuse embedded browsers).
+    { label: "Open in your default browser", enabled: /^https?:/.test(url), click: () => electronShell.openExternal(url) },
     {
       label: "Developer",
       ico: "code",
