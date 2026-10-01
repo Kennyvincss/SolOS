@@ -161,6 +161,28 @@ jobs:
           wait $RUN
           echo "exit code: $?"
           grep -v -E "dbus|Fontconfig|viz_main|gpu_|NOTREACHED|DEPRECATED|Datadog|zustand" e2e.log | tail -250
+      - name: Search engines (raw)
+        if: contains(inputs.checks, 'engines')
+        run: |
+          UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+          mkdir -p diag
+          curl -s -m 20 -A "$UA" -d "q=axiom+solana&kl=us-en" https://html.duckduckgo.com/html/ -o diag/ddg.html -w "ddg %{http_code} %{size_download}\n" || true
+          curl -s -m 20 -A "$UA" -d "q=axiom+solana&kl=us-en" https://lite.duckduckgo.com/lite/ -o diag/ddglite.html -w "ddglite %{http_code} %{size_download}\n" || true
+          curl -s -m 20 -A "$UA" -H "accept-language: en-US,en;q=0.9" "https://www.bing.com/search?q=axiom+solana&setlang=en&cc=us" -o diag/bing.html -w "bing %{http_code} %{size_download}\n" || true
+          curl -s -m 20 -A "$UA" "https://www.mojeek.com/search?q=axiom+solana" -o diag/mojeek.html -w "mojeek %{http_code} %{size_download}\n" || true
+          curl -s -m 20 -A "$UA" "https://search.yahoo.com/search?p=axiom+solana" -o diag/yahoo.html -w "yahoo %{http_code} %{size_download}\n" || true
+          for f in ddg ddglite bing mojeek yahoo; do
+            echo "===== $f"
+            python3 - "$f" <<'PY'
+          import re,sys
+          f=sys.argv[1]; h=open(f"diag/{f}.html",errors="ignore").read()
+          pats={"ddg":r'class="result__a"',"ddglite":r"result-link","bing":r'class="b_algo"',"mojeek":r'class="title"',"yahoo":r'class="compTitle'}
+          ms=[m.start() for m in re.finditer(pats[f],h)]
+          print("matches",len(ms))
+          for i in ms[:2]: print(repr(h[max(0,i-300):i+1500])); print("-----")
+          if not ms: print(repr(h[:1500]))
+          PY
+          done
       - name: Web search (live site)
         if: contains(inputs.checks, 'websearch')
         run: |
