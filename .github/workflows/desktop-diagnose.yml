@@ -163,7 +163,7 @@ jobs:
           grep -v -E "dbus|Fontconfig|viz_main|gpu_|NOTREACHED|DEPRECATED|Datadog|zustand" e2e.log | tail -250
       - name: Phantom Google sign-in
         if: contains(inputs.checks, 'phantomgoogle')
-        run: timeout 200 xvfb-run -a npx electron test/check-phantom-google.js 2>&1 | grep "^\\[pg" | cut -c1-600 || true
+        run: timeout 200 xvfb-run -a npx electron test/check-phantom-google.js 2>&1 | grep "^\\[pg" | cut -c1-1400 || true
       - name: Check extensions
         if: contains(inputs.checks, 'extensions')
         env:

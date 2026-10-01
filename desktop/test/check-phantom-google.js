@@ -42,6 +42,15 @@ app.whenReady().then(async () => {
   await sleep(2500);
   const ext = await installExtension(PHANTOM, { session: ses });
   log("installed", ext.name, ext.version);
+  // How Phantom's code runs the Google sign-in window.
+  const files = [];
+  const walk = (d) => { for (const f of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, f.name); if (f.isDirectory()) walk(p); else if (p.endsWith(".js")) files.push(p); } };
+  walk(ext.path);
+  const pats = [/login\/start/g, /launchWebAuthFlow/g, /chromiumapp/g, /login\/callback/g, /onUpdated\.addListener/g, /connect\.phantom\.app/g];
+  for (const f of files) {
+    const src = fs.readFileSync(f, "utf8");
+    for (const re of pats) for (const m of src.matchAll(re)) log("src", path.relative(ext.path, f), re.source, JSON.stringify(src.slice(Math.max(0, m.index - 400), m.index + 500)));
+  }
   let ob = null;
   for (let i = 0; i < 40 && !ob; i++) {
     await sleep(500);
@@ -64,7 +73,7 @@ app.whenReady().then(async () => {
   fs.writeFileSync(path.join(OUT, "pg-0.png"), (await ob.capturePage()).toPNG());
   for (let i = 1; i <= 8; i++) {
     await sleep(3000);
-    const wins = BrowserWindow.getAllWindows().map((w) => ({ id: w.id, url: w.webContents.getURL().slice(0, 140), visible: w.isVisible(), title: w.getTitle() }));
+    const wins = BrowserWindow.getAllWindows().map((w) => ({ id: w.id, url: w.webContents.getURL().slice(0, 140), visible: w.isVisible(), focused: w.isFocused(), bounds: w.getBounds(), title: w.getTitle() }));
     log(`after ${i * 3}s windows`, JSON.stringify(wins));
     const st = await ob.executeJavaScript(STATE).catch((e) => ({ error: String(e) }));
     log(`after ${i * 3}s onboarding`, JSON.stringify(st).slice(0, 300));
