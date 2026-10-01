@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="data:image/webp;base64,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">
+<title>Download STRATA</title>
+<meta name="description" content="Download STRATA, the browser built for Solana, for Windows, macOS and Linux.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: Chrome-style download page — slim nav, one-line banner, two-column hero (copy + big button | drawn STRATA window), then every platform and install steps. */
+:root {
+  --bg: #ffffff;
+  --band: #eef3ff;
+  --surface: #f5f6f8;
+  --line: #e4e6ec;
+  --fg: #15161a;
+  --muted: #5d626c;
+  --faint: #8d929b;
+  --accent: #2f6bff;
+  --accent-ink: #ffffff;
+  --accent-soft: #e3ebff;
+  --window: #ffffff;
+  --window-bar: #f1f2f5;
+  --up: #12a150;
+  --down: #d93348;
+  --shadow: 0 30px 60px -24px rgba(22, 32, 72, 0.28), 0 8px 18px -10px rgba(22, 32, 72, 0.18);
+  --font-display: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-body: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0c0d10; --band: #121a2e; --surface: #15161b; --line: #262830; --fg: #f2f3f5; --muted: #a3a8b2; --faint: #6f747e;
+    --accent: #4b80ff; --accent-ink: #ffffff; --accent-soft: #17254a; --window: #131419; --window-bar: #1b1c22; --up: #2fc472; --down: #f0566a;
+    --shadow: 0 30px 60px -24px rgba(0, 0, 0, 0.7), 0 8px 18px -10px rgba(0, 0, 0, 0.5);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0c0d10; --band: #121a2e; --surface: #15161b; --line: #262830; --fg: #f2f3f5; --muted: #a3a8b2; --faint: #6f747e;
+  --accent: #4b80ff; --accent-ink: #ffffff; --accent-soft: #17254a; --window: #131419; --window-bar: #1b1c22; --up: #2fc472; --down: #f0566a;
+  --shadow: 0 30px 60px -24px rgba(0, 0, 0, 0.7), 0 8px 18px -10px rgba(0, 0, 0, 0.5);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 16px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; text-underline-offset: 3px; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
+.wrap { max-width: 1180px; margin-inline: auto; padding-inline: 24px; }
+
+/* Nav */
+.nav { border-bottom: 1px solid var(--line); }
+.nav .wrap { display: flex; align-items: center; gap: 32px; min-height: 68px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 10px; color: var(--fg); font-weight: 600; font-size: 22px; letter-spacing: -0.02em; }
+.brand:hover { text-decoration: none; }
+.brand img { width: 34px; height: 34px; border-radius: 9px; }
+.links { display: flex; gap: 26px; flex-wrap: wrap; font-size: 15.5px; }
+.links a { color: var(--muted); }
+.links a:hover { color: var(--fg); text-decoration: none; }
+
+/* Banner */
+.banner { background: var(--band); }
+.banner .wrap { display: flex; align-items: center; gap: 14px; min-height: 60px; padding-block: 10px; flex-wrap: wrap; }
+.spark { width: 22px; height: 22px; flex: none; }
+.banner p { margin: 0; flex: 1 1 280px; font-size: 15.5px; }
+.pill { display: inline-flex; align-items: center; height: 38px; padding-inline: 20px; border-radius: 999px; background: var(--bg); color: var(--accent); font-weight: 500; font-size: 14.5px; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+.pill:hover { text-decoration: none; }
+
+/* Hero */
+.hero .wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 56px; align-items: center; padding-block: 72px 64px; }
+.hero-logo { width: 64px; height: 64px; border-radius: 16px; }
+h1 { font-family: var(--font-display); font-size: clamp(42px, 6vw, 68px); line-height: 1.04; letter-spacing: -0.035em; font-weight: 600; margin: 22px 0 0; text-wrap: balance; }
+.lede { color: var(--muted); font-size: 18px; max-width: 32ch; margin: 18px 0 0; }
+.cta { margin-top: 34px; display: grid; justify-items: start; gap: 10px; }
+.download { display: inline-flex; align-items: center; gap: 12px; height: 64px; padding-inline: 34px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-size: 18px; font-weight: 600; letter-spacing: -0.01em; transition: filter .15s, transform .15s; }
+.download:hover { text-decoration: none; filter: brightness(1.08); }
+.download:active { transform: translateY(1px); }
+.download svg { width: 22px; height: 22px; }
+.for { color: var(--muted); font-size: 13px; padding-left: 18px; }
+.alt { padding-left: 18px; font-size: 15px; display: flex; gap: 18px; flex-wrap: wrap; }
+.desktop-only { margin-top: 14px; padding: 14px 16px; border-radius: 12px; background: var(--surface); color: var(--muted); font-size: 14.5px; max-width: 42ch; }
+
+/* Drawn STRATA window */
+.shot { position: relative; min-width: 0; }
+.window { border-radius: 14px; background: var(--window); box-shadow: var(--shadow); border: 1px solid var(--line); overflow: hidden; font-size: 12px; }
+.tabs { display: flex; align-items: end; gap: 4px; padding: 10px 10px 0; background: var(--window-bar); }
+.tab { display: flex; align-items: center; gap: 7px; padding: 8px 12px; border-radius: 9px 9px 0 0; color: var(--muted); white-space: nowrap; overflow: hidden; min-width: 0; }
+.tab.on { background: var(--window); color: var(--fg); }
+.tab i { width: 14px; height: 14px; border-radius: 4px; flex: none; }
+.dots { margin-left: auto; display: flex; gap: 6px; padding: 0 4px 10px; }
+.dots b { width: 11px; height: 11px; border-radius: 50%; background: var(--line); }
+.bar { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-bottom: 1px solid var(--line); }
+.addr { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; height: 30px; padding-inline: 12px; border-radius: 999px; background: var(--surface); color: var(--fg); overflow: hidden; white-space: nowrap; }
+.safe { color: var(--up); font-weight: 600; font-size: 11px; }
+.ext { width: 24px; height: 24px; border-radius: 7px; flex: none; }
+.ext.phantom { background: #ab9ff2; }
+.ext.solflare { background: #fc7227; }
+.page { display: grid; grid-template-columns: 1.4fr 1fr; gap: 14px; padding: 16px; }
+.card { border: 1px solid var(--line); border-radius: 11px; padding: 12px; min-width: 0; }
+.card h4 { margin: 0 0 8px; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: .07em; color: var(--faint); }
+.row { display: flex; align-items: center; gap: 9px; padding: 6px 0; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.row:first-of-type { border-top: 0; }
+.coin { width: 22px; height: 22px; border-radius: 50%; flex: none; }
+.row .name { flex: 1; min-width: 0; font-weight: 500; }
+.row .px { font-family: var(--font-mono); font-size: 11.5px; }
+.up { color: var(--up); font-family: var(--font-mono); font-size: 11.5px; width: 52px; text-align: right; }
+.down { color: var(--down); font-family: var(--font-mono); font-size: 11.5px; width: 52px; text-align: right; }
+.spark-line { width: 100%; height: 70px; display: block; }
+.big { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.approve { position: absolute; right: -14px; bottom: -64px; width: 210px; border-radius: 14px; background: var(--window); border: 1px solid var(--line); box-shadow: var(--shadow); padding: 14px; font-size: 12px; }
+.approve .who { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.approve p { margin: 8px 0 10px; color: var(--muted); }
+.approve .btns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.approve span { display: grid; place-items: center; height: 30px; border-radius: 8px; background: var(--surface); font-weight: 500; }
+.approve span.ok { background: var(--accent); color: var(--accent-ink); }
+
+/* Platforms */
+.section { padding-block: 64px; border-top: 1px solid var(--line); }
+h2 { font-family: var(--font-display); font-size: clamp(28px, 3.4vw, 38px); letter-spacing: -0.025em; line-height: 1.1; font-weight: 600; margin: 0; text-wrap: balance; }
+.sub { color: var(--muted); margin: 10px 0 0; max-width: 60ch; }
+.platforms { margin-top: 32px; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.plat { display: grid; grid-template-rows: auto auto 1fr auto; gap: 6px; padding: 22px; border-radius: 16px; background: var(--surface); border: 1px solid transparent; min-width: 0; }
+.plat.mine { border-color: var(--accent); background: var(--accent-soft); }
+.plat .os { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 17px; }
+.plat .os svg { width: 22px; height: 22px; flex: none; }
+.plat .req { color: var(--muted); font-size: 14px; margin: 0; }
+.files { display: grid; gap: 8px; margin-top: 12px; align-content: end; }
+.file { display: flex; align-items: center; justify-content: space-between; gap: 10px; height: 44px; padding-inline: 16px; border-radius: 12px; background: var(--bg); border: 1px solid var(--line); color: var(--fg); font-weight: 500; font-size: 14.5px; }
+.file:hover { border-color: var(--accent); text-decoration: none; }
+.file code { font-family: var(--font-mono); font-size: 12px; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.tag { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--accent); }
+
+/* Install steps */
+.steps { margin-top: 32px; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 28px; }
+.step h3 { margin: 0; font-size: 17px; font-weight: 600; }
+.step ol { margin: 10px 0 0; padding-left: 20px; color: var(--muted); display: grid; gap: 6px; }
+.step b { color: var(--fg); font-weight: 600; }
+.kbd { font-family: var(--font-mono); font-size: 13px; background: var(--surface); padding: 1px 6px; border-radius: 6px; border: 1px solid var(--line); color: var(--fg); }
+
+/* Footer */
+footer { border-top: 1px solid var(--line); }
+footer .wrap { display: flex; flex-wrap: wrap; gap: 14px 28px; align-items: center; padding-block: 28px; color: var(--faint); font-size: 14px; }
+footer .ver { font-family: var(--font-mono); font-size: 13px; }
+
+@media (max-width: 900px) {
+  .hero .wrap { grid-template-columns: 1fr; gap: 64px; padding-block: 48px 72px; }
+  .approve { right: 8px; }
+}
+@media (max-width: 520px) {
+  .wrap { padding-inline: 16px; }
+  .links { display: none; }
+  .page { grid-template-columns: 1fr; }
+  .page .card:last-child { display: none; }
+  .download { height: 58px; padding-inline: 26px; font-size: 17px; }
+  .approve { display: none; }
+  .tab:not(.on) { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="STRATA">
+      <img id="logo" alt="" src="data:image/webp;base64,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">
+      STRATA
+    </a>
+    <nav class="links" aria-label="STRATA">
+      <a href="#platforms">Downloads</a>
+      <a href="#install">Install</a>
+      <a href="https://solos-rho.vercel.app" target="_blank" rel="noopener">Web app ↗</a>
+      <a id="notes" href="https://github.com/Kennyvincss/SolOS/releases" target="_blank" rel="noopener">Release notes ↗</a>
+    </nav>
+  </div>
+</header>
+
+<div class="banner">
+  <div class="wrap">
+    <svg class="spark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c.6 4.9 3.9 8.4 10 10-6.1 1.6-9.4 5.1-10 10-.6-4.9-3.9-8.4-10-10 6.1-1.6 9.4-5.1 10-10z" fill="var(--accent)"/></svg>
+    <p>Ask STRATA AI about the page you're on, a token, a wallet or a transaction, right from the side panel.</p>
+    <a class="pill" href="#platforms">Get STRATA</a>
+  </div>
+</div>
+
+<main id="top">
+  <section class="hero">
+    <div class="wrap">
+      <div>
+        <img class="hero-logo" alt="STRATA logo" src="data:image/webp;base64,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">
+        <h1>The browser built for Solana</h1>
+        <p class="lede">Your wallets, tokens, apps and AI in one browser, with warnings before you sign on a site that isn't what it claims to be.</p>
+        <div class="cta">
+          <a class="download" id="main-download" href="https://github.com/Kennyvincss/SolOS/releases/download/desktop-v0.9.12/strata-0.9.12-win-x64.exe">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M6.5 10.5 12 16l5.5-5.5M4.5 20h15"/></svg>
+            Download STRATA
+          </a>
+          <div class="for" id="main-for">For Windows 11/10 64-bit</div>
+          <div class="alt">
+            <a id="main-alt" href="#platforms">Other platforms</a>
+            <a href="#install">How to install</a>
+          </div>
+          <div class="desktop-only" id="desktop-only" hidden>STRATA is a desktop browser. Open this page on your Windows, Mac or Linux computer to download it.</div>
+        </div>
+      </div>
+
+      <div class="shot" aria-label="The STRATA browser window">
+        <div class="window">
+          <div class="tabs">
+            <div class="tab on"><i style="background: var(--accent)"></i>Portfolio · STRATA</div>
+            <div class="tab"><i style="background:#19d3a2"></i>Jupiter</div>
+            <div class="tab"><i style="background:#6b5cf6"></i>Raydium</div>
+            <div class="dots" aria-hidden="true"><b></b><b></b><b></b></div>
+          </div>
+          <div class="bar">
+            <div class="addr"><span class="safe">● Known app</span> jup.ag/swap</div>
+            <span class="ext phantom" title="Phantom"></span>
+            <span class="ext solflare" title="Solflare"></span>
+          </div>
+          <div class="page">
+            <div class="card">
+              <h4>Portfolio</h4>
+              <div class="big">$12,480.22</div>
+              <svg class="spark-line" viewBox="0 0 300 70" preserveAspectRatio="none" aria-hidden="true">
+                <path d="M0 52 L30 48 L60 54 L90 40 L120 44 L150 30 L180 34 L210 22 L240 26 L270 14 L300 10 L300 70 L0 70 Z" fill="var(--accent-soft)"/>
+                <path d="M0 52 L30 48 L60 54 L90 40 L120 44 L150 30 L180 34 L210 22 L240 26 L270 14 L300 10" fill="none" stroke="var(--accent)" stroke-width="2.5"/>
+              </svg>
+              <div class="row"><span class="coin" style="background:linear-gradient(135deg,#9945ff,#14f195)"></span><span class="name">SOL</span><span class="px">$182.40</span><span class="up">+4.2%</span></div>
+              <div class="row"><span class="coin" style="background:#2775ca"></span><span class="name">USDC</span><span class="px">$1.00</span><span class="up">0.0%</span></div>
+              <div class="row"><span class="coin" style="background:#19d3a2"></span><span class="name">JUP</span><span class="px">$0.84</span><span class="down">−1.8%</span></div>
+            </div>
+            <div class="card">
+              <h4>Trending</h4>
+              <div class="row"><span class="coin" style="background:#f7a600"></span><span class="name">BONK</span><span class="up">+12%</span></div>
+              <div class="row"><span class="coin" style="background:#c7f284"></span><span class="name">JTO</span><span class="up">+3.1%</span></div>
+              <div class="row"><span class="coin" style="background:#e85d75"></span><span class="name">WIF</span><span class="down">−2.4%</span></div>
+              <div class="row"><span class="coin" style="background:#6b5cf6"></span><span class="name">RAY</span><span class="up">+1.6%</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="approve" aria-hidden="true">
+          <div class="who"><span class="ext phantom"></span>Phantom</div>
+          <p>jup.ag wants to connect to Account 1</p>
+          <div class="btns"><span>Cancel</span><span class="ok">Connect</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="platforms">
+    <div class="wrap">
+      <h2>Download for your computer</h2>
+      <p class="sub">STRATA runs on Windows, macOS and Linux. It updates itself when a new version comes out. <span id="version-line">Current version: 0.9.12.</span></p>
+      <div class="platforms">
+        <div class="plat" data-os="windows">
+          <div class="os"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 5.5 10.5 4.5v7H3zM11.5 4.4 21 3v8.5h-9.5zM3 12.5h7.5v7L3 18.5zM11.5 12.5H21V21l-9.5-1.4z"/></svg>Windows</div>
+          <p class="req">Windows 11 or 10, 64-bit</p>
+          <span></span>
+          <div class="files">
+            <a class="file" data-file="win-x64.exe" href="https://github.com/Kennyvincss/SolOS/releases/download/desktop-v0.9.12/strata-0.9.12-win-x64.exe">Installer <code>strata-0.9.12-win-x64.exe</code></a>
+          </div>
+        </div>
+        <div class="plat" data-os="mac">
+          <div class="os"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16.4 12.6c0-2.4 2-3.6 2.1-3.7-1.2-1.7-3-1.9-3.6-2-1.5-.2-3 .9-3.8.9-.8 0-2-.9-3.3-.8-1.7 0-3.3 1-4.1 2.5-1.8 3.1-.5 7.6 1.3 10.1.8 1.2 1.8 2.6 3.1 2.5 1.3 0 1.7-.8 3.3-.8 1.5 0 1.9.8 3.2.8 1.4 0 2.2-1.2 3-2.4.9-1.4 1.3-2.7 1.3-2.8-.1 0-2.5-1-2.5-3.8zM14 5.3c.7-.8 1.1-1.9 1-3-1 0-2.1.7-2.8 1.5-.6.7-1.2 1.8-1 2.9 1 .1 2.1-.6 2.8-1.4z"/></svg>macOS</div>
+          <p class="req">macOS 11 Big Sur or later</p>
+          <span></span>
+          <div class="files">
+            <a class="file" data-file="mac-arm64.dmg" href="https://github.com/Kennyvincss/SolOS/releases/download/desktop-v0.9.12/strata-0.9.12-mac-arm64.dmg">Apple silicon (M1–M4) <code>.dmg</code></a>
+            <a class="file" data-file="mac-x64.dmg" href="https://github.com/Kennyvincss/SolOS/releases/download/desktop-v0.9.12/strata-0.9.12-mac-x64.dmg">Intel <code>.dmg</code></a>
+          </div>
+        </div>
+        <div class="plat" data-os="linux">
+          <div class="os"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2c-2.2 0-3.6 1.9-3.6 4.6 0 1.4.3 2.3-.6 3.6-1 1.5-2.6 3.6-2.6 6 0 .9.2 1.6.6 2.2-.8.3-1.8.8-1.8 1.6 0 1 1.5 1.3 3 1.6 1.1.2 2 .6 2.8.6.7 0 1.1-.3 1.5-.6.4 0 .9.1 1.4.1s1-.1 1.4-.1c.4.3.8.6 1.5.6.8 0 1.7-.4 2.8-.6 1.5-.3 3-.6 3-1.6 0-.8-1-1.3-1.8-1.6.4-.6.6-1.3.6-2.2 0-2.4-1.6-4.5-2.6-6-.9-1.3-.6-2.2-.6-3.6C15.6 3.9 14.2 2 12 2z"/></svg>Linux</div>
+          <p class="req">64-bit Ubuntu, Debian, Fedora and most others</p>
+          <span></span>
+          <div class="files">
+            <a class="file" data-file="linux-x86_64.AppImage" href="https://github.com/Kennyvincss/SolOS/releases/download/desktop-v0.9.12/strata-0.9.12-linux-x86_64.AppImage">AppImage <code>any distribution</code></a>
+            <a class="file" data-file="linux-amd64.deb" href="https://github.com/Kennyvincss/SolOS/releases/download/desktop-v0.9.12/strata-0.9.12-linux-amd64.deb">.deb <code>Ubuntu / Debian</code></a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="install">
+    <div class="wrap">
+      <h2>Install in a minute</h2>
+      <p class="sub">Your wallets come with you: install Phantom, Solflare or Backpack from the Chrome Web Store inside STRATA and import your wallet as usual.</p>
+      <div class="steps">
+        <div class="step">
+          <h3>Windows</h3>
+          <ol>
+            <li>Open <span class="kbd">strata-…-win-x64.exe</span>.</li>
+            <li>If Windows shows <b>“Windows protected your PC”</b>, choose <b>More info</b>, then <b>Run anyway</b>.</li>
+            <li>STRATA opens when it's installed and adds itself to the Start menu.</li>
+          </ol>
+        </div>
+        <div class="step">
+          <h3>macOS</h3>
+          <ol>
+            <li>Open the <span class="kbd">.dmg</span> and drag STRATA to <b>Applications</b>.</li>
+            <li>The first time, right-click STRATA in Applications and choose <b>Open</b>.</li>
+            <li>Not sure which Mac you have? Apple menu → <b>About This Mac</b>: “Apple M…” means Apple silicon.</li>
+          </ol>
+        </div>
+        <div class="step">
+          <h3>Linux</h3>
+          <ol>
+            <li><b>AppImage:</b> make it runnable with <span class="kbd">chmod +x strata-*.AppImage</span>, then open it.</li>
+            <li><b>.deb:</b> <span class="kbd">sudo apt install ./strata-*-linux-amd64.deb</span></li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© STRATA</span>
+    <span class="ver" id="footer-ver">Desktop 0.9.12</span>
+    <a href="https://github.com/Kennyvincss/SolOS/releases" target="_blank" rel="noopener">All releases</a>
+    <a href="https://solos-rho.vercel.app" target="_blank" rel="noopener">Use STRATA on the web</a>
+  </div>
+</footer>
+
+<script>
+(() => {
+  const REPO = "Kennyvincss/SolOS";
+  let version = "0.9.12";
+  const url = (file) => `https://github.com/${REPO}/releases/download/desktop-v${version}/strata-${version}-${file}`;
+
+  // Which computer is this? (Mac chips can't be told apart reliably: Apple silicon is the default.)
+  const ua = navigator.userAgent;
+  const plat = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || "";
+  const mobile = /Android|iPhone|iPad|iPod|Mobile/i.test(ua) || (navigator.userAgentData && navigator.userAgentData.mobile) || (/Mac/.test(plat) && navigator.maxTouchPoints > 1);
+  const os = mobile ? "mobile" : /Win/i.test(plat + ua) ? "windows" : /Mac/i.test(plat + ua) ? "mac" : /Linux|X11|CrOS/i.test(plat + ua) ? "linux" : "windows";
+  const MAIN = {
+    windows: { file: "win-x64.exe", label: "For Windows 11/10 64-bit", alt: ["Other platforms", "#platforms"] },
+    mac: { file: "mac-arm64.dmg", label: "For macOS 11 or later · Apple silicon", alt: ["Mac with Intel chip", "intel"] },
+    linux: { file: "linux-x86_64.AppImage", label: "For Linux 64-bit · AppImage", alt: [".deb for Ubuntu / Debian", "deb"] },
+  };
+
+  function render() {
+    const main = document.getElementById("main-download");
+    const m = MAIN[os];
+    if (!m) {
+      main.hidden = true;
+      document.getElementById("main-for").hidden = true;
+      document.getElementById("desktop-only").hidden = false;
+    } else {
+      main.href = url(m.file);
+      document.getElementById("main-for").textContent = m.label;
+      const alt = document.getElementById("main-alt");
+      alt.textContent = m.alt[0];
+      alt.href = m.alt[1] === "intel" ? url("mac-x64.dmg") : m.alt[1] === "deb" ? url("linux-amd64.deb") : m.alt[1];
+    }
+    for (const a of document.querySelectorAll(".file[data-file]")) {
+      a.href = url(a.dataset.file);
+      const code = a.querySelector("code");
+      if (code && /strata-/.test(code.textContent)) code.textContent = `strata-${version}-${a.dataset.file}`;
+    }
+    for (const p of document.querySelectorAll(".plat")) p.classList.toggle("mine", p.dataset.os === os);
+    document.getElementById("version-line").textContent = `Current version: ${version}.`;
+    document.getElementById("footer-ver").textContent = `Desktop ${version}`;
+    document.getElementById("notes").href = `https://github.com/${REPO}/releases/tag/desktop-v${version}`;
+  }
+  render();
+
+  // Newest release, when this page can reach GitHub (it falls back to the version above).
+  fetch(`https://api.github.com/repos/${REPO}/releases?per_page=15`)
+    .then((r) => (r.ok ? r.json() : []))
+    .then((list) => {
+      const rel = list.find((r) => /^desktop-v\d/.test(r.tag_name) && !r.draft && !r.prerelease && r.assets.some((a) => /win-x64\.exe$/.test(a.name)));
+      if (rel) {
+        version = rel.tag_name.replace(/^desktop-v/, "");
+        render();
+      }
+    })
+    .catch(() => {});
+})();
+</script>
+
+</body>
+</html>
