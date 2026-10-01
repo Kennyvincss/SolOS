@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 const path = require("node:path");
+const fs = require("node:fs");
 const { app, BrowserWindow, ipcMain, net, session } = require("electron");
 const { ElectronChromeExtensions } = require("electron-chrome-extensions");
 const { installChromeWebStore } = require("electron-chrome-web-store");
@@ -144,6 +145,7 @@ function getRuntime(profileId) {
     },
   });
 
+  quietExtensionPreload(ses);
   extWindows.install(rt.extensions, () => hooks.focusedShell(profileId)?.win ?? null);
 
   // Camera, microphone, location, notifications, ...: ask first, like Chrome.
@@ -184,6 +186,45 @@ function dropRuntime(profileId) {
   rt.library.flushSession();
   runtimes.delete(profileId);
   return rt;
+}
+
+/* ------------------------------------------------------------ extension API preload */
+
+/**
+ * electron-chrome-extensions 4.9 ships its extension-API preload with debug
+ * logging switched on: every chrome.* call, every result and every browser
+ * event (each tab update, to every extension page and worker) is written to
+ * the console with its arguments. STRATA uses a copy with that logging off.
+ * STRATA_CRX_VERBOSE=1 keeps the library's original.
+ */
+let quietPreload;
+function quietPreloadPath() {
+  if (quietPreload !== undefined) return quietPreload;
+  quietPreload = null;
+  try {
+    const original = require.resolve("electron-chrome-extensions/preload");
+    const src = fs.readFileSync(original, "utf8");
+    const quiet = src.replace(/if \(true\) \{(\s*console\.log\()/g, "if (false) {$1");
+    if (quiet === src) return null; // a version without the logging
+    const file = path.join(app.getPath("userData"), `crx-preload-${require("node:crypto").createHash("sha256").update(quiet).digest("hex").slice(0, 12)}.js`);
+    if (!fs.existsSync(file)) fs.writeFileSync(file, quiet);
+    quietPreload = file;
+  } catch {
+    quietPreload = null;
+  }
+  return quietPreload;
+}
+
+function quietExtensionPreload(ses) {
+  if (process.env.STRATA_CRX_VERBOSE) return;
+  const file = quietPreloadPath();
+  if (!file || typeof ses.unregisterPreloadScript !== "function") return;
+  const ids = new Set(ses.getPreloadScripts().map((p) => p.id));
+  if (!ids.has("crx-mv2-preload") || !ids.has("crx-mv3-preload")) return;
+  ses.unregisterPreloadScript("crx-mv2-preload");
+  ses.unregisterPreloadScript("crx-mv3-preload");
+  ses.registerPreloadScript({ id: "crx-mv2-preload", type: "frame", filePath: file });
+  ses.registerPreloadScript({ id: "crx-mv3-preload", type: "service-worker", filePath: file });
 }
 
 /* ------------------------------------------------------------ chrome.identity.launchWebAuthFlow */

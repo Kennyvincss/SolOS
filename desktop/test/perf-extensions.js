@@ -134,12 +134,12 @@ app.whenReady().then(async () => {
     // Toolbar popup, three times.
     for (let i = 0; i < 3; i++) {
       phase = "toolbar popup";
-      const pt = await shell.webContents.executeJavaScript("(() => { const el = document.querySelector('browser-action-list'); const b = el && el.shadowRoot.querySelector('.action, [part~=action]'); if (!b) return null; const r = b.getBoundingClientRect(); return { x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2) }; })()");
+      const pt = await shell.win.webContents.executeJavaScript("(() => { const el = document.querySelector('browser-action-list'); const b = el && el.shadowRoot.querySelector('.action, [part~=action]'); if (!b) return null; const r = b.getBoundingClientRect(); return { x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2) }; })()");
       if (!pt) break;
       const before = new Set(BrowserWindow.getAllWindows());
       t = Date.now();
-      shell.webContents.sendInputEvent({ type: "mouseDown", x: pt.x, y: pt.y, button: "left", clickCount: 1 });
-      shell.webContents.sendInputEvent({ type: "mouseUp", x: pt.x, y: pt.y, button: "left", clickCount: 1 });
+      shell.win.webContents.sendInputEvent({ type: "mouseDown", x: pt.x, y: pt.y, button: "left", clickCount: 1 });
+      shell.win.webContents.sendInputEvent({ type: "mouseUp", x: pt.x, y: pt.y, button: "left", clickCount: 1 });
       const pop = await until(() => { const w = newWindow(before); return w && w.isVisible() ? w : null; }, 10000);
       if (!pop) {
         record("toolbar popup: NEVER visible", Date.now() - t);
