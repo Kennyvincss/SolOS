@@ -217,13 +217,52 @@ app.whenReady().then(async () => {
   }
   log("connect result", JSON.stringify(result), `total ${Date.now() - t}ms`);
 
+
+  // What real sites do next: sign a message, then reconnect later. Keep focus on
+  // the browser window (as when the popup opens without taking focus).
+  async function approveNext(label, start) {
+    const before = new Set(BrowserWindow.getAllWindows());
+    shellWin.focus();
+    const t1 = Date.now();
+    await tab.executeJavaScript(start, true);
+    let pop = null;
+    for (let i = 0; i < 80 && !pop; i++) {
+      await sleep(250);
+      pop = BrowserWindow.getAllWindows().find((w) => !before.has(w));
+    }
+    log(`${label}: popup`, pop ? `after ${Date.now() - t1}ms visible=${pop.isVisible()} focused=${pop.isFocused()} bounds=${JSON.stringify(pop.getBounds())}` : "none (may be auto-approved)");
+    if (pop) {
+      shellWin.focus(); // the browser keeps focus
+      let clicked = false;
+      for (let i = 0; i < 40 && !clicked && !pop.isDestroyed(); i++) {
+        await sleep(500);
+        clicked = await pop.webContents.executeJavaScript(clickText("/^(connect|approve|confirm|sign)$/i")).catch(() => false);
+      }
+      log(`${label}: clicked`, clicked);
+    }
+    let out = null;
+    for (let i = 0; i < 40 && !out; i++) {
+      await sleep(500);
+      out = await tab.executeJavaScript("window.result2").catch(() => null);
+    }
+    log(`${label}: result`, JSON.stringify(out), `${Date.now() - t1}ms`, "browser window open:", !shellWin.isDestroyed());
+    await tab.executeJavaScript("window.result2 = null");
+  }
+  if (result && result.ok) {
+    await approveNext("sign message", `window.result2 = null; window.phantom.solana.signMessage(new TextEncoder().encode("Sign in to STRATA test"), "utf8").then((r) => (window.result2 = { ok: true, sigBytes: r.signature.length }), (e) => (window.result2 = { ok: false, error: String(e && e.message || e) }))`);
+    await tab.executeJavaScript("window.phantom.solana.disconnect()").catch(() => {});
+    await sleep(500);
+    await approveNext("reconnect", `window.result2 = null; window.phantom.solana.connect().then((r) => (window.result2 = { ok: true, address: r.publicKey.toString() }), (e) => (window.result2 = { ok: false, error: String(e && e.message || e) }))`);
+    await approveNext("sign again", `window.result2 = null; window.phantom.solana.signMessage(new TextEncoder().encode("Second message"), "utf8").then((r) => (window.result2 = { ok: true, sigBytes: r.signature.length }), (e) => (window.result2 = { ok: false, error: String(e && e.message || e) }))`);
+  }
+
   // Toolbar popup speed (click the Phantom icon).
   const pt = await shellWin.webContents.executeJavaScript("(() => { const el = document.querySelector('browser-action-list'); const b = el && el.shadowRoot.querySelector('.action, [part~=action]'); if (!b) return null; const r = b.getBoundingClientRect(); return { x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2) }; })()");
   if (pt) {
     const before2 = new Set(BrowserWindow.getAllWindows());
     t = Date.now();
-    shell.webContents.sendInputEvent({ type: "mouseDown", x: pt.x, y: pt.y, button: "left", clickCount: 1 });
-    shell.webContents.sendInputEvent({ type: "mouseUp", x: pt.x, y: pt.y, button: "left", clickCount: 1 });
+    shellWin.webContents.sendInputEvent({ type: "mouseDown", x: pt.x, y: pt.y, button: "left", clickCount: 1 });
+    shellWin.webContents.sendInputEvent({ type: "mouseUp", x: pt.x, y: pt.y, button: "left", clickCount: 1 });
     let pop = null;
     for (let i = 0; i < 80; i++) {
       await sleep(100);

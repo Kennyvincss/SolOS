@@ -9,6 +9,7 @@ const { SOLANA_OS_URL } = require("./lib");
 const profiles = require("./profiles");
 const { createLibrary } = require("./library");
 const { createPasswords } = require("./passwords");
+const extWindows = require("./extension-windows");
 
 const DESKTOP_UA_TOKEN = "SolanaOSDesktop/" + app.getVersion();
 
@@ -110,8 +111,7 @@ function getRuntime(profileId) {
         const popup = new BrowserWindow({
           width: details.width ?? 360,
           height: details.height ?? 620,
-          x: details.left,
-          y: details.top,
+          show: false,
           resizable: false,
           minimizable: false,
           fullscreenable: false,
@@ -120,9 +120,15 @@ function getRuntime(profileId) {
           backgroundColor: "#111111",
           webPreferences: { session: ses, sandbox: true, contextIsolation: true },
         });
+        extWindows.markPopup(popup);
+        // On screen, over the browser window (wallets compute a position that
+        // can land off-screen or on another display), then in front with focus.
+        extWindows.placeOnScreen(popup, details, hooks.focusedShell(profileId)?.win ?? BrowserWindow.getFocusedWindow());
         rt.extensions.addTab(popup.webContents, popup);
         const url = Array.isArray(details.url) ? details.url[0] : details.url;
         if (url) popup.loadURL(url);
+        if (details.focused !== false) extWindows.bringToFront(popup);
+        else popup.showInactive();
         return popup;
       }
       const url = Array.isArray(details.url) ? details.url[0] : details.url;
@@ -132,6 +138,8 @@ function getRuntime(profileId) {
       if (!win.isDestroyed()) win.close();
     },
   });
+
+  extWindows.install(rt.extensions, () => hooks.focusedShell(profileId)?.win ?? null);
 
   // "Add to Chrome" on chromewebstore.google.com installs into this profile.
   installChromeWebStore({ session: ses, extensionsPath: rt.extensionsPath }).catch((err) => console.error("[extensions] web store setup failed:", err));
