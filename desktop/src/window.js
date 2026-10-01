@@ -222,8 +222,8 @@ class BrowserShell {
     this.win.on("close", () => this.saveSession({ closing: true }));
     this.win.on("closed", () => {
       shells.delete(this);
-      for (const t of this.tabs.values()) if (!t.view.webContents.isDestroyed()) t.view.webContents.close();
-      if (this.panel && !this.panel.view.webContents.isDestroyed()) this.panel.view.webContents.close();
+      for (const t of this.tabs.values()) if (t.view.webContents && !t.view.webContents.isDestroyed()) t.view.webContents.close();
+      if (this.panel?.view.webContents && !this.panel.view.webContents.isDestroyed()) this.panel.view.webContents.close();
       this.tabs.clear();
     });
     this.win.webContents.once("did-finish-load", () => {
@@ -374,8 +374,10 @@ class BrowserShell {
   closeTab(id, { remember = true } = {}) {
     const tab = this.tabs.get(id);
     if (!tab) return;
+    // Undefined once the page has closed itself (window.close()).
     const wc = tab.view.webContents;
-    if (remember && !wc.isDestroyed()) {
+    const alive = Boolean(wc) && !wc.isDestroyed();
+    if (remember && alive) {
       const g = tab.groupId ? this.groups.get(tab.groupId) : null;
       const url = tab.pending?.url ?? (wc.getURL() || tab.requestedUrl || "");
       if (/^https?:/.test(url)) {
@@ -402,7 +404,7 @@ class BrowserShell {
     this.tabs.delete(id);
     this.order = this.order.filter((x) => x !== id);
     this.pruneGroups();
-    if (!wc.isDestroyed()) wc.close();
+    if (alive) wc.close();
     if (!this.tabs.size) {
       this.activeId = null;
       return this.win.close();
@@ -969,27 +971,29 @@ class BrowserShell {
     if (this.win.isDestroyed() || !this.ready) return;
     const lib = this.profile.library;
     const mutedSites = new Set(lib.getSetting("mutedSites", []));
-    const tabs = this.order.map((id) => {
-      const t = this.tabs.get(id);
-      const wc = t.view.webContents;
-      const url = t.offlineFor ?? t.pending?.url ?? wc.getURL();
-      return {
-        id,
-        title: tabTitle(t, url),
-        url,
-        favicon: t.favicon,
-        loading: !t.pending && wc.isLoading(),
-        pinned: t.pinned,
-        groupId: t.groupId,
-        splitId: t.splitId,
-        audible: wc.isCurrentlyAudible(),
-        muted: wc.isAudioMuted() || mutedSites.has(hostOf(url)),
-        crashed: t.crashed,
-      };
-    });
+    const tabs = this.order
+      .filter((id) => this.tabs.get(id)?.view.webContents && !this.tabs.get(id).view.webContents.isDestroyed())
+      .map((id) => {
+        const t = this.tabs.get(id);
+        const wc = t.view.webContents;
+        const url = t.offlineFor ?? t.pending?.url ?? wc.getURL();
+        return {
+          id,
+          title: tabTitle(t, url),
+          url,
+          favicon: t.favicon,
+          loading: !t.pending && wc.isLoading(),
+          pinned: t.pinned,
+          groupId: t.groupId,
+          splitId: t.splitId,
+          audible: wc.isCurrentlyAudible(),
+          muted: wc.isAudioMuted() || mutedSites.has(hostOf(url)),
+          crashed: t.crashed,
+        };
+      });
     const t = this.activeTab;
     const wc = t?.view.webContents;
-    const url = t ? t.offlineFor ?? t.pending?.url ?? wc.getURL() : "";
+    const url = t && wc && !wc.isDestroyed() ? t.offlineFor ?? t.pending?.url ?? wc.getURL() : "";
     const meta = this.profile.meta;
     const favorites = lib.bookmarks().filter((b) => b.favorite);
     this.win.webContents.send("shell:state", {
@@ -1171,7 +1175,12 @@ function wireTab(tab) {
       stopWatching(tab);
     }
   });
-  wc.on("destroyed", () => stopWatching(tab));
+  wc.on("destroyed", () => {
+    stopWatching(tab);
+    // A page that closed itself (window.close(), e.g. a wallet's onboarding
+    // page when it's done) leaves the tab strip right away.
+    for (const s of shells) if (s.tabs.get(tab.id) === tab) s.closeTab(tab.id, { remember: false });
+  });
   wc.on("did-navigate", async (_e, navUrl) => {
     const s = owner();
     if (!s) return;
