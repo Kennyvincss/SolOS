@@ -109,6 +109,9 @@ jobs:
           echo "--- bare Electron window (no STRATA code)"
           UA=chrome timeout 150 xvfb-run -a npx electron test/check-turnstile-bare.js > electron.log 2>&1 || true
           grep "^\[bare" electron.log | cut -c1-400 || true
+          for v in "PERM=1" "PERM=1 PS=1" "PERM=1 PS=1 BRAND=1 SHIM=1"; do
+            env UA=chrome SNAPSHOT= $v timeout 150 xvfb-run -a npx electron test/check-turnstile-bare.js 2>&1 | grep "^\[bare" | grep -E "PASSED|NOT PASSED" | cut -c1-200 || true
+          done
           echo "--- what a page can see: Chrome vs Electron (differences only)"
           python3 - <<'PY'
           import json, re
