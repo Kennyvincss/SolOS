@@ -15,11 +15,14 @@ const UAS = {
   firefox: `Mozilla/5.0 (${process.platform === "win32" ? "Windows NT 10.0; Win64; x64" : process.platform === "darwin" ? "Macintosh; Intel Mac OS X 10.15" : "X11; Linux x86_64"}; rv:140.0) Gecko/20100101 Firefox/140.0`,
   edge: `Mozilla/5.0 (${plat}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${major}.0.0.0 Safari/537.36 Edg/${major}.0.0.0`,
 };
-const tag = `[google MODE=${MODE} UA=${process.env.UA || "-"} BRAND=${process.env.BRAND || 0}]`;
+const tag = `[google MODE=${MODE} POPUP=${process.env.POPUP || 0} UA=${process.env.UA || "-"} BRAND=${process.env.BRAND || 0}]`;
+const SIGNIN = "https://accounts.google.com/ServiceLogin?hl=en&continue=https://www.google.com/";
+let opener = null;
 if (MODE === "bare" && process.env.UA) app.userAgentFallback = UAS[process.env.UA];
 if (MODE === "strata") {
   const http = require("node:http");
-  const home = http.createServer((_q, r) => r.end("<!doctype html><title>Home</title>home")).listen(0);
+  const home = http.createServer((q, r) => { r.setHeader("content-type", "text/html"); r.end(q.url.startsWith("/site") ? `<!doctype html><title>Site</title><button id="g" style="width:300px;height:100px">Continue with Google</button><script>document.getElementById("g").onclick = () => window.open(${JSON.stringify(SIGNIN)}, "google", "width=500,height=650");</script>` : "<!doctype html><title>Home</title>home"); }).listen(0);
+  opener = `http://127.0.0.1:${home.address().port}/site`;
   process.env.SOLANA_OS_URL = `http://127.0.0.1:${home.address().port}`;
   if (process.env.UA) process.env.STRATA_TEST_UA = UAS[process.env.UA];
   require("../src/main.js");
@@ -49,14 +52,34 @@ app.whenReady().then(async () => {
   if (MODE === "strata") {
     await wait(2500);
     const s = [...require("../src/window").shells][0];
-    wc = s.newTab("about:blank");
+    if (process.env.POPUP) {
+      // Like "Continue with Google": the site opens Google's sign-in in a popup.
+      const site = s.newTab(opener);
+      await new Promise((r) => (site.isLoading() ? site.once("did-finish-load", r) : r()));
+      await wait(500);
+      const before = new Set(BrowserWindow.getAllWindows());
+      const b = await site.executeJavaScript("(() => { const r = document.getElementById('g').getBoundingClientRect(); return { x: Math.round(r.x + 20), y: Math.round(r.y + 20) }; })()");
+      site.sendInputEvent({ type: "mouseDown", x: b.x, y: b.y, button: "left", clickCount: 1 });
+      site.sendInputEvent({ type: "mouseUp", x: b.x, y: b.y, button: "left", clickCount: 1 });
+      let pop = null;
+      for (let i = 0; i < 40 && !pop; i++) {
+        await wait(250);
+        pop = BrowserWindow.getAllWindows().find((w) => !before.has(w));
+      }
+      if (!pop) {
+        console.log(tag, "NO POPUP");
+        return app.exit(0);
+      }
+      wc = pop.webContents;
+      await new Promise((r) => (wc.isLoading() ? wc.once("did-finish-load", r) : r()));
+    } else wc = s.newTab("about:blank");
   } else {
     const win = new BrowserWindow({ width: 1100, height: 900, webPreferences: { session: session.fromPartition("persist:g"), sandbox: true } });
     wc = win.webContents;
     await wc.loadURL("about:blank");
   }
   if (process.env.BRAND) await brand(wc).catch((e) => console.log(tag, "brand failed", String(e)));
-  await wc.loadURL("https://accounts.google.com/ServiceLogin?hl=en&continue=https://www.google.com/").catch(() => {});
+  if (!process.env.POPUP) await wc.loadURL(SIGNIN).catch(() => {});
   let ok = false;
   for (let i = 0; i < 40 && !ok; i++) {
     await wait(500);
