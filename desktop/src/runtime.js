@@ -200,9 +200,13 @@ function webAuthFlow(ses, extensionId, { url, interactive }) {
     }
     if (target.protocol !== "https:") return reject(new Error("Auth URL must be https"));
     const redirectPrefix = `https://${extensionId}.chromiumapp.org/`;
+    // Attached to the window you're in, so it stays in front of it instead of
+    // ending up behind STRATA (the extension would wait for it forever).
+    const parent = BrowserWindow.getFocusedWindow() ?? undefined;
     const win = new BrowserWindow({
       width: 480,
       height: 720,
+      parent,
       show: interactive !== false,
       title: "Sign in",
       autoHideMenuBar: true,
@@ -228,6 +232,7 @@ function webAuthFlow(ses, extensionId, { url, interactive }) {
     win.webContents.on("will-frame-navigate", (e) => check(e, e.url));
     win.on("closed", () => finish(new Error("The user did not approve access.")));
     if (interactive === false) setTimeout(() => finish(new Error("User interaction required.")), 15000);
+    if (interactive !== false) win.once("ready-to-show", () => !win.isDestroyed() && (win.moveTop(), win.focus()));
     win.loadURL(target.toString()).catch(() => {});
   });
 }

@@ -46,7 +46,7 @@ app.whenReady().then(async () => {
   const files = [];
   const walk = (d) => { for (const f of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, f.name); if (f.isDirectory()) walk(p); else if (p.endsWith(".js")) files.push(p); } };
   walk(ext.path);
-  const pats = [/login\/start/g, /launchWebAuthFlow/g, /chromiumapp/g, /login\/callback/g, /onUpdated\.addListener/g, /connect\.phantom\.app/g];
+  const pats = process.env.SRC ? [/login\/start/g, /launchWebAuthFlow/g, /chromiumapp/g, /login\/callback/g, /onUpdated\.addListener/g, /connect\.phantom\.app/g] : [];
   for (const f of files) {
     const src = fs.readFileSync(f, "utf8");
     for (const re of pats) for (const m of src.matchAll(re)) log("src", path.relative(ext.path, f), re.source, JSON.stringify(src.slice(Math.max(0, m.index - 400), m.index + 500)));
@@ -71,7 +71,7 @@ app.whenReady().then(async () => {
   }
   log("clicked Google", clickedGoogle);
   fs.writeFileSync(path.join(OUT, "pg-0.png"), (await ob.capturePage()).toPNG());
-  for (let i = 1; i <= 8; i++) {
+  for (let i = 1; i <= 2; i++) {
     await sleep(3000);
     const wins = BrowserWindow.getAllWindows().map((w) => ({ id: w.id, url: w.webContents.getURL().slice(0, 140), visible: w.isVisible(), focused: w.isFocused(), bounds: w.getBounds(), title: w.getTitle() }));
     log(`after ${i * 3}s windows`, JSON.stringify(wins));
@@ -80,6 +80,18 @@ app.whenReady().then(async () => {
     for (const w of BrowserWindow.getAllWindows()) if (/google|phantom\.app|auth/.test(w.webContents.getURL())) {
       const t = await w.webContents.executeJavaScript("document.body ? document.body.innerText.replace(/\\s+/g,' ').slice(0,200) : ''").catch(() => "");
       log("  auth window text", w.id, JSON.stringify(t));
+    }
+  }
+  // Pretend the sign-in finished: the page sends the browser to the
+  // extension's chromiumapp.org address, which the browser must catch and hand
+  // back to Phantom (which then rejects the made-up code and leaves "Logging in").
+  const auth = BrowserWindow.getAllWindows().find((w) => /accounts\.google|phantom\.app/.test(w.webContents.getURL()));
+  log("auth window parent", auth ? String(auth.getParentWindow()?.webContents.getURL()).slice(0, 80) : "none");
+  if (auth) {
+    await auth.webContents.executeJavaScript(`location.href = "https://${PHANTOM}.chromiumapp.org/?code=made-up&state=made-up"; true`).catch(() => {});
+    for (let i = 0; i < 6; i++) {
+      await sleep(1000);
+      log(`after redirect ${i + 1}s`, "auth window open", !auth.isDestroyed(), JSON.stringify(await ob.executeJavaScript(STATE).catch(() => null)).slice(0, 300));
     }
   }
   for (const [i, w] of BrowserWindow.getAllWindows().entries()) fs.writeFileSync(path.join(OUT, `pg-win${i}.png`), (await w.webContents.capturePage()).toPNG());
