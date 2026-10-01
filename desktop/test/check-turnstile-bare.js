@@ -9,6 +9,20 @@ const PAGES = (process.env.TURNSTILE_PAGES || "https://2captcha.com/demo/cloudfl
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const tag = `[bare UA=${process.env.UA || "default"} SHIM=${process.env.SHIM || 0} BRAND=${process.env.BRAND || 0}]`;
 
+const frames = new Map(); // DevTools session -> frame URL
+
+/** Visible text of Cloudflare's widget (inside its closed shadow DOM), read through the DevTools protocol. */
+async function widgetText(wc) {
+  const out = [];
+  for (const [sid, url] of frames) {
+    if (!/challenges\.cloudflare\.com/.test(url)) continue;
+    const doc = await wc.debugger.sendCommand("DOM.getDocument", { depth: -1, pierce: true }, sid).catch(() => null);
+    const walk = (n) => { if (!n) return; if (n.nodeType === 3 && n.nodeValue.trim()) out.push(n.nodeValue.trim()); for (const c of [...(n.children || []), ...(n.shadowRoots || []), ...(n.contentDocument ? [n.contentDocument] : [])]) walk(c); };
+    walk(doc && doc.root);
+  }
+  return out.join(" | ").slice(0, 200);
+}
+
 /** Chrome's client hints (brands incl. "Google Chrome") via the DevTools protocol, for the page and every frame/worker. */
 function brandAsChrome(wc) {
   const major = process.versions.chrome.split(".")[0];
@@ -20,14 +34,20 @@ function brandAsChrome(wc) {
     fullVersion: full, platform: plat, platformVersion: "", architecture: "x86", model: "", mobile: false, bitness: "64", wow64: false,
   };
   const params = { userAgent: app.userAgentFallback, userAgentMetadata: meta };
+  if (!process.env.BRAND) return dbg.sendCommand("Target.setAutoAttach", { autoAttach: true, waitForDebuggerOnStart: false, flatten: true }).catch(() => {});
   const dbg = wc.debugger;
-  dbg.attach("1.3");
+  if (!dbg.isAttached()) dbg.attach("1.3");
   const setup = async (sessionId) => {
     await dbg.sendCommand("Emulation.setUserAgentOverride", params, sessionId).catch((e) => console.log(tag, "override failed", String(e)));
     await dbg.sendCommand("Target.setAutoAttach", { autoAttach: true, waitForDebuggerOnStart: true, flatten: true }, sessionId).catch(() => {});
     if (sessionId) await dbg.sendCommand("Runtime.runIfWaitingForDebugger", {}, sessionId).catch(() => {});
   };
-  dbg.on("message", (_e, method, p) => { if (method === "Target.attachedToTarget") setup(p.sessionId); });
+  dbg.on("message", (_e, method, p) => {
+    if (method !== "Target.attachedToTarget") return;
+    frames.set(p.sessionId, p.targetInfo.url);
+    if (process.env.BRAND) setup(p.sessionId);
+    else dbg.sendCommand("Runtime.runIfWaitingForDebugger", {}, p.sessionId).catch(() => {});
+  });
   return setup();
 }
 
@@ -36,16 +56,16 @@ app.whenReady().then(async () => {
   if (process.env.SHIM) ses.registerPreloadScript({ id: "shim", type: "frame", filePath: path.join(__dirname, "chrome-shim.js") });
   const win = new BrowserWindow({ width: 1280, height: 900, webPreferences: { session: ses, sandbox: true, contextIsolation: true, nodeIntegrationInSubFrames: Boolean(process.env.SHIM) } });
   const wc = win.webContents;
-  if (process.env.BRAND) {
-    await wc.loadURL("about:blank"); // the debugger answers only once a page is loaded
-    await brandAsChrome(wc);
-  }
+  await wc.loadURL("about:blank"); // the debugger answers only once a page is loaded
+  await brandAsChrome(wc); // BRAND=1: override; otherwise only watch frames
   for (const url of PAGES) {
     await wc.loadURL(url).catch(() => {});
     if (url === PAGES[0]) console.log(tag, "ua", await wc.executeJavaScript("navigator.userAgent + ' | brands: ' + (navigator.userAgentData ? navigator.userAgentData.brands.map((b) => b.brand).join('/') : '') + ' | chrome keys: ' + Object.keys(window.chrome || {}).join(',')"));
     let token = -1, clicked = false;
+    const seen = [];
     for (let i = 0; i < 26 && !(token > 0); i++) {
       await wait(1000);
+      if ([2, 6, 12, 20, 25].includes(i)) seen.push(`${i}s: ${await widgetText(wc)}`);
       token = await wc.executeJavaScript(`(() => { const i = document.querySelector('[name="cf-turnstile-response"]'); return i ? i.value.length : -1; })()`).catch(() => -2);
       if (!(token > 0) && !clicked && i >= 3) {
         const r = await wc.executeJavaScript(`(() => { const i = document.querySelector('[name="cf-turnstile-response"]'); const box = i && (i.closest('.cf-turnstile, [class*="turnstile"]') || i.parentElement); if (!box) return null; const b = box.getBoundingClientRect(); return { x: Math.round(b.x + 30), y: Math.round(b.y + Math.min(b.height, 65) / 2) }; })()`).catch(() => null);
@@ -60,7 +80,7 @@ app.whenReady().then(async () => {
         }
       }
     }
-    console.log(tag, url, token > 0 ? "PASSED" : "NOT PASSED", JSON.stringify({ token }));
+    console.log(tag, url, token > 0 ? "PASSED" : "NOT PASSED", JSON.stringify({ token, widget: seen }));
   }
   app.exit(0);
 });
