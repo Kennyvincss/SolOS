@@ -106,8 +106,7 @@ jobs:
           timeout 200 xvfb-run -a node test/check-turnstile-chrome.mjs 2>&1 | grep "^\[turnstile" || true
           echo "--- bare Electron window (no STRATA code)"
           UA=chrome timeout 150 xvfb-run -a npx electron test/check-turnstile-bare.js 2>&1 | grep "^\[bare" || true
-          UA=chrome SWGL=1 timeout 150 xvfb-run -a npx electron test/check-turnstile-bare.js 2>&1 | grep "^\[bare" || true
-          UA=chrome SWGL=1 BRAND=1 timeout 150 xvfb-run -a npx electron test/check-turnstile-bare.js 2>&1 | grep "^\[bare" || true
+          UA=chrome BRAND=1 timeout 150 xvfb-run -a npx electron test/check-turnstile-bare.js 2>&1 | grep "^\[bare" || true
       - name: Jupiter links
         if: contains(inputs.checks, 'jupiter')
         run: timeout 200 xvfb-run -a npx electron test/check-jupiter.js 2>&1 | grep "^\\[jup" || true

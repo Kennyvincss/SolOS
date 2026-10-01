@@ -39,8 +39,6 @@ function brandAsChrome(wc) {
     fullVersion: full, platform: plat, platformVersion: "", architecture: "x86", model: "", mobile: false, bitness: "64", wow64: false,
   };
   const params = { userAgent: app.userAgentFallback, userAgentMetadata: meta };
-  dbg.sendCommand("Target.setDiscoverTargets", { discover: true }).catch(() => {});
-  if (!process.env.BRAND) return dbg.sendCommand("Target.setAutoAttach", { autoAttach: true, waitForDebuggerOnStart: false, flatten: true }).catch(() => {});
   const dbg = wc.debugger;
   if (!dbg.isAttached()) dbg.attach("1.3");
   const setup = async (sessionId) => {
@@ -56,6 +54,8 @@ function brandAsChrome(wc) {
     if (process.env.BRAND) setup(p.sessionId);
     else dbg.sendCommand("Runtime.runIfWaitingForDebugger", {}, p.sessionId).catch(() => {});
   });
+  dbg.sendCommand("Target.setDiscoverTargets", { discover: true }).catch(() => {});
+  if (!process.env.BRAND) return dbg.sendCommand("Target.setAutoAttach", { autoAttach: true, waitForDebuggerOnStart: false, flatten: true }).catch(() => {});
   return setup();
 }
 
