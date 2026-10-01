@@ -93,6 +93,7 @@ app.whenReady().then(async () => {
         await wait(800);
         const p3 = BrowserWindow.getAllWindows().find((w) => !before3.has(w));
         const opened = BrowserWindow.getAllWindows().find((w) => w.id === resp?.id);
+        console.log("[ext-windows] new windows", BrowserWindow.getAllWindows().filter((w) => !before3.has(w)).map((w) => `${w.id} ${w.webContents.getURL()}`));
         check(`worker-opened popup ${round} shows`, opened && opened.isVisible() && !before3.has(opened), { resp, p3: p3?.id });
         if (opened && opened !== p3) opened.close();
         p3?.close();

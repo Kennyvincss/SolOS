@@ -126,6 +126,7 @@ async function drive(wc, words, password) {
 }
 
 process.on("unhandledRejection", (e) => log("UNHANDLED", String(e && e.stack || e)));
+process.on("uncaughtException", (e) => log("UNCAUGHT", String(e && e.stack || e)));
 app.whenReady().then(async () => {
   const ses = session.fromPartition("persist:solanaos");
   const shellWin = BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().includes("shell.html")) || BrowserWindow.getAllWindows()[0];
