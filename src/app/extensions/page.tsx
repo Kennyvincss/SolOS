@@ -7,7 +7,7 @@ import { BROWSER_EXTENSIONS, chromeWebStoreUrl } from "@/lib/extensions/browser"
 import { useAppShell, useDesktopExtensions, type StoreExtension } from "@/lib/client/desktop";
 import { appLogo } from "@/lib/catalog/apps";
 
-const RELEASES_URL = "https://github.com/Kennyvincss/SolOS/releases/latest";
+const RELEASES_URL = "https://stratabrowser.xyz";
 const DEFAULT_QUERY = "solana";
 
 type Desktop = ReturnType<typeof useDesktopExtensions>;

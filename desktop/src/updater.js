@@ -8,7 +8,7 @@
 
 const { app, dialog, shell } = require("electron");
 
-const RELEASES_URL = "https://github.com/Kennyvincss/SolOS/releases/latest";
+const RELEASES_URL = "https://stratabrowser.xyz";
 const CHECK_EVERY_MS = 4 * 60 * 60 * 1000;
 
 let updater = null;

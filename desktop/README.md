@@ -43,6 +43,8 @@ A desktop browser for the Solana ecosystem, built on Chromium (Electron).
 
 ## Get the installers
 
+Download the latest version at **[stratabrowser.xyz](https://stratabrowser.xyz)**.
+
 Installers are built by GitHub Actions (`.github/workflows/desktop.yml`):
 
 1. On GitHub, open **Actions → Desktop app → Run workflow**.

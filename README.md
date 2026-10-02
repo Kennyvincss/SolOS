@@ -12,7 +12,8 @@ extensions and a developer platform, all in one fast, dark-first interface.
 `desktop/` contains **STRATA**, a Chromium browser with STRATA as
 its home and real Chrome wallet extensions (Phantom, Solflare, Backpack), plus
 a password manager, bookmarks, account sync and automatic updates. See
-[desktop/README.md](desktop/README.md). Installers for macOS, Windows and Linux
+[desktop/README.md](desktop/README.md). Download it at
+**[stratabrowser.xyz](https://stratabrowser.xyz)**. Installers for macOS, Windows and Linux
 are built by the "Desktop app" GitHub Actions workflow. The desktop app is
 licensed GPL-3.0.
 
