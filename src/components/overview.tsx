@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Activity, ArrowRight, Bell, Download, Flame, LayoutGrid, Newspaper, Star, TrendingUp, Wallet } from "lucide-react";
+import { ArrowRight, Bell, Download, Flame, LayoutGrid, Newspaper, Star, TrendingUp, Wallet } from "lucide-react";
 import { AreaChart, Meter } from "./charts";
 import { AppCard, NewsRow } from "./domain";
 import { Card, CardHeader, DataBadge, Monogram, Select, Skeleton, SkeletonRows, StatCard, Tabs, Change, cn } from "./ui";
@@ -12,7 +12,7 @@ import { useSession } from "@/lib/client/session";
 import { useStore } from "@/lib/client/store";
 import { APPS } from "@/lib/catalog/apps";
 import type { AppMetrics, NewsItem, Portfolio, PricePoint, Sourced, Token } from "@/lib/types";
-import { fmtNum, fmtUsd } from "@/lib/format";
+import { fmtUsd } from "@/lib/format";
 
 const SOL = "So11111111111111111111111111111111111111112";
 type Range = "1D" | "7D" | "30D" | "90D";
@@ -38,13 +38,12 @@ function Kpis({ tokens, loadingTokens }: { tokens: Token[]; loadingTokens: boole
   const followed = useStore((st) => st.followed.length);
   const alerts = useStore((st) => st.notifications.filter((n) => !n.read && n.category === "wallet").length);
   const port = useApi<Sourced<Portfolio>>(s.address ? `/api/wallets/${s.address}` : null, { refreshMs: 60_000 });
-  const net = useApi<Sourced<{ tps?: number; epoch: number; epochProgress: number }>>("/api/network", { refreshMs: 30_000 });
   const sol = tokens.find((t) => t.mint === SOL);
   const watched = tokens.filter((t) => watch.includes(t.mint) && t.change24h !== undefined);
   const avg = watched.length ? watched.reduce((a, t) => a + (t.change24h ?? 0), 0) / watched.length : undefined;
 
   return (
-    <div className="no-scrollbar -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-5 [&>*]:min-w-[210px] [&>*]:snap-start sm:[&>*]:min-w-0">
+    <div className="no-scrollbar -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-4 [&>*]:min-w-[210px] [&>*]:snap-start sm:[&>*]:min-w-0">
       {s.address ? (
         <StatCard
           icon={<Wallet size={17} />}
@@ -68,15 +67,6 @@ function Kpis({ tokens, loadingTokens }: { tokens: Token[]; loadingTokens: boole
         </Card>
       )}
       <StatCard icon={<Flame size={17} />} tone="red" label="SOL price" href={`/tokens/${SOL}`} loading={loadingTokens} value={fmtUsd(sol?.priceUsd)} change={sol?.change24h} changeLabel="24h" />
-      <StatCard
-        icon={<Activity size={17} />}
-        tone="green"
-        label="Network speed"
-        href="/discover"
-        loading={net.loading}
-        value={net.data?.data.tps !== undefined ? `${fmtNum(Math.round(net.data.data.tps))} TPS` : "—"}
-        sub={net.data ? `Epoch ${net.data.data.epoch} · ${Math.round(net.data.data.epochProgress * 100)}%` : undefined}
-      />
       <StatCard icon={<Star size={17} />} tone="pink" label="Watchlist" href="/tokens?tab=watchlist" loading={loadingTokens} value={`${watch.length} ${watch.length === 1 ? "token" : "tokens"}`} change={avg} changeLabel="avg 24h" />
       <StatCard icon={<Bell size={17} />} tone="amber" label="Wallet alerts" href="/notifications" value={String(alerts)} sub={`from ${followed} followed ${followed === 1 ? "wallet" : "wallets"}`} />
     </div>

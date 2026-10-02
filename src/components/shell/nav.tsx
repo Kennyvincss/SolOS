@@ -23,7 +23,7 @@ type NavGroup = { id: string; title?: string; badge?: string; add?: { href: stri
 const GROUPS: NavGroup[] = [
   { id: "main", items: [{ href: "/", label: "Dashboard", icon: "Home" }, { href: "/search" }, { href: "/notifications" }] },
   { id: "discover", title: "Discover", items: [{ href: "/discover", label: "Explore" }, { href: "/tokens" }, { href: "/apps?category=NFTs", label: "NFTs", icon: "Images" }, { href: "/defi" }, { href: "/rwa" }, { href: "/news" }] },
-  { id: "markets", title: "Markets", items: [{ href: "/?view=market", label: "Market Overview", icon: "Activity" }, { href: "/tokens?tab=trending", label: "Trending", icon: "Flame" }, { href: "/tokens?tab=watchlist", label: "Watchlist", icon: "Star" }, { href: "/portfolio" }] },
+  { id: "markets", title: "Markets", items: [{ href: "/tokens?tab=trending", label: "Trending", icon: "Flame" }, { href: "/tokens?tab=watchlist", label: "Watchlist", icon: "Star" }, { href: "/portfolio" }] },
   { id: "tools", title: "Tools", items: [{ href: "/ai" }, { href: "/wallets", label: "Wallets" }, { href: "/tx", label: "Transactions" }, { href: "/security" }, { href: "/payments" }, { href: "/developers", label: "Developer" }] },
   { id: "store", title: "App Store", badge: "New", add: { href: "/apps", label: "Browse apps" }, items: [{ href: "/apps" }, { href: "/extensions" }] },
   { id: "library", title: "Library", items: [{ href: "/bookmarks" }, { href: "/history" }, { href: "/reading-list" }] },
