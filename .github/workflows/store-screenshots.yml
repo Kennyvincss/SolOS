@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   shots:
@@ -34,3 +34,10 @@ jobs:
         with:
           name: store-screenshots
           path: ${{ runner.temp }}/shots/*.png
+      # Also on a "store-screenshots" pre-release, for direct download links.
+      - name: Publish to the store-screenshots release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view store-screenshots >/dev/null 2>&1 || gh release create store-screenshots --prerelease --title "Microsoft Store screenshots" --notes "Screenshots for the Microsoft Store listing (1920x1080)."
+          gh release upload store-screenshots "$RUNNER_TEMP"/shots/*.png --clobber
