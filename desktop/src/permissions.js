@@ -7,7 +7,8 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
-const { dialog, BrowserWindow } = require("electron");
+const { BrowserWindow } = require("electron");
+const prompt = require("./permission-prompt");
 const { SOLANA_OS_URL } = require("./lib");
 
 /** Granted without asking, as in Chrome. */
@@ -65,10 +66,10 @@ function keysFor(permission, details) {
 }
 
 /**
- * Wire one profile's session. `dir` is the profile folder; `windowFor(wc)`
- * returns the browser window to attach the prompt to.
+ * Wire one profile's session. `dir` is the profile folder; `shellFor(wc)`
+ * returns the browser window (shell) a tab is in, if any.
  */
-function install(ses, dir, windowFor) {
+function install(ses, dir, shellFor) {
   const file = path.join(dir, "permissions.json");
   let store = {};
   try {
@@ -119,22 +120,19 @@ function install(ses, dir, windowFor) {
           return origin;
         }
       })();
-      const parent = windowFor(wc) ?? BrowserWindow.getFocusedWindow() ?? undefined;
-      const ask = dialog
-        .showMessageBox(parent, {
-          type: "question",
-          buttons: ["Allow", "Block"],
-          defaultId: 1,
-          cancelId: 1,
-          noLink: true,
-          title: "Site permission",
-          message: `${host} wants to ${what}`,
-          detail: "STRATA will remember your choice for this site.",
-        })
-        .then(({ response }) => {
-          const ok = response === 0;
-          remember(origin, keys, ok ? "allow" : "block");
-          return ok;
+      // In the tab's browser window, under the address bar; in an extension
+      // or sign-in popup, at the top of that popup.
+      const shell = wc ? shellFor(wc) : null;
+      const own = wc && !wc.isDestroyed() ? BrowserWindow.fromWebContents(wc) : null;
+      const parent = shell?.win ?? own ?? BrowserWindow.getFocusedWindow();
+      const anchor = shell && parent === shell.win ? () => ({ left: shell.sidebarWidth() + 104, top: shell.toolbarHeight() - 4 }) : null;
+      const ask = prompt
+        .ask(parent, { host, what, anchor })
+        .then((answer) => {
+          // Closing it without choosing asks again next time, like Chrome.
+          if (answer === "dismiss") return false;
+          remember(origin, keys, answer);
+          return answer === "allow";
         })
         .catch(() => false)
         .finally(() => pending.delete(id));

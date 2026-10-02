@@ -231,6 +231,7 @@ app.whenReady().then(() => {
   ElectronChromeExtensions.handleCRXProtocol(session.defaultSession);
   ipc.register();
   bubbles.registerIpc();
+  require("./permission-prompt").registerIpc();
   require("./popmenu").registerIpc();
   menus.buildMenuBar(ipc.actionsFor());
   initUpdater();

@@ -10,11 +10,25 @@ const site = http.createServer((_q, r) => { r.setHeader("content-type", "text/ht
 const home = http.createServer((_q, r) => { r.setHeader("content-type", "text/html"); r.end(PAGE); }).listen(0);
 process.env.SOLANA_OS_URL = `http://127.0.0.1:${home.address().port}`;
 
-const { app, dialog } = require("electron");
+const { app } = require("electron");
 const asked = [];
-let answer = 0; // 0 = Allow, 1 = Block
-dialog.showMessageBox = async (_w, opts) => { asked.push((opts || _w).message); return { response: answer }; };
+let answer = "allow"; // button the test clicks: allow | block | dismiss
+let placement = null;
 require("../src/main.js");
+
+// Answer STRATA's own prompt window (not a system dialog) by clicking its buttons.
+app.on("browser-window-created", (_e, win) => {
+  win.webContents.once("did-finish-load", async () => {
+    if (!win.webContents.getURL().endsWith("/permission.html")) return;
+    await new Promise((r) => setTimeout(r, 300));
+    const text = await win.webContents.executeJavaScript("document.body.innerText");
+    asked.push(text.replace(/\s+/g, " "));
+    const parent = win.getParentWindow();
+    placement = { inside: Boolean(parent), visible: win.isVisible(), prompt: win.getBounds(), parent: parent?.getContentBounds() };
+    if (process.env.PERM_SHOT) require("node:fs").writeFileSync(process.env.PERM_SHOT, (await parent.webContents.capturePage()).toPNG()), require("node:fs").writeFileSync(process.env.PERM_SHOT + ".prompt.png", (await win.webContents.capturePage()).toPNG());
+    await win.webContents.executeJavaScript(`document.getElementById(${JSON.stringify(answer)}).click()`);
+  });
+});
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const checks = [];
@@ -29,16 +43,26 @@ app.whenReady().then(async () => {
     const before = await tab.executeJavaScript("q()");
     check("a new site has no permissions", Object.entries(before).every(([k, v]) => v !== "granted"), before);
 
-    answer = 0;
+    answer = "dismiss";
+    const n0 = await tab.executeJavaScript("Notification.requestPermission()", true);
+    check("closing the prompt refuses for now", n0 !== "granted" && asked.length === 1, { n0, asked });
+
+    answer = "allow";
     const n = await tab.executeJavaScript("Notification.requestPermission()", true);
-    check("asking shows a prompt", asked.length === 1 && /wants to show notifications/.test(asked[0]), asked);
+    check("asking again shows the prompt in STRATA's window", asked.length === 2 && /wants to Show notifications/.test(asked[1]), asked);
+    const p = placement;
+    check(
+      "the prompt sits inside the browser window, under the toolbar",
+      p && p.inside && p.visible && p.prompt.y >= p.parent.y && p.prompt.y < p.parent.y + 140 && p.prompt.x >= p.parent.x && p.prompt.x + p.prompt.width <= p.parent.x + p.parent.width,
+      p,
+    );
     check("Allow grants it", n === "granted", n);
     const n2 = await tab.executeJavaScript("Notification.requestPermission()", true);
-    check("the choice is remembered (no second prompt)", n2 === "granted" && asked.length === 1, { n2, asked });
+    check("the choice is remembered (no second prompt)", n2 === "granted" && asked.length === 2, { n2, asked });
 
-    answer = 1;
+    answer = "block";
     const geo = await tab.executeJavaScript("new Promise((r) => navigator.geolocation.getCurrentPosition(() => r('ok'), (e) => r('error ' + e.code), { timeout: 3000 }))", true);
-    check("Block refuses location", /error 1/.test(geo) && asked.some((m) => /know your location/.test(m)), { geo, asked });
+    check("Block refuses location", /error 1/.test(geo) && asked.some((m) => /Know your location/.test(m)), { geo, asked });
     const after = await tab.executeJavaScript("q()");
     check("other permissions still not granted", after.camera !== "granted" && after.microphone !== "granted" && after.geolocation !== "granted", after);
 

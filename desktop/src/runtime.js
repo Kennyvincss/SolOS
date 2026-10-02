@@ -175,7 +175,7 @@ function getRuntime(profileId) {
   extWindows.install(rt.extensions, () => hooks.focusedShell(profileId)?.win ?? null);
 
   // Camera, microphone, location, notifications, ...: ask first, like Chrome.
-  rt.permissions = permissions.install(ses, dir, (wc) => (wc ? hooks.shellForWebContents(wc)?.win : null) ?? hooks.focusedShell(profileId)?.win ?? null);
+  rt.permissions = permissions.install(ses, dir, (wc) => hooks.shellForWebContents(wc) ?? null);
 
   // "Add to Chrome" on chromewebstore.google.com installs into this profile.
   installChromeWebStore({ session: ses, extensionsPath: rt.extensionsPath }).catch((err) => console.error("[extensions] web store setup failed:", err));
