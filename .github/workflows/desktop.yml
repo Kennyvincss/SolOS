@@ -84,6 +84,15 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASS: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM: ${{ secrets.APPLE_TEAM_ID }}
+          # Azure Trusted Signing (Windows): removes the "unknown publisher"
+          # SmartScreen warning once set up. See desktop/SIGNING.md.
+          AZ_TENANT: ${{ secrets.AZURE_TENANT_ID }}
+          AZ_CLIENT: ${{ secrets.AZURE_CLIENT_ID }}
+          AZ_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZ_ENDPOINT: ${{ vars.AZURE_SIGNING_ENDPOINT }}
+          AZ_ACCOUNT: ${{ vars.AZURE_SIGNING_ACCOUNT }}
+          AZ_PROFILE: ${{ vars.AZURE_SIGNING_PROFILE }}
+          AZ_PUBLISHER: ${{ vars.AZURE_SIGNING_PUBLISHER }}
         run: |
           put() { if [ -n "$2" ]; then { echo "$1<<__EOF__"; echo "$2"; echo "__EOF__"; } >> "$GITHUB_ENV"; fi; }
           if [ "$RUNNER_OS" = "macOS" ] && [ -n "$MAC_CERT" ]; then
@@ -92,8 +101,17 @@ jobs:
           else
             echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> "$GITHUB_ENV"
           fi
-          if [ "$RUNNER_OS" = "Windows" ] && [ -n "$WIN_CERT" ]; then
+          if [ "$RUNNER_OS" = "Windows" ] && [ -n "$AZ_SECRET" ] && [ -n "$AZ_ENDPOINT" ]; then
+            put AZURE_TENANT_ID "$AZ_TENANT"; put AZURE_CLIENT_ID "$AZ_CLIENT"; put AZURE_CLIENT_SECRET "$AZ_SECRET"
+            node -e '
+              const fs = require("fs"), p = JSON.parse(fs.readFileSync("package.json", "utf8")), e = process.env;
+              p.build.win.azureSignOptions = { endpoint: e.AZ_ENDPOINT, codeSigningAccountName: e.AZ_ACCOUNT, certificateProfileName: e.AZ_PROFILE, publisherName: e.AZ_PUBLISHER };
+              fs.writeFileSync("package.json", JSON.stringify(p, null, 2));
+            '
+          elif [ "$RUNNER_OS" = "Windows" ] && [ -n "$WIN_CERT" ]; then
             put WIN_CSC_LINK "$WIN_CERT"; put WIN_CSC_KEY_PASSWORD "$WIN_PASS"
+          elif [ "$RUNNER_OS" = "Windows" ]; then
+            echo "::warning::Windows build is unsigned, so SmartScreen will warn people who download it. See desktop/SIGNING.md."
           fi
 
       - name: Build (and publish on tags)
