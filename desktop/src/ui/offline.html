@@ -8,7 +8,10 @@
   </head>
   <body>
     <main>
-      <img src="brand-mark.png" class="mark" alt="" />
+      <picture>
+        <source srcset="brand-mark-light.svg" media="(prefers-color-scheme: light)" />
+        <img src="brand-mark.png" class="mark" alt="" />
+      </picture>
       <div class="status"><span class="pulse" aria-hidden="true"></span><span id="status-text">Waiting for a connection…</span></div>
       <h1>Please check your internet connection</h1>
       <p class="sub">STRATA will reconnect and reload this page automatically. While you wait, learn a little about Solana.</p>

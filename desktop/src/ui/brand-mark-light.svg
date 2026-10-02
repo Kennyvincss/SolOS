@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="70 40 570 600">
+<defs>
+<linearGradient id="gt" x1="110" y1="390" x2="610" y2="60" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b08cff"/><stop offset=".2" stop-color="#6d82ff"/><stop offset=".5" stop-color="#2b7cff"/><stop offset=".8" stop-color="#2f9dff"/><stop offset="1" stop-color="#55d6ff"/></linearGradient>
+<linearGradient id="gm" x1="200" y1="430" x2="600" y2="270" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b45cf8"/><stop offset=".5" stop-color="#6a5cf6"/><stop offset="1" stop-color="#2f6dff"/></linearGradient>
+<linearGradient id="gb" x1="100" y1="580" x2="610" y2="420" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c56cfa"/><stop offset=".45" stop-color="#8a5cf6"/><stop offset="1" stop-color="#2f6dff"/></linearGradient>
+<linearGradient id="sm" x1="420" y1="250" x2="470" y2="420" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1a1590" stop-opacity=".22"/><stop offset="1" stop-color="#1a1590" stop-opacity="0"/></linearGradient>
+<linearGradient id="sb" x1="420" y1="395" x2="470" y2="560" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1a1590" stop-opacity=".22"/><stop offset="1" stop-color="#1a1590" stop-opacity="0"/></linearGradient>
+</defs>
+<path d="M122.9 568.3Q82 552 123.0 536.1L467.8 402.3Q520 382 567.7 411.3L586.5 422.9Q624 446 584.9 466.2L318.2 604.1Q272 628 223.7 608.7Z" fill="url(#gb)"/><path d="M122.9 568.3Q82 552 123.0 536.1L467.8 402.3Q520 382 567.7 411.3L586.5 422.9Q624 446 584.9 466.2L318.2 604.1Q272 628 223.7 608.7Z" fill="url(#sb)"/>
+<path d="M157.8 392.1Q112 372 159.1 355.2L452.2 250.8Q505 232 551.8 262.7L587.2 285.9Q624 310 585.5 331.3L384.0 442.9Q335 470 283.7 447.5Z" fill="url(#gm)"/><path d="M157.8 392.1Q112 372 159.1 355.2L452.2 250.8Q505 232 551.8 262.7L587.2 285.9Q624 310 585.5 331.3L384.0 442.9Q335 470 283.7 447.5Z" fill="url(#sm)"/>
+<path d="M89.8 224.0Q88 176 134.7 165.0L571.2 62.1Q614 52 616.1 95.9L619.1 156.0Q621 196 583.6 210.1L150.3 373.5Q96 394 93.9 336.0Z" fill="url(#gt)"/>
+<circle cx="162" cy="214" r="13" fill="#fff"/><circle cx="208" cy="202" r="13" fill="#fff"/><circle cx="254" cy="189" r="13" fill="#fff"/>
+</svg>

@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   title: { default: "STRATA — The browser for the onchain world.", template: "%s · STRATA" },
   description: "Search, discover, use and understand the entire Solana ecosystem. Apps, tokens, wallets, transactions, DeFi and STRATA AI in one place.",
   applicationName: "STRATA",
-  icons: { icon: [{ url: "/favicon.ico", sizes: "any" }], apple: "/apple-touch-icon.png" },
+  icons: { icon: [{ url: "/favicon.ico", sizes: "any" }, { url: "/favicon.svg", type: "image/svg+xml" }], apple: "/apple-touch-icon.png" },
   manifest: "/manifest.webmanifest",
   openGraph: { title: "STRATA", description: "The browser for the onchain world.", type: "website" },
 };
