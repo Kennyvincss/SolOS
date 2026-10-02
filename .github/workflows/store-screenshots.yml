@@ -1,0 +1,33 @@
+# Microsoft Store screenshots of the desktop app against the live site.
+# Download them from the run's "store-screenshots" artifact.
+name: Store screenshots
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  shots:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: sudo apt-get update && sudo apt-get install -y xvfb ffmpeg
+      - name: Take screenshots
+        run: |
+          export XDG_CONFIG_HOME="$RUNNER_TEMP/cfg"
+          export SHOTS_DIR="$RUNNER_TEMP/shots"
+          xvfb-run -a -s "-screen 0 1920x1080x24" npx electron test/store-screenshots.js 2>&1 | grep -E "^\[shots\]" || true
+          ls -la "$SHOTS_DIR"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: store-screenshots
+          path: ${{ runner.temp }}/shots/*.png
