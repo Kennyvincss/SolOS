@@ -23,16 +23,20 @@ trusts it more quickly than an ordinary certificate.
      - `AZURE_SIGNING_PROFILE`: the certificate profile name
      - `AZURE_SIGNING_PUBLISHER`: the exact name on the certificate (the validated identity)
 
-## Option B: a certificate file (OV or EV) from a certificate authority
+## Option B: a certificate from a certificate authority (DigiCert, Sectigo, ...)
 
-Buy a code-signing certificate (for example from Sectigo, DigiCert or SSL.com),
-export it as a `.p12`/`.pfx`, then add these repository secrets:
+Since 2023 every code-signing certificate's key must live on hardware: a USB
+token or a cloud HSM. It can no longer be exported as a `.pfx` file. For the
+automatic GitHub build, buy one with **cloud signing**, such as DigiCert
+KeyLocker. A USB-token certificate only works by signing by hand on a Windows
+PC for every release.
 
-- `WIN_CERT_P12_BASE64`: the file, base64-encoded (`base64 -w0 cert.pfx`)
-- `WIN_CERT_PASSWORD`: its password
+When the certificate is issued, add its KeyLocker credentials (API key,
+client-auth certificate and password, certificate fingerprint) as repository
+secrets. The build then needs a small change to sign through KeyLocker.
 
-Newer certificates are often issued only on a hardware key or a cloud HSM,
-which can't be exported as a file. If yours is like that, use Option A.
+(`WIN_CERT_P12_BASE64` / `WIN_CERT_PASSWORD` still work for an older
+certificate that you do have as a `.pfx` file.)
 
 ## After signing
 
