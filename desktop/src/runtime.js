@@ -97,10 +97,51 @@ function getRuntime(profileId) {
   };
   runtimes.set(profileId, rt);
 
+  // A small window in front of the browser, like a wallet's approval prompt.
+  const extensionPopup = (details) => {
+    const popup = new BrowserWindow({
+      width: details.width ?? 360,
+      height: details.height ?? 620,
+      show: false,
+      resizable: false,
+      minimizable: false,
+      fullscreenable: false,
+      alwaysOnTop: true,
+      autoHideMenuBar: true,
+      backgroundColor: "#111111",
+      webPreferences: { session: ses, sandbox: true, contextIsolation: true },
+    });
+    extWindows.markPopup(popup);
+    // On screen, over the browser window (wallets compute a position that
+    // can land off-screen or on another display), then in front with focus.
+    extWindows.placeOnScreen(popup, details, hooks.focusedShell(profileId)?.win ?? BrowserWindow.getFocusedWindow());
+    rt.extensions.addTab(popup.webContents, popup);
+    const url = Array.isArray(details.url) ? details.url[0] : details.url;
+    if (url) popup.loadURL(url);
+    if (details.focused !== false) extWindows.bringToFront(popup);
+    else popup.showInactive();
+    return popup;
+  };
+  // When an extension without a toolbar popup is clicked, it usually opens its
+  // own page in a tab; right after a click, that page opens as a popup instead.
+  // Setup pages (onboarding, welcome, options) still get a full tab.
+  const clickedAt = new Map(); // extension id -> time of the toolbar click
+  const opensAsPopup = (url) => {
+    const id = /^chrome-extension:\/\/([a-p]{32})\//.exec(url || "")?.[1];
+    if (!id || Date.now() - (clickedAt.get(id) ?? 0) > 4000) return false;
+    if (/onboard|welcome|setup|install|options|settings|fullscreen|expand/i.test(url)) return false;
+    clickedAt.delete(id);
+    return true;
+  };
+
   rt.extensions = new ElectronChromeExtensions({
     license: "GPL-3.0",
     session: ses,
     async createTab(details) {
+      if (opensAsPopup(details.url)) {
+        const popup = extensionPopup({ url: details.url, width: 380, height: 620 });
+        return [popup.webContents, popup];
+      }
       const s = hooks.focusedShell(profileId) ?? hooks.openWindow(profileId, { url: "about:blank" });
       const wc = s.newTab(details.url ?? SOLANA_OS_URL, { background: details.active === false });
       return [wc, s.win];
@@ -113,30 +154,7 @@ function getRuntime(profileId) {
     },
     async createWindow(details) {
       // Wallet approval prompts use chrome.windows.create({ type: "popup" }).
-      if (details.type === "popup" || details.type === "panel") {
-        const popup = new BrowserWindow({
-          width: details.width ?? 360,
-          height: details.height ?? 620,
-          show: false,
-          resizable: false,
-          minimizable: false,
-          fullscreenable: false,
-          alwaysOnTop: true,
-          autoHideMenuBar: true,
-          backgroundColor: "#111111",
-          webPreferences: { session: ses, sandbox: true, contextIsolation: true },
-        });
-        extWindows.markPopup(popup);
-        // On screen, over the browser window (wallets compute a position that
-        // can land off-screen or on another display), then in front with focus.
-        extWindows.placeOnScreen(popup, details, hooks.focusedShell(profileId)?.win ?? BrowserWindow.getFocusedWindow());
-        rt.extensions.addTab(popup.webContents, popup);
-        const url = Array.isArray(details.url) ? details.url[0] : details.url;
-        if (url) popup.loadURL(url);
-        if (details.focused !== false) extWindows.bringToFront(popup);
-        else popup.showInactive();
-        return popup;
-      }
+      if (details.type === "popup" || details.type === "panel") return extensionPopup(details);
       const url = Array.isArray(details.url) ? details.url[0] : details.url;
       return hooks.openWindow(profileId, { url }).win;
     },
@@ -144,6 +162,14 @@ function getRuntime(profileId) {
       if (!win.isDestroyed()) win.close();
     },
   });
+
+  // Remember toolbar clicks (see opensAsPopup).
+  const actions = rt.extensions.api.browserAction;
+  const activateClick = actions.activateClick.bind(actions);
+  actions.activateClick = (details) => {
+    if (details?.extensionId) clickedAt.set(details.extensionId, Date.now());
+    return activateClick(details);
+  };
 
   quietExtensionPreload(ses);
   extWindows.install(rt.extensions, () => hooks.focusedShell(profileId)?.win ?? null);
