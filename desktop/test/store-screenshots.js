@@ -112,7 +112,7 @@ const STEPS = {
     await sleep(2500);
     for (const w of BrowserWindow.getAllWindows()) if (w !== s.win && !w.isDestroyed() && w.webContents.getURL().includes(PHANTOM)) w.close();
     s.win.focus();
-    await go(s, "https://jup.ag", 14000);
+    await go(s, `${U}/tokens/${SOL}`, 12000);
     const pt = await s.win.webContents.executeJavaScript("(() => { const el = document.querySelector('browser-action-list'); const b = el && el.shadowRoot.querySelector('.action, [part~=action]'); if (!b) return null; const r = b.getBoundingClientRect(); return { x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2) }; })()");
     if (!pt) throw new Error("no toolbar button");
     const before = new Set(BrowserWindow.getAllWindows());
@@ -133,7 +133,7 @@ app.whenReady().then(async () => {
   s.win.setBounds({ x: 0, y: 0, width: 1920, height: 1080 });
   s.layout();
   await sleep(1500);
-  for (const name of (process.env.SHOTS || "home,search,token,ai,profiles,split,phantom").split(",")) {
+  for (const name of (process.env.SHOTS || "home,search,token,ai,profiles,phantom").split(",")) {
     try {
       await STEPS[name](s);
     } catch (e) {
