@@ -38,7 +38,7 @@ const AI_RE = /^(analy[sz]e|explain|summari[sz]e|research|compare|what (is|does|
 function routeInput(input, base = SOLANA_OS_URL) {
   const t = String(input || "").trim();
   if (!t) return { kind: "url", url: base };
-  // strata://tokens -> the STRATA page /tokens (what the address bar shows for STRATA pages).
+  // strata://tokens -> the STRATA page /tokens (typed shortcut; the address bar shows nothing for STRATA pages).
   const internal = t.match(/^strata:\/\/(.*)$/i);
   if (internal) return { kind: "url", url: `${base}/${internal[1].replace(/^\/+/, "")}` };
   if (/^(https?|chrome-extension|about|file):/i.test(t)) return { kind: "url", url: t };

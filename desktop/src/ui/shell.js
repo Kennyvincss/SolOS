@@ -33,7 +33,7 @@ const TYPE_ICON = {
 };
 
 // STRATA's own pages never show the website's domain: the home page is an empty
-// address bar, searches show what you typed, other pages show strata://page.
+// address bar (searches show what you typed; STRATA's own pages show nothing).
 function displayUrl(url) {
   if (!url || url === "about:blank" || url.startsWith("file:")) return "";
   const home = (state?.home || "").replace(/\/$/, "");
@@ -41,8 +41,8 @@ function displayUrl(url) {
     const rest = url.slice(home.length);
     const q = rest.match(/^\/(search|open)\?q=([^&]+)/);
     if (q) return decodeURIComponent(q[2].replace(/\+/g, " "));
-    if (rest === "" || rest === "/" || /^\/?[?#]/.test(rest)) return "";
-    return `strata://${rest.replace(/^\//, "")}`;
+    // STRATA's own pages (home, Discover, Tokens, ...) show no address.
+    return "";
   }
   return url.replace(/^https:\/\//, "");
 }
