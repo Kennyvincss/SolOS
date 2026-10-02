@@ -54,7 +54,8 @@
     },
     "win": {
       "target": [
-        "nsis"
+        "nsis",
+        "appx"
       ],
       "icon": "build/icon.png"
     },
@@ -89,7 +90,19 @@
           "solanaos-desktop"
         ]
       }
-    ]
+    ],
+    "appx": {
+      "identityName": "STRATABROWSER.STRATABROWSER",
+      "publisher": "CN=19C0BA52-3A13-4D31-A5F8-C62567A54B84",
+      "publisherDisplayName": "STRATA BROWSER",
+      "displayName": "STRATA BROWSER",
+      "applicationId": "STRATA",
+      "backgroundColor": "#07070b",
+      "languages": [
+        "en-US"
+      ],
+      "showNameOnTiles": false
+    }
   },
   "dependencies": {
     "electron-chrome-extensions": "^4.9.0",

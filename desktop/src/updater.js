@@ -35,6 +35,11 @@ function initUpdater() {
     setState({ status: "dev" });
     return;
   }
+  // The Microsoft Store installs updates itself.
+  if (process.windowsStore) {
+    setState({ status: "store" });
+    return;
+  }
   ({ autoUpdater: updater } = require("electron-updater"));
   updater.autoDownload = true;
   updater.autoInstallOnAppQuit = true;
@@ -67,7 +72,12 @@ function initUpdater() {
 /** "Check for Updates…" menu item. */
 async function checkForUpdatesInteractive() {
   if (!updater) {
-    await dialog.showMessageBox({ type: "info", message: "Updates are only available in installed builds.", detail: `Version ${app.getVersion()}` });
+    const store = Boolean(process.windowsStore);
+    await dialog.showMessageBox({
+      type: "info",
+      message: store ? "STRATA updates through the Microsoft Store" : "Updates are only available in installed builds.",
+      detail: store ? `Version ${app.getVersion()}. New versions install automatically from the Store.` : `Version ${app.getVersion()}`,
+    });
     return;
   }
   try {
