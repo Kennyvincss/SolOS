@@ -21,11 +21,14 @@ jobs:
           node-version: 22
       - run: npm ci
       - run: sudo apt-get update && sudo apt-get install -y xvfb ffmpeg
+      # Chromium's sandbox, like on users' computers.
+      - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
       - name: Take screenshots
         run: |
           export XDG_CONFIG_HOME="$RUNNER_TEMP/cfg"
           export SHOTS_DIR="$RUNNER_TEMP/shots"
-          xvfb-run -a -s "-screen 0 1920x1080x24" npx electron test/store-screenshots.js 2>&1 | grep -E "^\[shots\]" || true
+          timeout 900 xvfb-run -a -s "-screen 0 1920x1080x24" npx electron test/store-screenshots.js > shots.log 2>&1 || true
+          grep -E "^\[shots\]" shots.log || tail -40 shots.log
           ls -la "$SHOTS_DIR"
       - uses: actions/upload-artifact@v4
         with:
