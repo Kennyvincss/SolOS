@@ -5,12 +5,15 @@ import bs58 from "bs58";
 
 export function buildSignInMessage(opts: { domain: string; address: string; nonce: string; issuedAt: string }) {
   return [
-    // The heading names STRATA; the site the message is for is on the URI line
-    // (checked by the server, so a signature made on a copycat site fails).
-    "STRATA wants you to sign in with your Solana account:",
+    // Wallets treat "<site> wants you to sign in with your Solana account:" as
+    // a Sign-In With Solana request and refuse it unless <site> is the page's
+    // address, so the STRATA heading must not use that wording. The site the
+    // message is for is on the URI line, which the server checks (a signature
+    // made on a copycat site fails).
+    "Sign in to STRATA with your Solana account:",
     opts.address,
     "",
-    "Sign in to STRATA. This request will not trigger a blockchain transaction or cost any fees.",
+    "This request will not trigger a blockchain transaction or cost any fees.",
     "",
     `URI: https://${opts.domain}`,
     "Version: 1",
@@ -22,7 +25,7 @@ export function buildSignInMessage(opts: { domain: string; address: string; nonc
 
 export function parseSignInMessage(message: string): { domain: string; address: string; nonce: string; issuedAt: string } | null {
   const lines = message.split("\n");
-  if (!/ wants you to sign in/.test(lines[0] ?? "")) return null;
+  if (!/^Sign in to STRATA with your Solana account:$| wants you to sign in/.test(lines[0] ?? "")) return null;
   const domain = message.match(/^URI: https:\/\/([^\s/]+)\/?$/m)?.[1];
   const address = lines[1]?.trim();
   const nonce = message.match(/^Nonce: (\S+)$/m)?.[1];

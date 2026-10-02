@@ -64,7 +64,9 @@ describe("Sign-In With Solana", () => {
     const address = bs58.encode(Buffer.from(raw, "base64url"));
     const message = buildSignInMessage({ domain: "solanaos.app", address, nonce: "abc123", issuedAt: new Date().toISOString() });
     const sig = bs58.encode(crypto.sign(null, Buffer.from(message), privateKey));
-    expect(message.split("\n")[0]).toBe("STRATA wants you to sign in with your Solana account:");
+    expect(message.split("\n")[0]).toBe("Sign in to STRATA with your Solana account:");
+    // Not the Sign-In With Solana heading, which wallets reject unless it starts with the site's address.
+    expect(message).not.toMatch(/wants you to sign in with your Solana account/);
     expect(parseSignInMessage(message)).toMatchObject({ domain: "solanaos.app", address, nonce: "abc123" });
     expect(verifyEd25519(message, sig, address)).toBe(true);
     expect(verifyEd25519(message.replace("abc123", "zzz999"), sig, address)).toBe(false);
