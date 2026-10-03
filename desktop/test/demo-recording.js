@@ -37,6 +37,7 @@ const SCROLL = (px, ms) => `(() => new Promise((done) => {
   const from = el.scrollTop, t0 = performance.now();
   const step = (t) => { const k = Math.min(1, (t - t0) / ${ms}); const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2; el.scrollTop = from + ${px} * e; k < 1 ? requestAnimationFrame(step) : done(true); };
   requestAnimationFrame(step);
+  setTimeout(() => done(false), ${ms} + 1500);
 }))()`;
 
 let rec = null;
@@ -205,7 +206,7 @@ const SCENES = {
   async tx(s) {
     await go(s, `${U}/tx`, 2000);
     if (TX_SIG) {
-      await typeInPage(tab(s), "input", TX_SIG, 12);
+      await typeInPage(tab(s), "input[placeholder*='signature' i]", TX_SIG, 12);
       await sleep(300);
       await tab(s).executeJavaScript(CLICK("/^Explain/"));
     }
@@ -213,7 +214,7 @@ const SCENES = {
   },
   async security(s) {
     await go(s, `${U}/security`, 2000);
-    await typeInPage(tab(s), "input", "jup-ag-claim.com", 60);
+    await typeInPage(tab(s), "input[placeholder*='website' i]", "jup-ag-claim.com", 60);
     await sleep(300);
     await tab(s).executeJavaScript(CLICK("/^Check$/"));
     await sleep(5000);
@@ -287,7 +288,14 @@ const SCENES = {
     await sleep(800);
   },
   async developers(s) {
-    await go(s, `${U}/developers`, 3200);
+    const before = new Set(BrowserWindow.getAllWindows());
+    await go(s, `${U}/developers`, 1500);
+    const pop = await newWindowReady(before, /^(confirm|sign|approve)$/i, 6000);
+    if (pop) {
+      await sleep(1200);
+      await until(() => pop.webContents.executeJavaScript(clickText("/^(confirm|sign|approve)$/i")), 5000);
+    }
+    await sleep(2200);
     await go(s, `${U}/payments`, 2600);
   },
   async settings(s) {
@@ -331,7 +339,7 @@ app.whenReady().then(async () => {
     sceneKey = key;
     sceneStart = Date.now();
     try {
-      await SCENES[key](s);
+      await Promise.race([SCENES[key](s), sleep(40000).then(() => { throw new Error("scene timed out"); })]);
     } catch (e) {
       log("FAILED", key, String(e?.stack || e).split("\n")[0]);
     }
