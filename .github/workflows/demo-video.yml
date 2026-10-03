@@ -4,6 +4,11 @@ name: Demo video
 
 on:
   workflow_dispatch:
+    inputs:
+      survey:
+        description: Comma-separated pages to screenshot instead of recording
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -27,6 +32,7 @@ jobs:
         run: |
           export XDG_CONFIG_HOME="$RUNNER_TEMP/cfg"
           export DEMO_DIR="$RUNNER_TEMP/demo"
+          export SURVEY="${{ inputs.survey }}"
           timeout 900 xvfb-run -a -s "-screen 0 1920x1080x24" npx electron test/demo-recording.js > demo.log 2>&1 || true
           grep -E "^\[demo\]" demo.log || tail -40 demo.log
           ls -la "$DEMO_DIR"
@@ -35,4 +41,4 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release view demo-video >/dev/null 2>&1 || gh release create demo-video --prerelease --title "Demo video recording" --notes "Raw screen recording of the desktop app for the demo video."
-          gh release upload demo-video "$RUNNER_TEMP"/demo/demo.mp4 "$RUNNER_TEMP"/demo/timings.json --clobber
+          gh release upload demo-video "$RUNNER_TEMP"/demo/* --clobber

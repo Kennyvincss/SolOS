@@ -187,6 +187,19 @@ app.whenReady().then(async () => {
   const s = [...require("../src/window").shells][0];
   s.win.setBounds({ x: 0, y: 0, width: 1920, height: 1080 });
   s.layout();
+  if (process.env.SURVEY) {
+    // Screenshot every page once, to choose what to record.
+    const { execFileSync } = require("node:child_process");
+    for (const u of process.env.SURVEY.split(",")) {
+      tab(s) ? tab(s).loadURL(`${U}${u}`).catch(() => {}) : s.newTab(`${U}${u}`);
+      await sleep(9000);
+      const name = u.replace(/[^a-z0-9]+/gi, "_").replace(/^_|_$/g, "") || "home";
+      execFileSync("ffmpeg", ["-y", "-v", "error", "-f", "x11grab", "-draw_mouse", "0", "-video_size", "1920x1080", "-i", `${process.env.DISPLAY}.0+0,0`, "-frames:v", "1", path.join(OUT, `survey-${name}.png`)]);
+      log("survey", u);
+    }
+    app.exit(0);
+    return;
+  }
   try {
     await setup(s);
   } catch (e) {
