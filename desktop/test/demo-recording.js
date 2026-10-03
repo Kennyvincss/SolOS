@@ -45,10 +45,11 @@ const timings = [];
 const mark = (key) => {
   timings.push({ key, t: (Date.now() - t0) / 1000 });
   log("scene", key, timings.at(-1).t.toFixed(2));
+  fs.writeFileSync(path.join(OUT, "timings.json"), JSON.stringify(timings, null, 1));
 };
 
 function startRecording() {
-  rec = spawn("ffmpeg", ["-y", "-v", "error", "-f", "x11grab", "-draw_mouse", "0", "-framerate", "30", "-video_size", "1920x1080", "-i", `${process.env.DISPLAY}.0+0,0`, "-c:v", "libx264", "-preset", "veryfast", "-crf", "18", "-pix_fmt", "yuv420p", path.join(OUT, "demo.mp4")], { stdio: ["pipe", "inherit", "inherit"] });
+  rec = spawn("ffmpeg", ["-y", "-v", "error", "-f", "x11grab", "-draw_mouse", "0", "-framerate", "30", "-video_size", "1920x1080", "-i", `${process.env.DISPLAY}.0+0,0`, "-c:v", "libx264", "-preset", "veryfast", "-crf", "18", "-pix_fmt", "yuv420p", "-movflags", "+frag_keyframe+empty_moov", path.join(OUT, "demo.mp4")], { stdio: ["pipe", "inherit", "inherit"] });
   t0 = Date.now();
 }
 async function stopRecording() {

@@ -16,6 +16,7 @@ permissions:
 jobs:
   record:
     runs-on: ubuntu-latest
+    timeout-minutes: 50
     defaults:
       run:
         working-directory: desktop
@@ -33,7 +34,7 @@ jobs:
           export XDG_CONFIG_HOME="$RUNNER_TEMP/cfg"
           export DEMO_DIR="$RUNNER_TEMP/demo"
           export SURVEY="${{ inputs.survey }}"
-          timeout 900 xvfb-run -a -s "-screen 0 1920x1080x24" npx electron test/demo-recording.js > demo.log 2>&1 || true
+          timeout 2100 xvfb-run -a -s "-screen 0 1920x1080x24" npx electron test/demo-recording.js > demo.log 2>&1 || true
           grep -E "^\[demo\]" demo.log || tail -40 demo.log
           ls -la "$DEMO_DIR"
       - name: Publish to the demo-video release
