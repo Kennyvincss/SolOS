@@ -857,12 +857,12 @@ class BrowserShell {
     const L = this.computeLayout();
     this.lastLayout = L;
     const visible = new Set(L.panes.map((p) => p.id).filter((id) => this.tabs.has(id)));
+    // Hidden tabs stay attached but invisible: a page re-attached after being
+    // removed can come back blank (it stops painting without a GPU).
     for (const id of [...this.attached]) {
-      if (!visible.has(id) || !this.tabs.has(id)) {
-        const t = this.tabs.get(id);
-        if (t) this.win.contentView.removeChildView(t.view);
-        this.attached.delete(id);
-      }
+      const t = this.tabs.get(id);
+      if (!t) this.attached.delete(id);
+      else if (!visible.has(id)) t.view.setVisible(false);
     }
     for (const p of L.panes) {
       const t = this.tabs.get(p.id);
@@ -872,6 +872,7 @@ class BrowserShell {
         this.attached.add(p.id);
       }
       t.view.setBounds({ x: p.x, y: p.y, width: p.width, height: p.height });
+      t.view.setVisible(true);
     }
     if (this.panel) {
       if (L.panel) this.panel.view.setBounds(L.panel);
