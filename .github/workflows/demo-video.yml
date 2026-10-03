@@ -40,5 +40,5 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release view demo-video >/dev/null 2>&1 || gh release create demo-video --prerelease --title "Demo video recording" --notes "Raw screen recording of the desktop app for the demo video."
+          gh release create demo-video --prerelease --title "Demo video recording" --notes "Raw screen recording of the desktop app for the demo video." 2>/dev/null || true
           gh release upload demo-video "$RUNNER_TEMP"/demo/* --clobber
