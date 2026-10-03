@@ -93,90 +93,208 @@ async function setup(s) {
   // A fresh tab for the recording, in the dashboard ("Pro") view.
   s.newTab(`${U}/`);
   await sleep(5000);
-  await tab(s).executeJavaScript("sessionStorage.setItem('strata:mode','pro'); true");
+  await findTransaction();
   for (const id of [...s.tabs.keys()]) if (id !== tab(s).id) s.closeTab(id);
   await go(s, `${U}/`, 12000);
   s.win.focus();
 }
 
+// Voiceover length per scene (seconds); each scene lasts at least LEAD + line + TAIL.
+const VO = {"lite": 7.62, "dashboard": 6.53, "search": 5.18, "tokens": 4.99, "token": 6.57, "why": 4.2, "ai": 7.04, "discover": 2.71, "explore": 5.7, "wallets": 4.35, "tx": 3.35, "security": 6.61, "apps": 5.85, "wallet": 5.1, "connect": 3.29, "profiles": 4.95, "tabs": 3.75, "library": 4.44, "permissions": 6.31, "developers": 5.8, "settings": 4.82, "outro": 8.28};
+const LEAD = 0.5, TAIL = 0.8;
+let sceneStart = 0, sceneKey = "";
+const holdTo = async () => {
+  const left = sceneStart + (LEAD + (VO[sceneKey] || 0) + TAIL) * 1000 - Date.now();
+  if (left > 0) await sleep(left);
+};
+// Click the smallest visible element whose own text matches.
+const CLICK = (re) => `(() => {
+  const vis = (el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
+  const els = [...document.querySelectorAll("button, a, [role=button], [role=radio], [role=tab], label, span, div")].filter((e) => vis(e) && ${re}.test((e.innerText || "").trim()));
+  els.sort((a, b) => a.getBoundingClientRect().width * a.getBoundingClientRect().height - b.getBoundingClientRect().width * b.getBoundingClientRect().height);
+  const el = els[0];
+  if (!el) return false;
+  (el.closest("button, a, [role=button], [role=radio], [role=tab], label") || el).click();
+  return true;
+})()`;
+const typeInPage = async (wc, selector, text, delay = 70) => {
+  await wc.executeJavaScript(`(() => { const el = document.querySelector(${JSON.stringify(selector)}); if (!el) return false; el.focus(); return true; })()`);
+  await typeInto(wc, text, delay);
+};
+let TX_SIG = "";
+async function findTransaction() {
+  try {
+    const r = await fetch("https://api.mainnet-beta.solana.com", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "getSignaturesForAddress", params: ["JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4", { limit: 25 }] }) });
+    const j = await r.json();
+    TX_SIG = (j.result || []).find((x) => !x.err)?.signature || "";
+  } catch {}
+  log("tx", TX_SIG ? "found" : "none");
+}
+
 const SCENES = {
-  async intro(s) {
-    await sleep(7500);
+  async lite(s) {
+    await sleep(3800);
+    await tab(s).executeJavaScript(CLICK("/^Pro$/"));
+    await sleep(3600);
+  },
+  async dashboard(s) {
+    await tab(s).executeJavaScript(SCROLL(420, 2600)).catch(() => {});
+    await sleep(2800);
+    await tab(s).executeJavaScript(SCROLL(-420, 1500)).catch(() => {});
   },
   async search(s) {
     const sw = s.win.webContents;
     sw.focus();
     await sw.executeJavaScript("(() => { const a = document.getElementById('address'); a.focus(); a.select(); return true; })()");
-    await sleep(500);
-    await typeInto(sw, "jupiter", 130);
-    await sleep(400);
+    await sleep(300);
+    await typeInto(sw, "jupiter", 110);
+    await sleep(250);
     press(sw, "Enter");
-    await sleep(4500);
-    await tab(s).executeJavaScript(SCROLL(520, 3200)).catch(() => {});
     await sleep(3200);
+    await tab(s).executeJavaScript(SCROLL(480, 2200)).catch(() => {});
+  },
+  async tokens(s) {
+    await go(s, `${U}/tokens?tab=trending`, 2400);
+    for (const t of ["Gainers", "Losers", "New"]) {
+      await tab(s).executeJavaScript(CLICK(`/^${t}$/`));
+      await sleep(1300);
+    }
   },
   async token(s) {
-    await go(s, `${U}/tokens/${SOL}`, 4500);
-    await tab(s).executeJavaScript(SCROLL(640, 4200)).catch(() => {});
-    await sleep(2400);
+    await go(s, `${U}/tokens/${SOL}`, 3200);
+    await tab(s).executeJavaScript(CLICK("/^(Watch|Add to watchlist)$/")).catch(() => {});
+    await sleep(1000);
+    await tab(s).executeJavaScript(SCROLL(560, 2600)).catch(() => {});
+  },
+  async why(s) {
+    await tab(s).executeJavaScript(SCROLL(-260, 900)).catch(() => {});
+    await sleep(700);
+    await tab(s).executeJavaScript(CLICK("/^Generate$/"));
+    await sleep(7500);
   },
   async ai(s) {
-    await tab(s).executeJavaScript(SCROLL(-640, 900)).catch(() => {});
+    await tab(s).executeJavaScript(SCROLL(-600, 600)).catch(() => {});
     s.togglePanel(true);
-    await sleep(2500);
+    await sleep(2000);
     const pw = s.panel?.view.webContents;
     if (pw) {
-      const q = "What's moving SOL this week? Keep it short.";
+      const q = "Is SOL a good buy right now? Keep it short.";
       for (let i = 1; i <= q.length; i++) {
         await pw.executeJavaScript(`(() => { const ta = document.querySelector("textarea"); if (!ta) return false; Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value").set.call(ta, ${JSON.stringify(q)}.slice(0, ${i})); ta.dispatchEvent(new Event("input", { bubbles: true })); return true; })()`);
-        await sleep(45);
+        await sleep(35);
       }
-      await sleep(300);
+      await sleep(250);
       await pw.executeJavaScript(`(() => { const ta = document.querySelector("textarea"); ta.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", bubbles: true })); return true; })()`);
     }
-    await sleep(15000);
+    await sleep(11000);
     s.togglePanel(false);
-    await sleep(800);
+    await sleep(600);
+  },
+  async discover(s) {
+    await go(s, `${U}/discover`, 3200);
+  },
+  async explore(s) {
+    for (const p of ["/apps?category=NFTs", "/defi", "/rwa", "/news"]) await go(s, `${U}${p}`, 2300);
+  },
+  async wallets(s) {
+    await go(s, `${U}/wallets`, 2200);
+    await tab(s).executeJavaScript(CLICK("/^demo wallet$/i"));
+    await sleep(4200);
+  },
+  async tx(s) {
+    await go(s, `${U}/tx`, 2000);
+    if (TX_SIG) {
+      await typeInPage(tab(s), "input", TX_SIG, 12);
+      await sleep(300);
+      await tab(s).executeJavaScript(CLICK("/^Explain/"));
+    }
+    await sleep(5000);
+  },
+  async security(s) {
+    await go(s, `${U}/security`, 2000);
+    await typeInPage(tab(s), "input", "jup-ag-claim.com", 60);
+    await sleep(300);
+    await tab(s).executeJavaScript(CLICK("/^Check$/"));
+    await sleep(5000);
+  },
+  async apps(s) {
+    await go(s, `${U}/apps`, 2600);
+    await tab(s).executeJavaScript(CLICK("/^Jupiter$/"));
+    await sleep(3200);
   },
   async wallet(s) {
+    await go(s, `${U}/extensions`, 2200);
     const pt = await s.win.webContents.executeJavaScript("(() => { const el = document.querySelector('browser-action-list'); const b = el && el.shadowRoot.querySelector('.action, [part~=action]'); if (!b) return null; const r = b.getBoundingClientRect(); return { x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2) }; })()");
     if (!pt) throw new Error("no toolbar button");
     const before = new Set(BrowserWindow.getAllWindows());
     s.win.webContents.sendInputEvent({ type: "mouseDown", x: pt.x, y: pt.y, button: "left", clickCount: 1 });
     s.win.webContents.sendInputEvent({ type: "mouseUp", x: pt.x, y: pt.y, button: "left", clickCount: 1 });
-    const pop = await newWindowReady(before, /^(send|receive|swap|buy)$/i, 15000);
-    await sleep(5500);
+    const pop = await newWindowReady(before, /^(send|receive|swap|buy)$/i, 12000);
+    await holdTo();
     if (pop && !pop.isDestroyed()) pop.close();
-    await sleep(700);
+    await sleep(500);
   },
   async connect(s) {
+    await go(s, `${U}/tokens/${SOL}`, 2200);
     const wc = tab(s);
     await wc.executeJavaScript(clickText("/^Connect wallet$/i"));
-    await sleep(1600);
-    let before = new Set(BrowserWindow.getAllWindows());
+    await sleep(1300);
+    const before = new Set(BrowserWindow.getAllWindows());
     await wc.executeJavaScript(clickText("/^Phantom/"));
-    let pop = await newWindowReady(before, /^connect$/i);
-    await sleep(1200);
+    const pop = await newWindowReady(before, /^connect$/i);
+    await sleep(900);
     if (pop) await until(() => pop.webContents.executeJavaScript(clickText("/^connect$/i")), 8000);
-    await sleep(2500);
-    before = new Set(BrowserWindow.getAllWindows());
-    await until(() => wc.executeJavaScript(clickText("/Sign in with this wallet/i")), 8000);
-    pop = await newWindowReady(before, /^(confirm|sign|approve)$/i);
-    await sleep(1800);
-    if (pop) await until(() => pop.webContents.executeJavaScript(clickText("/^(confirm|sign|approve)$/i")), 8000);
-    await sleep(3000);
+    await sleep(2200);
     await wc.executeJavaScript("document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); true").catch(() => {});
-    await sleep(600);
   },
   async profiles(s) {
     require("../src/ipc").openProfileBubble(s, null);
-    await sleep(6500);
+    await holdTo();
     require("../src/bubbles").close();
-    await sleep(500);
+    await sleep(400);
+  },
+  async tabs(s) {
+    const a = s.newTab(`${U}/defi`, { background: true }).id;
+    const b = s.newTab(`${U}/news`, { background: true }).id;
+    await sleep(700);
+    s.addToNewGroup([a, b], { title: "Research", color: "blue" });
+    await sleep(1800);
+    require("../src/menus").setVertical(s.profile, true);
+    await sleep(2000);
+    require("../src/menus").setVertical(s.profile, false);
+    await sleep(600);
+    s.splitTabs(tab(s).id, a);
+    await sleep(3200);
+    for (const id of [a, b]) s.closeTab(id);
+    await sleep(600);
+  },
+  async library(s) {
+    require("../src/ipc").openBookmarkEditor(s, null, null);
+    await sleep(2400);
+    require("../src/bubbles").close();
+    require("../src/ipc").actionsFor(s).toggleBookmarksBar?.();
+    await sleep(900);
+    await go(s, `${U}/history`, 2400);
+    require("../src/ipc").actionsFor(s).toggleBookmarksBar?.();
+  },
+  async permissions(s) {
+    await go(s, "https://stratabrowser.xyz", 2500);
+    await tab(s).executeJavaScript("Notification.requestPermission(); true", true).catch(() => {});
+    await sleep(3200);
+    const p = BrowserWindow.getAllWindows().find((w) => !w.isDestroyed() && w.webContents.getURL().endsWith("/permission.html"));
+    if (p) await p.webContents.executeJavaScript("document.getElementById('allow').click(); true").catch(() => {});
+    await sleep(800);
+  },
+  async developers(s) {
+    await go(s, `${U}/developers`, 3200);
+    await go(s, `${U}/payments`, 2600);
+  },
+  async settings(s) {
+    await go(s, `${U}/settings`, 2400);
+    await tab(s).executeJavaScript(SCROLL(380, 2000)).catch(() => {});
   },
   async outro(s) {
-    s.newTab("https://stratabrowser.xyz");
-    await sleep(9500);
+    await go(s, "https://stratabrowser.xyz", 1500);
   },
 };
 
@@ -209,11 +327,14 @@ app.whenReady().then(async () => {
   await sleep(500);
   for (const key of Object.keys(SCENES)) {
     mark(key);
+    sceneKey = key;
+    sceneStart = Date.now();
     try {
       await SCENES[key](s);
     } catch (e) {
       log("FAILED", key, String(e?.stack || e).split("\n")[0]);
     }
+    await holdTo();
   }
   mark("end");
   await stopRecording();
