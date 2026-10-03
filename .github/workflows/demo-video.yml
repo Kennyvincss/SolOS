@@ -1,0 +1,38 @@
+# Screen recording of the desktop app for the product demo video.
+# The raw recording and scene timings go to the "demo-video" pre-release.
+name: Demo video
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: sudo apt-get update && sudo apt-get install -y xvfb ffmpeg
+      # Chromium's sandbox, like on users' computers.
+      - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - name: Record
+        run: |
+          export XDG_CONFIG_HOME="$RUNNER_TEMP/cfg"
+          export DEMO_DIR="$RUNNER_TEMP/demo"
+          timeout 900 xvfb-run -a -s "-screen 0 1920x1080x24" npx electron test/demo-recording.js > demo.log 2>&1 || true
+          grep -E "^\[demo\]" demo.log || tail -40 demo.log
+          ls -la "$DEMO_DIR"
+      - name: Publish to the demo-video release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view demo-video >/dev/null 2>&1 || gh release create demo-video --prerelease --title "Demo video recording" --notes "Raw screen recording of the desktop app for the demo video."
+          gh release upload demo-video "$RUNNER_TEMP"/demo/demo.mp4 "$RUNNER_TEMP"/demo/timings.json --clobber
